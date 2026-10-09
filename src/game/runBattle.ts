@@ -32,7 +32,8 @@ export interface MoveSource {
  * Plays a battle from `fen` to completion on `spec`. `onMove` runs after each move (e.g. to animate);
  * the engine searches the next move while it runs. `limits` defaults to the game's rules.
  * `evalScore` is the engine's score for white from the search that chose the move (null if the engine gave none).
- * `game` is only valid during the callback. Needs the chess rules loaded (setRules).
+ * `game` is only valid during the callback; throwing from it stops the battle (after the engine's current
+ * search). Needs the chess rules loaded (setRules).
  */
 export async function runBattle(
   fen: string,
@@ -62,7 +63,14 @@ export async function runBattle(
       if (limits.decisive) streak = nextLeadStreak(streak, material(game.fen()), limits.decisive.lead);
       result = battleResult(game, plies, limits, streak);
       searching = result ? null : search();
-      await onMove(move, game, plies, evalScore);
+      try {
+        await onMove(move, game, plies, evalScore);
+      } catch (err) {
+        // onMove can stop the battle by throwing (e.g. the player left). Let the search already
+        // running finish first, so the engine is idle for whatever comes next.
+        await searching?.catch(() => {});
+        throw err;
+      }
     }
     return result!;
   } finally {

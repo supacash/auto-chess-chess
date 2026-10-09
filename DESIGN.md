@@ -134,22 +134,24 @@ In Growing mode the board opens up during the run:
 - **Safari / iOS:** the engine needs cross-origin isolation; COEP is forced to require-corp with a one-time reload fallback (untested on a real iPhone).
 - **Fairy balance:** fusion pieces and the shop player buying fairy offers aren't measured yet.
 
-## Multiplayer (in progress)
-Live, TFT-style matches for 4 players. Everything that decides a match is deterministic from the match seed (pairings, bot armies, battles), so each client can compute results without a game server.
+## Multiplayer
+Live, TFT-style matches for 4 players. Everything that decides a match is deterministic from the match seed (pairings, bot armies, battles), so each client computes the results itself: there's no game server.
 - **Health:** everyone starts at 20 HP. Losing a battle costs the round number plus 1 per 5 points of material the winner has left; a draw costs nothing. At 0 HP you're out; lower HP places worse among players knocked out in the same round. Last one standing wins (places 1st–4th).
-- **Rounds:** everyone shops and places at the same time for 45 seconds (15 in Blitz), ending early when all are Ready. Opponents stay hidden until the round's battles start. If your king is still on the bench when the timer ends, it's placed for you.
-- **Pairings:** random each round from the match seed. With an odd number left, the last player fights a copy of another player's army; only the odd player can take damage in that battle. Battles are computed with the white player's army as white; the black player's screen shows the board flipped.
+- **Rounds:** everyone shops and places at the same time for 45 seconds (15 in Blitz), ending early when all are Ready. Opponents stay hidden until the round's battles start (enforced by the Firestore rules). If your king is still on the bench when the timer ends, it's placed for you.
+- **Pairings and sides:** random each round from the match seed, including who is White; White moves first. Your side is announced before the battle ("You're Black against …"), and your pieces are drawn in your colour at the bottom of the board. With an odd number left, the last player fights a copy of another player's army; only the odd player can take damage or extend a streak in that battle.
+- **Income:** base 5, +1 for a win (+1 for a draw), plus a streak bonus for win or loss streaks: 2 in a row +1, 3 +2, 4 or more +3. Draws neither extend nor break a streak and pay no streak bonus. Streaks show in the health list (🔥 wins, ❄️ losses).
 - **Battles:** auto only (no Play it in multiplayer). You watch your own; the others are computed and summarized.
-- **Board:** Classic 8×8 with standard pieces while multiplayer is being tested. Economy as in single player (income, offers, upgrades, fusion).
+- **Board:** Classic 8×8 with standard pieces while multiplayer is being tested. Economy otherwise as in single player (offers, upgrades, fusion).
 - **Bots:** AI-drafted armies at the single-player Normal budget, the same on every client.
-- **Now:** offline matches against 3 bots (*Multiplayer* → *Play vs 3 bots*, optional Blitz).
-- **Next:** online rooms on Firebase (project `auto-chess-chess`): room codes, bots fill empty seats, armies hidden until battle by security rules; public quick match later.
+- **Offline:** *Multiplayer* → *Play vs 3 bots* (optional Blitz).
+- **Online rooms** (Firebase project `auto-chess-chess`, anonymous sign-in): *Create room* gives a 4-letter code to share; others *Join room* with it; the host starts whenever they like and empty seats become bots. Players have generated names ("Golden Knight 19"). Ready uploads your army; the shop closes when everyone still in is ready or the deadline (server time) passes; the round ends once everyone has watched their battle (or after 2 minutes). Someone who leaves keeps their last army (or a lone king) and plays on until knocked out. *Leave* (two taps) exits a match.
+- **Not yet:** quick match with strangers, rejoining a match after a reload, avoiding repeat pairings.
 
 ## Roadmap
 Done: reproducible seeded battles, RULES_VERSION, army snapshots, replays, browser smoke tests in CI, game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as.
 
 Next candidates (not yet decided):
-1. **Multiplayer online:** room codes with bots in empty seats, then quick match (see Multiplayer).
+1. **Multiplayer:** quick match, rejoin after reload, and balance runs for 4-player matches (see Multiplayer).
 2. **Daily challenges:** one seed for everyone (battles are already seeded and reproducible).
 3. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
 4. **Bigger boards** past 8×8, with a longer move limit.

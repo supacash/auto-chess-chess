@@ -116,4 +116,25 @@ describe('runBattle', () => {
       `position fen ${start} moves e1d1 e8d8`,
     ]);
   });
+
+  it('stops when onMove throws, after the engine finishes its current search', async () => {
+    let running = 0;
+    let finished = 0;
+    const engine: MoveSource = {
+      newGame: async () => {},
+      candidates: async (fen) => {
+        running++;
+        await new Promise((r) => setTimeout(r, 20));
+        finished++;
+        return fen.includes(' w ') ? [{ move: 'e1d1', score: 0 }] : [{ move: 'e8d8', score: 0 }];
+      },
+    };
+    const stop = new Error('stop');
+    await expect(
+      runBattle('4k3/p7/8/8/8/8/P7/4K3 w - - 0 1', engine, seededRng(1), async () => {
+        throw stop;
+      }),
+    ).rejects.toBe(stop);
+    expect(finished).toBe(running); // no search left running
+  });
 });

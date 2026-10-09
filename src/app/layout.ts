@@ -18,7 +18,10 @@ export function renderLayout(root: HTMLElement): void {
   <section id="match-hud" class="match-hud" hidden>
     <div class="match-top">
       <span id="match-round"></span>
-      <span id="match-timer" class="match-timer"></span>
+      <span class="match-top-right">
+        <span id="match-timer" class="match-timer"></span>
+        <button type="button" id="match-leave" class="leave-button">Leave</button>
+      </span>
     </div>
     <div class="timer-bar"><div id="timer-fill"></div></div>
     <ol id="match-players" class="match-players"></ol>
@@ -58,6 +61,18 @@ export function renderLayout(root: HTMLElement): void {
     <p class="fight-hint" id="fight-hint" hidden></p>
     <p class="hint" id="points"></p>
     <button type="button" id="last-replay" class="link-button" hidden>Watch your last battle</button>
+  </section>
+
+  <section id="lobby" class="lobby" hidden>
+    <p class="lobby-label">Room code</p>
+    <p class="lobby-code" id="lobby-code"></p>
+    <p class="dialog-text muted" id="lobby-status"></p>
+    <ol class="lobby-seats" id="lobby-seats"></ol>
+    <p class="dialog-text error" id="lobby-message"></p>
+    <div class="actions">
+      <button type="button" id="lobby-leave">Leave</button>
+      <button type="button" id="lobby-start" class="primary">Start match</button>
+    </div>
   </section>
 
   <section id="battle" hidden>
@@ -102,10 +117,18 @@ export function renderLayout(root: HTMLElement): void {
       <p class="dialog-text muted">Classic 8×8, standard pieces, auto battles.</p>
       <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 15-second shop instead of 45</label>
       <div class="actions">
-        <button type="submit" value="cancel" formnovalidate>Cancel</button>
-        <button type="submit" value="bots" class="primary">Play vs 3 bots</button>
+        <button type="submit" value="create" class="primary">Create room</button>
+        <button type="submit" value="bots">Play vs 3 bots</button>
       </div>
-      <p class="dialog-text muted">Online rooms with friends are coming next.</p>
+      <div class="join-row">
+        <input id="mp-code" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="4"
+          placeholder="Room code" aria-label="Room code" />
+        <button type="submit" value="join">Join room</button>
+      </div>
+      <p class="dialog-text error" id="mp-error"></p>
+      <div class="actions">
+        <button type="submit" value="cancel" formnovalidate>Cancel</button>
+      </div>
     </form>
   </dialog>
 

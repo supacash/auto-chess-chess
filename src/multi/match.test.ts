@@ -6,6 +6,10 @@ import {
   applyRound,
   botArmy,
   lossDamage,
+  matchIncome,
+  nextStreak,
+  nextStreaks,
+  streakBonus,
   type MatchPlayer,
   matchOver,
   mixSeed,
@@ -63,7 +67,8 @@ describe('pairRound', () => {
     expect(pairs).toHaveLength(2);
     const copy = pairs.find((p) => p.copy)!;
     expect(copy.black).not.toBe(copy.white);
-    expect(alive(three).map((p) => p.id)).toContain(copy.black);
+    const owner = copy.copy === 'b' ? copy.black : copy.white;
+    expect(alive(three).map((p) => p.id)).toContain(owner);
     // Every player still in fights exactly once (the copy's owner fights in their own battle).
     for (const id of ['a', 'b', 'c']) expect(pairingOf(pairs, id)).not.toBeNull();
     expect(pairingOf(pairs, 'd')).toBeNull();
@@ -94,11 +99,16 @@ describe('damage and knockouts', () => {
     const three = out(four(), 'd');
     const pairs = pairRound(three, 9, 3);
     const i = pairs.findIndex((p) => p.copy);
-    const next = applyRound(three, 3, [result(pairs, i, 'w', 30)]);
-    expect(next.find((p) => p.id === pairs[i].black)!.hp).toBe(START_HP);
+    const copySide = pairs[i].copy!;
+    const owner = copySide === 'b' ? pairs[i].black : pairs[i].white;
+    const odd = copySide === 'b' ? pairs[i].white : pairs[i].black;
+    const oddWins = copySide === 'b' ? 'w' : 'b';
+    const copyWins = copySide;
+    const next = applyRound(three, 3, [result(pairs, i, oddWins, 30, 30)]);
+    expect(next.find((p) => p.id === owner)!.hp).toBe(START_HP);
     // ...but the odd player out takes damage when the copy wins.
-    const lost = applyRound(three, 3, [result(pairs, i, 'b', 0, 30)]);
-    expect(lost.find((p) => p.id === pairs[i].white)!.hp).toBe(START_HP - 9);
+    const lost = applyRound(three, 3, [result(pairs, i, copyWins, 30, 30)]);
+    expect(lost.find((p) => p.id === odd)!.hp).toBe(START_HP - 9);
   });
 
   it('crowns the last player standing', () => {
@@ -116,8 +126,8 @@ describe('damage and knockouts', () => {
   it('places simultaneous knockouts by remaining health', () => {
     const players = four().map((p) => ({ ...p, hp: { a: 20, b: 1, c: 3, d: 20 }[p.id]! }));
     const pairs = [
-      { white: 'a', black: 'b', copy: false, whiteFirst: true, seed: 1 },
-      { white: 'd', black: 'c', copy: false, whiteFirst: true, seed: 2 },
+      { white: 'a', black: 'b', copy: null, seed: 1 },
+      { white: 'd', black: 'c', copy: null, seed: 2 },
     ];
     const next = applyRound(
       players,
@@ -138,5 +148,54 @@ describe('bot armies', () => {
     expect(types(botArmy(5, 3, 'bot-1'))).toBe(types(army));
     expect(types(botArmy(5, 3, 'bot-2'))).not.toBe(types(army));
     expect(types(botArmy(5, 4, 'bot-1'))).not.toBe(types(army));
+  });
+});
+
+describe('streaks', () => {
+  it('count wins up and losses down, with draws leaving them alone', () => {
+    expect(nextStreak(0, 'w')).toBe(1);
+    expect(nextStreak(2, 'w')).toBe(3);
+    expect(nextStreak(2, 'b')).toBe(-1);
+    expect(nextStreak(-2, 'b')).toBe(-3);
+    expect(nextStreak(-2, 'draw')).toBe(-2);
+  });
+
+  it('pay a capped bonus for win and loss streaks alike', () => {
+    expect([1, 2, 3, 4, 7].map(streakBonus)).toEqual([0, 1, 2, 3, 3]);
+    expect([-1, -2, -3, -4, -7].map(streakBonus)).toEqual([0, 1, 2, 3, 3]);
+  });
+
+  it('make income: base 5, +1 for a win, streak bonus on top; a draw pays 6 with no streak bonus', () => {
+    expect(matchIncome('w', 1)).toBe(6);
+    expect(matchIncome('w', 3)).toBe(8);
+    expect(matchIncome('b', -1)).toBe(5);
+    expect(matchIncome('b', -4)).toBe(8);
+    expect(matchIncome('draw', 5)).toBe(6);
+  });
+
+  it('update every player from a round, but not the owner of a copied army', () => {
+    const pairs = [
+      { white: 'a', black: 'b', copy: null, seed: 1 },
+      { white: 'c', black: 'a', copy: 'b' as const, seed: 2 },
+    ];
+    const next = nextStreaks(new Map([['a', 2]]), [
+      { pairing: pairs[0], winner: 'w', material: { w: 0, b: 0 } },
+      { pairing: pairs[1], winner: 'b', material: { w: 0, b: 0 } },
+    ]);
+    expect(Object.fromEntries(next)).toEqual({ a: 3, b: -1, c: -1 });
+  });
+});
+
+describe('sides', () => {
+  it('put each player on White and Black across rounds, odd player out included', () => {
+    const three = out(four(), 'd');
+    const sides = new Map<string, Set<string>>();
+    for (let round = 1; round <= 30; round++) {
+      for (const p of pairRound(three, 4, round)) {
+        if (p.copy !== 'w') sides.set(p.white, new Set([...(sides.get(p.white) ?? []), 'w']));
+        if (p.copy !== 'b') sides.set(p.black, new Set([...(sides.get(p.black) ?? []), 'b']));
+      }
+    }
+    for (const id of ['a', 'b', 'c']) expect(sides.get(id)).toEqual(new Set(['w', 'b']));
   });
 });

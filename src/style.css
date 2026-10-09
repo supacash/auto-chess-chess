@@ -1069,3 +1069,133 @@ body.in-match #multiplayer {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+/* ---- online rooms ---- */
+
+.join-row {
+  display: flex;
+  gap: 8px;
+}
+
+.join-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+}
+
+.join-row button {
+  flex: 0 0 auto;
+}
+
+.dialog-text.error {
+  min-height: 1.2em;
+  color: var(--danger);
+}
+
+body.in-lobby .run-bar,
+body.in-lobby #help,
+body.in-lobby #placement,
+body.in-lobby #new-run,
+body.in-lobby #multiplayer {
+  display: none;
+}
+
+.lobby {
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+  animation: fade-in 0.2s ease-out;
+}
+
+.lobby-label {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.lobby-code {
+  margin: 4px 0 8px;
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  color: var(--gold);
+  user-select: all;
+}
+
+.lobby-seats {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.seat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.seat small {
+  color: var(--muted);
+}
+
+.seat-number {
+  flex: none;
+  width: 1.6em;
+  height: 1.6em;
+  line-height: 1.6em;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--panel);
+  border-radius: 50%;
+}
+
+.empty-seat {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.match-players .streak.hot {
+  color: var(--gold);
+}
+
+.match-players .streak.cold {
+  color: #8ab4f8;
+}
+
+.match-top-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.leave-button {
+  flex: none;
+  min-height: 0;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+}

@@ -12,6 +12,6 @@ export default defineConfig({
   base: './',
   server: { headers: isolation },
   preview: { headers: isolation },
-  // e2e/ holds the Playwright browser tests (npm run e2e), not Vitest unit tests.
-  test: { exclude: [...configDefaults.exclude, 'e2e/**'] },
+  // e2e/ holds the Playwright browser tests (npm run e2e) and rules-test/ the emulator tests (npm run test:rules).
+  test: { exclude: [...configDefaults.exclude, 'e2e/**', 'e2e-online/**', 'rules-test/**'] },
 });

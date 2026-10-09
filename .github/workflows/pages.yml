@@ -31,6 +31,13 @@ jobs:
       # Browser smoke tests: whole runs in Chromium against the production build.
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
+      # Firestore security rules and two-player online rooms, on the Firebase emulators (need Java).
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm run test:rules
+      - run: npm run e2e:online
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

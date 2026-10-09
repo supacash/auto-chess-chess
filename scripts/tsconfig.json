@@ -4,7 +4,17 @@
   "compilerOptions": {
     "types": ["node", "vite/client"]
   },
-  "include": ["sim/**/*.ts", "check/**/*.ts", "../src/**/*.ts", "../e2e/**/*.ts", "../playwright.config.ts"],
+  "include": [
+    "sim/**/*.ts",
+    "check/**/*.ts",
+    "../src/**/*.ts",
+    "../e2e/**/*.ts",
+    "../e2e-online/**/*.ts",
+    "../playwright.online.config.ts",
+    "../rules-test/**/*.ts",
+    "../playwright.config.ts",
+    "../vitest.rules.config.ts"
+  ],
   // The root config leaves tests out of the browser typecheck (they use Node APIs); check them here.
   "exclude": []
 }

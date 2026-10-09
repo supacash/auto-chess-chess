@@ -8,3 +8,8 @@ export function $<T extends HTMLElement = HTMLElement>(selector: string): T {
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+/** Escapes text for use inside HTML (e.g. names that came from other players). */
+export function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+}

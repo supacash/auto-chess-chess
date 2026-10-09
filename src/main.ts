@@ -5,11 +5,14 @@ import { renderHeader } from './app/header';
 import { renderLayout } from './app/layout';
 import { NewRunDialog } from './app/newRunDialog';
 import { PlacementScreen } from './app/placementScreen';
+import { LobbyScreen } from './app/lobbyScreen';
 import { MatchController } from './app/matchController';
 import { Session } from './app/session';
 import { loadRules } from './chess/loadRules';
 import { Engine } from './engine/stockfish';
 import { ManualBattle } from './game/manualBattle';
+import { generateName } from './multi/names';
+import { isRoomCode, normalizeCode } from './online/room';
 import type { RunSettings } from './rules/difficulty';
 import type { BattleResult } from './rules/battle';
 import { seededRng } from './rules/rng';
@@ -44,14 +47,71 @@ const match = new MatchController({
     showPlacement();
   },
 });
+const lobby = new LobbyScreen(
+  (client, room) => {
+    document.body.classList.remove('in-lobby');
+    match.startOnline(client, room);
+  },
+  () => {
+    document.body.classList.remove('in-lobby');
+    showPlacement();
+  },
+  () => [1, 2, 3].map(() => generateName(Math.random)),
+);
 const matchDialog = $<HTMLDialogElement>('#match-dialog');
 $('#multiplayer').addEventListener('click', () => {
-  if (!busy) matchDialog.showModal();
+  if (busy) return;
+  $('#mp-error').textContent = '';
+  matchDialog.showModal();
 });
 matchDialog.querySelector('form')?.addEventListener('submit', (e) => {
-  if ((e.submitter as HTMLButtonElement | null)?.value !== 'bots') return;
-  match.startOffline({ blitz: $<HTMLInputElement>('#mp-blitz').checked });
+  const action = (e.submitter as HTMLButtonElement | null)?.value;
+  const blitz = $<HTMLInputElement>('#mp-blitz').checked;
+  if (action === 'bots') match.startOffline({ blitz });
+  else if (action === 'create' || action === 'join') {
+    e.preventDefault(); // keep the window open until the room is ready (or show what went wrong)
+    void openRoom(action, blitz);
+  }
 });
+
+/** The player's generated name, kept so friends recognise them from game to game. */
+function playerName(): string {
+  try {
+    const saved = localStorage.getItem('acc.name.v1');
+    if (saved) return saved;
+    const name = generateName(Math.random);
+    localStorage.setItem('acc.name.v1', name);
+    return name;
+  } catch {
+    return generateName(Math.random);
+  }
+}
+
+/** Creates or joins an online room, then shows its lobby. The Firebase code loads only now. */
+async function openRoom(action: 'create' | 'join', blitz: boolean): Promise<void> {
+  const error = $('#mp-error');
+  const code = normalizeCode($<HTMLInputElement>('#mp-code').value);
+  if (action === 'join' && !isRoomCode(code)) {
+    error.textContent = 'Enter the 4-letter room code.';
+    return;
+  }
+  error.textContent = action === 'create' ? 'Creating a room…' : 'Joining…';
+  try {
+    const { RoomClient } = await import('./online/client');
+    const client = await RoomClient.connect();
+    const name = playerName();
+    const roomCode = action === 'create' ? await client.createRoom(name, { blitz }, Math.random) : code;
+    if (action === 'join') await client.joinRoom(code, name);
+    matchDialog.close();
+    placement.hide();
+    battle.hide();
+    document.body.classList.add('in-lobby');
+    lobby.open(client, roomCode);
+  } catch (err) {
+    console.error(err);
+    error.textContent = err instanceof Error ? err.message : String(err);
+  }
+}
 
 let engine: Engine | null = null;
 let busy = false;

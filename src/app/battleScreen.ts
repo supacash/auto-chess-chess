@@ -11,7 +11,7 @@ import { roundIncome } from '../rules/economy';
 import type { Rng } from '../rules/rng';
 import { PIECE_NAME, type PieceType } from '../rules/pieces';
 import { BattleView } from '../ui/battleView';
-import { displayColor, inlinePiece } from '../ui/boardDom';
+import { displayColor, inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { $, sleep } from './dom';
 import type { BattleOutcome } from './session';
 
@@ -19,6 +19,8 @@ import type { BattleOutcome } from './session';
 const MOVE_MS = 400;
 /** Pause on the starting position before the first move. */
 const INTRO_MS = 700;
+/** Longer pause in multiplayer, where the player's side is announced first. */
+const SIDE_INTRO_MS = 2000;
 
 const REASON_TEXT: Record<EndReason, string> = {
   checkmate: 'by checkmate',
@@ -36,6 +38,13 @@ export interface Playback {
   result: BattleResult;
   moves: string[];
   evals: (number | null)[];
+}
+
+/** Thrown by play() when the battle was stopped with abort(). */
+export class BattleAborted extends Error {
+  constructor() {
+    super('Battle stopped');
+  }
 }
 
 type PlayerAction = { kind: 'move'; uci: string } | { kind: 'undo' } | { kind: 'resign' };
@@ -93,6 +102,7 @@ export class BattleScreen {
   }
 
   hide(): void {
+    this.waiting = false;
     this.section.hidden = true;
   }
 
@@ -107,11 +117,20 @@ export class BattleScreen {
     firstMover: Color,
     spec: BoardSpec,
     rng: Rng,
-    { flip = false, opponent = '' }: { flip?: boolean; opponent?: string } = {},
+    {
+      flip = false,
+      opponent = '',
+      announceSide = false,
+    }: { flip?: boolean; opponent?: string; announceSide?: boolean } = {},
   ): Promise<Playback> {
+    // In a match the player's pieces are drawn in their real colour (black when they're Black); the
+    // mirrored position puts them at the bottom either way.
+    if (announceSide) setPlayerColor(flip ? 'b' : 'w');
+    this.aborted = false;
     const show = (f: string) => (flip ? mirrorFen(f, spec.files) : f);
     const square = (s: string) => (flip ? mirrorSquare(s, spec.ranks) : s);
     const mine = flip ? 'b' : 'w';
+    this.waiting = false;
     this.speed = 1;
     this.skipping = false;
     this.renderPlaybackButtons();
@@ -127,8 +146,16 @@ export class BattleScreen {
     $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
     this.showEval(0);
     const against = opponent ? ` against ${opponent}` : '';
-    this.status.textContent = firstMover === mine ? `You move first${against}` : `Opponent moves first${against}`;
-    await sleep(INTRO_MS);
+    if (announceSide) {
+      // Multiplayer: sides are random each battle, so say which one before the first move.
+      const side = mine === 'w' ? 'White' : 'Black';
+      const first = firstMover === mine ? 'you move first' : 'they move first';
+      this.status.textContent = `You're ${side}${against} · ${first}`;
+      await sleep(SIDE_INTRO_MS);
+    } else {
+      this.status.textContent = firstMover === mine ? `You move first${against}` : `Opponent moves first${against}`;
+      await sleep(INTRO_MS);
+    }
 
     const moves: string[] = [];
     const evals: (number | null)[] = [];
@@ -137,6 +164,7 @@ export class BattleScreen {
       engine,
       rng,
       async (move, game, plies, evalScore) => {
+        if (this.aborted) throw new BattleAborted();
         moves.push(move.uci);
         evals.push(evalScore);
         const ms = this.skipping ? 0 : MOVE_MS / this.speed;
@@ -318,6 +346,27 @@ export class BattleScreen {
     });
   }
 
+  private waiting = false;
+  /** Set by abort(): the battle being played stops at its next move. */
+  private aborted = false;
+
+  /** Stops the battle being played (play() then rejects with BattleAborted). */
+  abort(): void {
+    this.aborted = true;
+  }
+
+  /** Hides the result card and shows `text` while waiting on other players (online matches). */
+  showWaiting(text: string): void {
+    this.result.hidden = true;
+    this.playback.hidden = true;
+    this.status.textContent = text;
+    this.waiting = true;
+  }
+
+  isWaiting(): boolean {
+    return this.waiting && !this.section.hidden;
+  }
+
   /** Replaces the status line (e.g. while other battles finish). */
   setStatus(text: string): void {
     this.status.textContent = text;
@@ -338,6 +387,7 @@ export class BattleScreen {
     this.manual.hidden = true;
     this.result.hidden = false;
     this.result.dataset.winner = card.tone;
+    this.waiting = false;
     this.status.textContent = 'Final position';
     $('#result-title').textContent = card.title;
     $('#result-detail').textContent = card.detail;

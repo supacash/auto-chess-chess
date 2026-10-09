@@ -1,0 +1,99 @@
+rules_version = '2';
+
+// Online rooms for 4-player matches (see src/online/). Players sign in anonymously.
+//
+// - rooms/{code}: the shared room. Anyone signed in can read it (to join by code). Only people
+//   seated in the room can change it, except that anyone may take a free seat while it's in the lobby.
+// - rooms/{code}/armies/{round}_{uid}: each player's locked army for a round. Only its owner can
+//   write it, only during that round's shop, and nobody else can read it until the shop has closed:
+//   opponents stay hidden until the battle starts.
+//
+// Clients validate everything they read (parseArmy), so these rules enforce ownership, timing and
+// size rather than every detail. Friends in a room are trusted not to tamper with the room document.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /rooms/{code} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && code.matches('^[A-HJ-NP-Z]{4}$')
+        && request.resource.data.code == code
+        && request.resource.data.host == request.auth.uid
+        && request.resource.data.status == 'lobby'
+        && request.resource.data.seats is list
+        && request.resource.data.seats.size() == 4
+        && request.resource.data.seats[0].uid == request.auth.uid;
+
+      allow update: if signedIn()
+        && request.resource.data.code == resource.data.code
+        && request.resource.data.host == resource.data.host
+        && (isSeated(resource.data) || joiningLobby());
+
+      allow delete: if signedIn() && resource.data.host == request.auth.uid;
+
+      match /armies/{armyId} {
+        allow create: if signedIn()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.round is int
+          && armyId == string(request.resource.data.round) + '_' + request.auth.uid
+          && request.resource.data.pieces is list
+          && request.resource.data.pieces.size() >= 1
+          && request.resource.data.pieces.size() <= 16
+          && isSeated(room())
+          && room().status == 'playing'
+          && room().phase == 'shop'
+          && room().round == request.resource.data.round;
+
+        // Your own army any time; others' once that round's shop has closed. Asking for an army that
+        // doesn't exist is allowed (it reveals nothing) so players can fall back to an earlier one.
+        allow read: if signedIn()
+          && (resource == null
+            || resource.data.uid == request.auth.uid
+            || room().round > resource.data.round
+            || (room().round == resource.data.round && room().phase != 'shop'));
+
+        allow update, delete: if false;
+
+        function room() {
+          return get(/databases/$(database)/documents/rooms/$(code)).data;
+        }
+      }
+    }
+
+    // Each player's clock-sync doc: write a server timestamp, read it back (src/online/client.ts).
+    match /clocks/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSeated(room) {
+      return room.seats[0].uid == request.auth.uid
+        || room.seats[1].uid == request.auth.uid
+        || room.seats[2].uid == request.auth.uid
+        || room.seats[3].uid == request.auth.uid;
+    }
+
+    // Taking one free seat in a lobby: nothing else changes, and each seat either stays as it was or
+    // goes from empty to the caller.
+    function joiningLobby() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.status == 'lobby'
+        && after.diff(before).affectedKeys().hasOnly(['seats'])
+        && after.seats.size() == 4
+        && seatOk(before.seats[0], after.seats[0])
+        && seatOk(before.seats[1], after.seats[1])
+        && seatOk(before.seats[2], after.seats[2])
+        && seatOk(before.seats[3], after.seats[3])
+        && isSeated(after);
+    }
+
+    function seatOk(before, after) {
+      return after == before || (before.uid == null && after.uid == request.auth.uid);
+    }
+  }
+}

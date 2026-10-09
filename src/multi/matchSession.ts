@@ -2,7 +2,7 @@ import type { PlacementSession } from '../app/placementSession';
 import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
 import type { Color } from '../chess/fen';
 import type { Winner } from '../rules/battle';
-import { rerollOffers, rollOffers, roundIncome, type Shop, type ShopResult, startingShop } from '../rules/economy';
+import { rerollOffers, rollOffers, type Shop, type ShopResult, startingShop } from '../rules/economy';
 import { gameMode } from '../rules/mode';
 import type { Piece } from '../rules/pieces';
 import { armyErrors, canPlace, pieceAt } from '../rules/placement';
@@ -14,8 +14,10 @@ import {
   botArmy,
   type MatchPlayer,
   type MatchSettings,
+  matchIncome,
   matchOver,
   newPlayers,
+  nextStreaks,
   type Pairing,
   type PairingResult,
   pairingOf,
@@ -48,6 +50,8 @@ export class MatchSession implements PlacementSession {
   pairings: Pairing[] = [];
   /** Health each player lost last round, for the round summary. */
   lastDamage = new Map<string, number>();
+  /** Each player's win (+n) or loss (−n) streak. */
+  streaks = new Map<string, number>();
   private locked = new Map<string, Piece[]>();
 
   constructor(
@@ -110,10 +114,12 @@ export class MatchSession implements PlacementSession {
     this.shop = { ...this.shop, pieces: withKingPlaced(this.shop.pieces, this.board) };
     this.locked = new Map();
     for (const p of alive(this.players)) {
+      // Armies given (online: everyone's uploaded army, the player's own included) come first.
       const army =
-        p.id === this.myId
+        armies.get(p.id) ??
+        (p.id === this.myId
           ? this.shop.pieces.filter((x) => x.square)
-          : (armies.get(p.id) ?? botArmy(this.seed, this.round, p.id, this.board));
+          : botArmy(this.seed, this.round, p.id, this.board));
       this.locked.set(p.id, army);
     }
     this.pairings = pairRound(this.players, this.seed, this.round);
@@ -131,13 +137,15 @@ export class MatchSession implements PlacementSession {
   }
 
   battle(pairing: Pairing): MatchBattle {
-    const start = startPosition(this.army(pairing.white), this.army(pairing.black), pairing.whiteFirst, this.board);
+    // White moves first, as in chess (a king that starts in check still moves first).
+    const start = startPosition(this.army(pairing.white), this.army(pairing.black), true, this.board);
     return { pairing, start: start.ok ? { fen: start.fen, firstMover: start.firstMover } : null };
   }
 
   /** Applies the round's results: health, knockouts, the player's income, then the next round's shop. */
   finishRound(results: PairingResult[]): void {
     this.lastDamage = roundDamage(this.round, results);
+    this.streaks = nextStreaks(this.streaks, results);
     this.players = applyRound(this.players, this.round, results);
     const mine = results.find((r) => r.pairing === this.myPairing());
     const myResult = mine ? fromSide(mine.winner, mine.pairing.white === this.myId ? 'w' : 'b') : 'draw';
@@ -148,7 +156,7 @@ export class MatchSession implements PlacementSession {
     this.round++;
     this.shop = {
       ...this.shop,
-      gold: this.shop.gold + roundIncome(myResult),
+      gold: this.shop.gold + matchIncome(myResult, this.streaks.get(this.myId) ?? 0),
       offers: rollOffers(this.round, this.rng, false),
     };
     this.pairings = [];

@@ -17,12 +17,16 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "check:determinism": "tsx scripts/check/determinism.ts",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "test:rules": "firebase emulators:exec --only firestore --project auto-chess-chess \"vitest run --config vitest.rules.config.ts\"",
+    "e2e:online": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.online.config.ts\""
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@playwright/test": "^1.64.0",
     "@types/node": "^22.20.5",
+    "firebase-tools": "^15.33.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
@@ -31,6 +35,7 @@
   "dependencies": {
     "coi-serviceworker": "^0.1.7",
     "fairy-stockfish-nnue.wasm": "^1.1.12",
-    "ffish-es6": "^0.7.10"
+    "ffish-es6": "^0.7.10",
+    "firebase": "^12.19.0"
   }
 }

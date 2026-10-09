@@ -66,7 +66,8 @@ describe('MatchSession', () => {
     expect(m.me.hp).toBe(START_HP - 3); // round 1 + 10/5
     expect(m.round).toBe(2);
     expect(m.phase).toBe('shop');
-    expect(m.shop.gold).toBe(goldBefore + 5); // loss income
+    expect(m.shop.gold).toBe(goldBefore + 5); // loss income (no streak yet)
+    expect(m.streaks.get('me')).toBe(-1);
     expect(m.pairings).toEqual([]);
   });
 
