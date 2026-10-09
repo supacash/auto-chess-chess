@@ -63,7 +63,7 @@ Every run is still alive after round 10, with an average score of 6.3. 298 of 10
 
 ## Problems found
 
-1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. `--ai-budget 0,6` plays all 1000 battles.
+1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.
    **Stockfish refuses armies the game allows (bug, affects the real game).** Stockfish 17+ rejects a position when a side's pawns plus "promoted" pieces exceed 8. Promoted pieces are knights, bishops or rooks beyond 2, and queens beyond 1. For example, 7 pawns + 4 bishops counts as 9. The engine prints `CRITICAL ERROR … Unsupported position. Too many pieces for WHITE` and then never sends `bestmove`.
    - The player can buy into this. `draftAiArmy` produces it too: at current budgets 15 of 1000 AI armies, and 160 of 1000 at 6×round. Once the pawn cap is hit, leftovers pile into upgrades.
    - In the browser, `Engine.candidates` waits for `bestmove` forever, so **the battle would freeze**.
