@@ -12,7 +12,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - No accounts or server. The run in progress and best scores live in the browser (localStorage).
 
 ## Core loop
-1. **Shop.** Spend gold on pawns, upgrades and the round's shop offers, and fuse pieces. You see the opponent's style and piece list (and, with Reveal on, where its pieces are).
+1. **Shop.** Spend gold on the round's shop offers and upgrades, and fuse pieces. You see the opponent's style and piece list (and, with Reveal on, where its pieces are).
 2. **Place.** Arrange your army in your home rows. Extras wait on the bench.
 3. **Battle.** The engine plays both sides; you watch, with an eval bar and 1×/2×/4×/Skip playback.
 4. **Result.** Win, lose or draw. Gold is paid out; a loss costs a life.
@@ -34,7 +34,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 ## Pieces and economy
 | Piece | Value | Cost |
 |---|---|---|
-| Pawn | 1 | 1 gold to buy |
+| Pawn | 1 | From shop offers (1 gold) |
 | Knight / Bishop | 3 | Pawn + 2 gold |
 | Rook | 5 | Knight/Bishop + 2 gold |
 | Queen | 9 | Rook + 4 gold |
@@ -45,9 +45,12 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **Income:** 5 gold per round, +2 for a win, +1 for a draw.
 - **Selling** refunds value minus 1 (minimum 0).
 - **Army cap:** 16 pieces including the king. There's no limit on the mix of pieces.
-- **Board space:** you can own more than fits; extras wait on the bench until the board grows. When your home (or pawn) squares are full, *Buy pawn* reads "Board full: upgrade instead".
+- **Board space:** you can own more than fits; extras wait on the bench until the board grows.
 - Pieces lost in battle come back for the next round.
 - **Shop offers:** 4 random pieces each round, each priced at its value, bought onto the bench. Offers cost at most 2 + 2×round (Rooks from round 2, Queens from round 4). Reroll: 1 gold. Fusion pieces are never offered. With fairy pieces off, offers are standard pieces only.
+- **Piece info:** tapping any piece (yours, a shop offer, or the opponent's in its list or on the revealed board) shows its value and how it moves.
+- **No single-pawn purchases:** pawns come from shop offers (Pawn and Berolina pawn are the most common offers).
+- **Pawn fusion:** three pawns (Berolina pawns count) fuse into a Knight or Bishop, or a Man with fairy pieces on. Free and points-neutral: it frees two board squares. The result takes the chosen pawn's square; benched pawns are used up first.
 - **Fusion** (fairy pieces on): free. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur. The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for value − 2 (the same as selling both parts).
 
 ### Fairy pieces
@@ -133,7 +136,6 @@ In Growing mode the board opens up during the run:
 Done: game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as.
 
 Next candidates (not yet decided):
-1. **Fusing three pawns** into a Knight, Bishop or Man (decided; next up).
 2. **Browser smoke test** (Playwright in CI): a full run including reload mid-battle.
 3. **Seeded runs:** one seed per run for reproducible bugs, and daily challenges.
 4. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.

@@ -6,11 +6,11 @@ Runs in the browser and is built for phones first. **[Play it here](https://supa
 
 ## How to play
 
-1. **Shop.** You start with a king, 4 pawns (3 in Classic) and 3 gold. Buy pawns (1g) and upgrade pieces for the difference in their value:
-   pawn → knight/bishop (2g) → rook (2g) → queen (4g). Selling refunds the piece's value minus 1.
+1. **Shop.** You start with a king, 4 pawns (3 in Classic) and 3 gold. Each round the shop offers 4 random pieces (reroll for 1g), including fairy pieces like the Cannon and Berolina pawn. Upgrade pieces for the difference in their value:
+   pawn → knight/bishop (2g) → rook (2g) → queen (4g). Fuse a Knight with a Bishop, Rook, Queen or Man for a compound piece, or three pawns into a Knight, Bishop or Man, for free. Selling refunds the piece's value minus 1.
 2. **Place.** Drag or tap pieces into your home rows. In the default *Growing board* mode the board starts at 5×5 and grows every two rounds to 8×8; *Classic* mode is 8×8 throughout. The king can't go on the front row, and pawns can't go on the back row.
-   You can see which pieces the opponent has and its style, but not where they are.
-3. **Fight.** The engine plays both sides. A round ends on checkmate, or after 45 moves each, when the side with more material wins on points.
+   You can see which pieces the opponent has and its style, but not where they are. Tap any piece to see what it does.
+3. **Fight.** The engine plays both sides. A round ends on checkmate, or after a move limit (or when nobody can checkmate any more), when the side with more material wins on points.
 4. **Repeat.** Every round you earn 5 gold, +2 for a win or +1 for a draw. A loss costs one of your 3 lives. Your score is the number of rounds won.
 
 Your run is saved in the browser and resumes after a reload. Leaving in the middle of a battle counts as a loss.

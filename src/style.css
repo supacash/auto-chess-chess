@@ -239,6 +239,31 @@ button:disabled {
   color: var(--muted);
 }
 
+.opponent button.foe {
+  flex: none;
+  padding: 1px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.opponent button.foe.active {
+  border-color: var(--accent);
+}
+
+.opponent-info {
+  margin: -4px 0 8px;
+  padding: 6px 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+  background: var(--panel);
+  border-radius: 6px;
+}
+
+.opponent-info strong {
+  color: var(--text);
+}
+
 .opponent .glyphs {
   white-space: nowrap;
 }
@@ -392,13 +417,6 @@ button.fuse {
   border-color: rgb(95 179 107 / 0.6);
 }
 
-.offers-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 12px;
-}
-
 .offers-label {
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -406,7 +424,8 @@ button.fuse {
   color: var(--muted);
 }
 
-.shop .offers-head button {
+.shop .shop-row #reroll {
+  margin-left: auto;
   flex: 0 0 auto;
   padding: 4px 10px;
   font-size: 0.85rem;
@@ -550,7 +569,7 @@ header .link {
 }
 
 .piece.enemy-piece {
-  cursor: default;
+  cursor: help;
 }
 
 /* ---- new run window ---- */

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   buyOffer,
-  buyPawn,
+  fusePawns,
+  pawnFusionOptions,
   fusePieces,
   fusionOptions,
   fusionResult,
@@ -37,21 +38,6 @@ describe('startingShop', () => {
   });
 });
 
-describe('buyPawn', () => {
-  it('costs 1 gold and adds a benched pawn', () => {
-    const shop = ok(buyPawn(startingShop()));
-    expect(shop.gold).toBe(2);
-    expect(shop.pieces).toHaveLength(5);
-    expect(shop.pieces[4]).toMatchObject({ type: 'P', square: null });
-  });
-
-  it('fails without gold or when the army is full', () => {
-    expect(buyPawn({ gold: 0, pieces: [] })).toMatchObject({ ok: false, error: 'Not enough gold' });
-    const full = { gold: 10, pieces: Array.from({ length: MAX_ARMY }, () => makePiece('P')) };
-    expect(buyPawn(full).ok).toBe(false);
-  });
-});
-
 describe('upgradePiece', () => {
   it('follows the upgrade path and keeps the square', () => {
     const pawn = makePiece('P', { file: 3, rank: 1 });
@@ -84,7 +70,7 @@ describe('upgradePiece', () => {
   it('keeps gold spent equal to army points', () => {
     let shop = startingShop();
     const start = shop.gold + points(shop);
-    shop = ok(buyPawn(shop));
+    shop = ok(buyOffer({ ...shop, offers: ['P'] }, 0));
     shop = ok(upgradePiece(shop, shop.pieces[1].id, 'B'));
     expect(shop.gold + points(shop)).toBe(start);
     expect(upgradeCost('B', 'R')).toBe(2);
@@ -117,7 +103,7 @@ describe('roundIncome', () => {
 describe('no piece-count limit', () => {
   it('lets an army have more than 8 pawns plus extra pieces (Fairy-Stockfish accepts them)', () => {
     const shop: Shop = { gold: 100, pieces: 'KPPPPPPPPBBB'.split('').map((t) => makePiece(t as PieceType)) };
-    expect(buyPawn(shop).ok).toBe(true);
+    expect(buyOffer({ ...shop, offers: ['P'] }, 0).ok).toBe(true);
     expect(upgradePiece(shop, shop.pieces[1].id, 'B').ok).toBe(true);
   });
 });
@@ -215,5 +201,38 @@ describe('fusion', () => {
     ]);
     expect(fusionOptions(shop, rook.id)).toEqual([{ partnerId: knight.id, result: 'C' }]);
     expect(fusionOptions(shop, shop.pieces[0].id)).toEqual([]);
+  });
+});
+
+describe('pawn fusion', () => {
+  it('needs three pawns (Berolina pawns count) and offers the Man only with fairy pieces on', () => {
+    const a = makePiece('P', { file: 1, rank: 1 });
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), a, makePiece('E')] };
+    expect(pawnFusionOptions(shop, a.id, true)).toEqual([]);
+    const three = { ...shop, pieces: [...shop.pieces, makePiece('P')] };
+    expect(pawnFusionOptions(three, a.id, true)).toEqual(['N', 'B', 'M']);
+    expect(pawnFusionOptions(three, a.id, false)).toEqual(['N', 'B']);
+    expect(pawnFusionOptions(three, three.pieces[0].id, true)).toEqual([]);
+  });
+
+  it('is free, keeps points, puts the result on the chosen pawn and uses benched pawns first', () => {
+    const chosen = makePiece('P', { file: 2, rank: 1 });
+    const placed = makePiece('P', { file: 3, rank: 1 });
+    const bench1 = makePiece('E');
+    const bench2 = makePiece('P');
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), chosen, placed, bench1, bench2] };
+    const next = ok(fusePawns(shop, chosen.id, 'B', false));
+    expect(next.gold).toBe(0);
+    expect(next.pieces.map((p) => p.id)).toEqual([shop.pieces[0].id, chosen.id, placed.id]);
+    expect(next.pieces[1]).toEqual({ ...chosen, type: 'B' });
+    expect(points(next)).toBe(points(shop));
+  });
+
+  it('rejects other results, the Man without fairy pieces, and too few pawns', () => {
+    const pawns = [makePiece('P'), makePiece('P'), makePiece('P')];
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), ...pawns] };
+    expect(fusePawns(shop, pawns[0].id, 'R', true).ok).toBe(false);
+    expect(fusePawns(shop, pawns[0].id, 'M', false).ok).toBe(false);
+    expect(fusePawns({ ...shop, pieces: shop.pieces.slice(0, 3) }, pawns[0].id, 'N', true).ok).toBe(false);
   });
 });

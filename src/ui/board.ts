@@ -1,5 +1,5 @@
 import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
-import { type Piece, type Square, PIECE_NAME } from '../rules/pieces';
+import { type Piece, type PieceType, type Square, PIECE_NAME } from '../rules/pieces';
 import { movePiece, pieceAt, placementError } from '../rules/placement';
 import { mirror } from '../rules/position';
 import { fillPiece, label, squareEl } from './boardDom';
@@ -11,6 +11,8 @@ type DropTarget = { kind: 'square'; sq: Square } | { kind: 'bench' };
 
 interface Press {
   pieceId: string | null;
+  /** The opponent piece type pressed, if any (revealed opponents only). */
+  foe: PieceType | null;
   x: number;
   y: number;
   dragging: boolean;
@@ -22,6 +24,8 @@ export interface PlacementBoardOptions {
   onMessage: (text: string) => void;
   /** Called whenever the tap-selected piece changes (null = none). */
   onSelect?: (pieceId: string | null) => void;
+  /** Called when an opponent piece is tapped (with Reveal on) while nothing is selected. */
+  onFoeTap?: (type: PieceType) => void;
 }
 
 /** Interactive placement board: drag or tap pieces between the bench and the home rows. */
@@ -147,7 +151,15 @@ export class PlacementBoard {
   private onPointerDown(e: PointerEvent): void {
     if (e.button !== 0) return;
     const pieceEl = (e.target as HTMLElement).closest<HTMLElement>('.piece[data-id]');
-    this.press = { pieceId: pieceEl?.dataset.id ?? null, x: e.clientX, y: e.clientY, dragging: false, ghost: null };
+    const foe = ((e.target as HTMLElement).closest<HTMLElement>('[data-foe]')?.dataset.foe as PieceType) ?? null;
+    this.press = {
+      pieceId: pieceEl?.dataset.id ?? null,
+      foe,
+      x: e.clientX,
+      y: e.clientY,
+      dragging: false,
+      ghost: null,
+    };
     if (pieceEl) e.preventDefault();
   }
 
@@ -176,6 +188,8 @@ export class PlacementBoard {
 
     if (press.dragging) {
       if (target) this.tryMove(press.pieceId!, target);
+    } else if (press.foe && !this.selected) {
+      this.opts.onFoeTap?.(press.foe);
     } else {
       this.handleTap(press.pieceId, target);
     }
@@ -234,6 +248,7 @@ function enemyEl(p: Piece): HTMLElement {
   el.className = 'piece black enemy-piece';
   fillPiece(el, p.type, 'b');
   el.title = `Opponent's ${PIECE_NAME[p.type]}`;
+  el.dataset.foe = p.type;
   return el;
 }
 

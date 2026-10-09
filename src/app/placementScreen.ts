@@ -1,11 +1,12 @@
-import { homeSquares, pawnSquares } from '../chess/boardSpec';
+import { homeSquares } from '../chess/boardSpec';
 import {
   buyOffer,
-  buyPawn,
+  fusePawns,
   fusePieces,
   fusionOptions,
+  PAWN_FUSION_COUNT,
+  pawnFusionOptions,
   REROLL_COST,
-  PAWN_COST,
   type ShopResult,
   sellPiece,
   sellValue,
@@ -13,7 +14,7 @@ import {
   upgradeCost,
   upgradePiece,
 } from '../rules/economy';
-import { isPawnLike, MAX_ARMY, type Piece, PIECE_NAME, PIECE_VALUE, PIECES, type PieceType } from '../rules/pieces';
+import { MAX_ARMY, type Piece, PIECE_NAME, PIECE_VALUE, PIECES, type PieceType } from '../rules/pieces';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { $ } from './dom';
@@ -33,6 +34,8 @@ export class PlacementScreen {
   private selected: string | null = null;
   /** The shop offer being looked at (its index), shown with its description and a Buy button. */
   private selectedOffer: number | null = null;
+  /** The opponent piece type whose description is showing. */
+  private foeInfo: PieceType | null = null;
   private busy = false;
   /** Variant of the board last shown, to announce when it grows. */
   private shownBoard: string | null = null;
@@ -44,6 +47,7 @@ export class PlacementScreen {
     this.board = new PlacementBoard($('#board-root'), session.run.shop.pieces, {
       onChange: (pieces) => this.piecesChanged(pieces),
       onMessage: (text) => this.setMessage(text),
+      onFoeTap: (type) => this.toggleFoeInfo(type),
       onSelect: (id) => {
         this.selected = id;
         if (id) this.selectedOffer = null;
@@ -57,14 +61,21 @@ export class PlacementScreen {
       this.setMessage('');
       this.piecesChanged(pieces);
     });
-    $('#buy-pawn').addEventListener('click', () => this.applyShop(buyPawn(this.session.run.shop)));
     $('#piece-actions').addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
       if (!btn || !this.selected) return;
       const shop = this.session.run.shop;
       if (btn.dataset.upgrade) this.applyShop(upgradePiece(shop, this.selected, btn.dataset.upgrade as PieceType));
       else if (btn.dataset.fuse) this.applyShop(fusePieces(shop, this.selected, btn.dataset.fuse));
-      else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
+      else if (btn.dataset.fusePawns) {
+        const fairy = this.session.run.settings.fairy;
+        this.applyShop(fusePawns(shop, this.selected, btn.dataset.fusePawns as PieceType, fairy));
+      } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
+    });
+    // Tapping an opponent piece in the list explains what it does (the board reports taps via onFoeTap).
+    $('#opponent').addEventListener('click', (e) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-foe]');
+      if (el) this.toggleFoeInfo(el.dataset.foe as PieceType);
     });
     $('#offers').addEventListener('click', (e) => {
       const card = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-offer]');
@@ -152,7 +163,30 @@ export class PlacementScreen {
     const points = types.reduce((s, t) => s + PIECE_VALUE[t], 0);
     $('#opponent').innerHTML =
       `Opponent · <strong>${aiStyle.name}</strong>: ` +
-      `<span class="glyphs">${types.map((t) => inlinePiece(t, 'b')).join('')}</span> · ${points} pts`;
+      `<span class="glyphs">${types
+        .map(
+          (t) =>
+            `<button type="button" class="foe" data-foe="${t}" aria-label="What does the ${PIECE_NAME[t]} do?">${inlinePiece(t, 'b')}</button>`,
+        )
+        .join('')}</span> · ${points} pts`;
+    this.foeInfo = null;
+    this.renderFoeInfo();
+  }
+
+  private toggleFoeInfo(type: PieceType): void {
+    this.foeInfo = this.foeInfo === type ? null : type;
+    this.renderFoeInfo();
+  }
+
+  private renderFoeInfo(): void {
+    const info = $('#opponent-info');
+    const type = this.foeInfo;
+    info.hidden = !type;
+    for (const el of document.querySelectorAll<HTMLElement>('#opponent [data-foe]')) {
+      el.classList.toggle('active', el.dataset.foe === type);
+    }
+    if (!type) return;
+    info.innerHTML = `${inlinePiece(type, 'b')} <strong>${PIECE_NAME[type]}</strong> · ${PIECE_VALUE[type]} pts. ${PIECES[type].description}`;
   }
 
   private deselectPiece(): void {
@@ -191,14 +225,6 @@ export class PlacementScreen {
     this.renderOffers();
     const { gold, pieces } = this.session.run.shop;
     $('#gold').textContent = `${gold}g`;
-    const buy = $<HTMLButtonElement>('#buy-pawn');
-    buy.disabled = gold < PAWN_COST || pieces.length >= MAX_ARMY;
-    // On a full board, more pawns only wait on the bench: point players at upgrades instead.
-    const spec = this.session.board;
-    const pawns = pieces.filter((p) => isPawnLike(p.type)).length;
-    const boardFull = pieces.length >= homeSquares(spec) || pawns >= pawnSquares(spec);
-    buy.textContent = boardFull ? `Board full: upgrade instead (pawn ${PAWN_COST}g)` : `Buy pawn · ${PAWN_COST}g`;
-    buy.classList.toggle('muted', boardFull);
 
     const actions = $('#piece-actions');
     const piece = pieces.find((p) => p.id === this.selected);
@@ -224,9 +250,16 @@ export class PlacementScreen {
         return `<button type="button" class="fuse" data-fuse="${partnerId}" title="Uses up a ${PIECE_NAME[partner.type]}">+ ${inlinePiece(partner.type)} → ${inlinePiece(result)} ${PIECE_NAME[result]}</button>`;
       })
       .join('');
+    // Three pawns → one piece: same points, two squares freed.
+    const pawnFusions = pawnFusionOptions(this.session.run.shop, piece.id, this.session.run.settings.fairy)
+      .map(
+        (to) =>
+          `<button type="button" class="fuse" data-fuse-pawns="${to}" title="Uses up ${PAWN_FUSION_COUNT - 1} more pawns">${PAWN_FUSION_COUNT}×${inlinePiece(piece.type)} → ${inlinePiece(to)} ${PIECE_NAME[to]}</button>`,
+      )
+      .join('');
     actions.innerHTML =
       `<p class="piece-info"><strong>${PIECE_NAME[piece.type]}</strong> · ${PIECE_VALUE[piece.type]} pts. ${PIECES[piece.type].description}</p>` +
-      `${upgrades}${fusions}${sell}`;
+      `${upgrades}${fusions}${pawnFusions}${sell}`;
   }
 
   /** Applies a shop action, or shows why it failed. */

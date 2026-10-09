@@ -1,5 +1,5 @@
 import { DIFFICULTIES, SIDES } from '../rules/difficulty';
-import { PAWN_COST, REROLL_COST } from '../rules/economy';
+import { REROLL_COST } from '../rules/economy';
 import { MODES } from '../rules/mode';
 
 /** Playback speeds offered during a battle. */
@@ -21,18 +21,16 @@ export function renderLayout(root: HTMLElement): void {
 
   <section id="placement">
     <p class="help" id="help">
-      Place your king and any other pieces in your home rows (the lit squares), spend gold on pawns and upgrades, then press
+      Place your king and any other pieces in your home rows (the lit squares), buy pieces from the shop, upgrade or fuse them, then press
       <strong>Fight</strong>. The engine plays both sides. Lose a round and you lose a life.
     </p>
     <p class="notice" id="notice" role="status" hidden></p>
     <p class="opponent" id="opponent"></p>
+    <p class="opponent-info" id="opponent-info" role="status" hidden></p>
     <div id="board-root"></div>
     <div class="shop">
       <div class="shop-row">
         <span class="gold" id="gold" aria-label="Gold"></span>
-        <button id="buy-pawn" type="button">Buy pawn · ${PAWN_COST}g</button>
-      </div>
-      <div class="offers-head">
         <span class="offers-label">For sale</span>
         <button id="reroll" type="button">Reroll · ${REROLL_COST}g</button>
       </div>

@@ -16,7 +16,7 @@ import { aiBudget, AI_STYLES, draftAiArmy, pickStyle, placeAiArmy } from '../../
 import { type BoardSpec, plyLimit } from '../../src/chess/boardSpec';
 import { gameMode } from '../../src/rules/mode';
 import { type BattleLimits, type BattleResult, material } from '../../src/rules/battle';
-import { roundIncome, START_GOLD, startingShop } from '../../src/rules/economy';
+import { rollOffers, roundIncome, START_GOLD, startingShop } from '../../src/rules/economy';
 import { type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
 import { startPosition } from '../../src/rules/position';
 import { randomInt, seededRng } from '../../src/rules/rng';
@@ -146,7 +146,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     if (PLAYER_POINTS === 'ai') playerPoints = aiPoints;
     let playerTypes: PieceType[];
     if (PLAYER === 'shop') {
-      shop = spendGold(shop, runStyle, rng, spec);
+      shop = spendGold({ ...shop, offers: rollOffers(round, rng, PLAYER_FAIRY) }, runStyle, rng, spec);
       playerPoints = armyValue(shop);
       playerTypes = shop.pieces.map((p) => p.type);
     } else {
