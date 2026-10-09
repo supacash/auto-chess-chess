@@ -7,6 +7,8 @@ import { NewRunDialog } from './app/newRunDialog';
 import { PlacementScreen } from './app/placementScreen';
 import { LobbyScreen } from './app/lobbyScreen';
 import { MatchController } from './app/matchController';
+import { ProfileScreen } from './app/profileScreen';
+import { RecordBook } from './app/recordBook';
 import { Session } from './app/session';
 import { loadRules } from './chess/loadRules';
 import { Engine } from './engine/stockfish';
@@ -22,6 +24,7 @@ const rng = Math.random;
 
 renderLayout($('#app'));
 const session = new Session(rng);
+const records = new RecordBook();
 const placement = new PlacementScreen(
   session,
   () => renderHeader(session),
@@ -36,6 +39,12 @@ const battle = new BattleScreen(
   },
   () => void watchReplay(),
 );
+placement.onGained = (type) => records.bought(type);
+const profile = new ProfileScreen(records, playerName, renamePlayer, () => showMenu());
+$('#menu-profile').addEventListener('click', () => {
+  $('#menu').hidden = true;
+  profile.show();
+});
 const newRun = new NewRunDialog(startNewRun);
 $('#menu-button').addEventListener('click', () => {
   // During a Play it game, Menu pauses it (it's saved after every move); Resume game picks it up.
@@ -54,6 +63,7 @@ const match = new MatchController({
   placement,
   battle,
   ensureEngine,
+  records,
   onExit: () => {
     placement.use(session, { header: () => renderHeader(session) });
     showMenu();
@@ -87,6 +97,17 @@ matchDialog.querySelector('form')?.addEventListener('submit', (e) => {
     void openRoom(action, blitz);
   }
 });
+
+/** Picks a new random name for the player (used in online rooms from then on). */
+function renamePlayer(): string {
+  const name = generateName(Math.random);
+  try {
+    localStorage.setItem('acc.name.v1', name);
+  } catch {
+    // ignore
+  }
+  return name;
+}
 
 /** The player's generated name, kept so friends recognise them from game to game. */
 function playerName(): string {
@@ -142,6 +163,7 @@ function showMenu(notice = ''): void {
   battle.hide();
   placement.hide();
   document.body.classList.add('in-menu');
+  profile.hide();
   $('#menu').hidden = false;
   const inProgress = session.manual !== null || (session.saved && !isRunOver(session.run));
   $('#menu-resume').hidden = !inProgress;
@@ -159,6 +181,7 @@ function showMenu(notice = ''): void {
 function hideMenu(): void {
   document.body.classList.remove('in-menu');
   $('#menu').hidden = true;
+  profile.hide();
 }
 
 function openNewRun(): void {
@@ -200,7 +223,9 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
     // Auto battles can't be left midway (leaving counts as a loss); Play it games can be paused.
     $<HTMLButtonElement>('#menu-button').disabled = !session.manual;
     const result = await play(loaded);
+    const settings = session.run.settings;
     const outcome = session.finishBattle(result);
+    if (outcome.over) records.runEnd(settings, outcome.score);
     renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
   } catch (err) {
@@ -228,7 +253,7 @@ function fight(): void {
     const seed = session.newSeed();
     const record = session.startRecord(start.fen, seed, false);
     session.persist(true);
-    const { result, moves, evals } = await battle.play(
+    const { result, moves, evals, worstDeficit } = await battle.play(
       loaded,
       start.fen,
       start.firstMover,
@@ -236,6 +261,7 @@ function fight(): void {
       seededRng(seed),
     );
     session.saveReplay({ ...record, moves, evals, result });
+    records.battle(result, 'w', worstDeficit, session.run.settings);
     return result;
   });
 }
@@ -256,6 +282,7 @@ async function playManual(loaded: Engine, game: ManualBattle): Promise<BattleRes
   try {
     const result = await battle.playManual(loaded, game, (state) => session.saveManual(state));
     session.saveReplay({ ...record, moves: [...game.moves], evals: [], result });
+    records.battle(result, 'w', battle.manualWorstDeficit, session.run.settings);
     return result;
   } finally {
     game.delete();

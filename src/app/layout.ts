@@ -25,6 +25,7 @@ export function renderLayout(root: HTMLElement): void {
       </button>
       <button type="button" id="menu-new">New game</button>
       <button type="button" id="menu-multiplayer">Multiplayer</button>
+      <button type="button" id="menu-profile">Profile</button>
     </div>
     <button type="button" id="menu-replay" class="link-button" hidden>Watch your last battle</button>
   </section>
@@ -74,6 +75,28 @@ export function renderLayout(root: HTMLElement): void {
     <p class="fight-hint" id="fight-hint" hidden></p>
     <p class="hint" id="points"></p>
     <button type="button" id="last-replay" class="link-button" hidden>Watch your last battle</button>
+  </section>
+
+  <section id="profile" class="profile" hidden>
+    <div class="profile-head">
+      <img class="profile-logo" src="${import.meta.env.BASE_URL}icon.svg" alt="" width="52" height="52" />
+      <div>
+        <p class="profile-name"><span id="profile-name"></span>
+          <button type="button" id="profile-rename" class="leave-button" title="Pick a new random name">New name</button>
+        </p>
+        <p class="dialog-text muted">Your records are saved on this device.</p>
+      </div>
+    </div>
+    <div class="tabs" id="profile-tabs" role="tablist">
+      <button type="button" role="tab" data-tab="single">Single</button>
+      <button type="button" role="tab" data-tab="multi">Multiplayer</button>
+      <button type="button" role="tab" data-tab="history">History</button>
+      <button type="button" role="tab" data-tab="fun">Fun</button>
+    </div>
+    <div id="profile-body" class="profile-body"></div>
+    <div class="actions">
+      <button type="button" id="profile-back" class="primary">Back to menu</button>
+    </div>
   </section>
 
   <section id="lobby" class="lobby" hidden>

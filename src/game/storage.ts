@@ -7,6 +7,7 @@ import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
 import type { Run } from '../rules/run';
 import type { ManualState } from './manualBattle';
 import { type BattleRecord, parseRecord } from './record';
+import { parseRecords, type Records } from './records';
 
 /** Saved squares may be anywhere on the biggest board; the game fits them to the current one (fitToBoard). */
 const MAX_FILES = Math.max(...BOARDS.map((b) => b.files));
@@ -15,6 +16,8 @@ const MAX_HOME_ROWS = Math.max(...BOARDS.map((b) => b.homeRows));
 // The key names keep their original "v1" suffix so existing saves are found; the save's format
 // version lives inside it (SavedGame.version) and is upgraded by MIGRATIONS.
 const RUN_KEY = 'acc.run.v1';
+/** Personal records (see records.ts). */
+const RECORDS_KEY = 'acc.records.v1';
 /** The last finished battle, for Watch replay. */
 const REPLAY_KEY = 'acc.replay.v1';
 const BEST_KEY = 'acc.best.v1';
@@ -65,6 +68,24 @@ export function loadReplay(): BattleRecord | null {
 export function saveReplay(record: BattleRecord): void {
   try {
     localStorage.setItem(REPLAY_KEY, JSON.stringify(record));
+  } catch {
+    // ignore
+  }
+}
+
+/** Saved records, or null when there are none yet (e.g. a first visit, or before records existed). */
+export function loadRecords(): Records | null {
+  try {
+    const raw = localStorage.getItem(RECORDS_KEY);
+    return raw ? parseRecords(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveRecords(records: Records): void {
+  try {
+    localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
   } catch {
     // ignore
   }

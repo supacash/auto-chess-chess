@@ -48,6 +48,8 @@ export class PlacementScreen {
   /** Variant of the board last shown, to announce when it grows. */
   private shownBoard: string | null = null;
   private mode: PlacementMode;
+  /** Called with each piece gained in the shop (bought, upgraded into or fused), for records. */
+  onGained: ((type: PieceType) => void) | null = null;
 
   constructor(
     private session: PlacementSession,
@@ -78,11 +80,17 @@ export class PlacementScreen {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
       if (!btn || !this.selected) return;
       const shop = this.session.run.shop;
-      if (btn.dataset.upgrade) this.applyShop(upgradePiece(shop, this.selected, btn.dataset.upgrade as PieceType));
-      else if (btn.dataset.fuse) this.applyShop(fusePieces(shop, this.selected, btn.dataset.fuse));
-      else if (btn.dataset.fusePawns) {
+      if (btn.dataset.upgrade) {
+        const to = btn.dataset.upgrade as PieceType;
+        this.applyShop(upgradePiece(shop, this.selected, to), to);
+      } else if (btn.dataset.fuse) {
+        const result = fusePieces(shop, this.selected, btn.dataset.fuse);
+        const id = this.selected;
+        this.applyShop(result, result.ok ? result.shop.pieces.find((p) => p.id === id)?.type : undefined);
+      } else if (btn.dataset.fusePawns) {
         const fairy = this.session.run.settings.fairy;
-        this.applyShop(fusePawns(shop, this.selected, btn.dataset.fusePawns as PieceType, fairy));
+        const to = btn.dataset.fusePawns as PieceType;
+        this.applyShop(fusePawns(shop, this.selected, to, fairy), to);
       } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
     });
     // Tapping an opponent piece in the list explains what it does (the board reports taps via onFoeTap).
@@ -102,7 +110,7 @@ export class PlacementScreen {
       if (!(e.target as HTMLElement).closest('button[data-buy]') || this.selectedOffer === null) return;
       const index = this.selectedOffer;
       this.selectedOffer = null;
-      this.applyShop(buyOffer(this.session.run.shop, index));
+      this.applyShop(buyOffer(this.session.run.shop, index), this.session.run.shop.offers?.[index]);
     });
     $('#reroll').addEventListener('click', () => {
       this.selectedOffer = null;
@@ -316,11 +324,12 @@ export class PlacementScreen {
   }
 
   /** Applies a shop action, or shows why it failed. */
-  private applyShop(result: ShopResult): void {
+  private applyShop(result: ShopResult, gained?: PieceType): void {
     if (!result.ok) {
       this.setMessage(result.error);
       return;
     }
+    if (gained) this.onGained?.(gained);
     this.setMessage('');
     this.session.setShop(result.shop);
     this.board.setPieces(result.shop.pieces);

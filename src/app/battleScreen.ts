@@ -38,6 +38,8 @@ export interface Playback {
   result: BattleResult;
   moves: string[];
   evals: (number | null)[];
+  /** The most points the player was ever behind in material (for records). */
+  worstDeficit: number;
 }
 
 /** Thrown by play() when the battle was stopped with abort(). */
@@ -167,6 +169,7 @@ export class BattleScreen {
 
     const moves: string[] = [];
     const evals: (number | null)[] = [];
+    let worstDeficit = 0;
     const result = await runBattle(
       fen,
       engine,
@@ -175,6 +178,8 @@ export class BattleScreen {
         if (this.aborted) throw new BattleAborted();
         moves.push(move.uci);
         evals.push(evalScore);
+        const now = material(game.fen());
+        worstDeficit = Math.max(worstDeficit, now[mine === 'w' ? 'b' : 'w'] - now[mine]);
         const ms = this.skipping ? 0 : MOVE_MS / this.speed;
         this.view.render(show(game.fen()), game.spec, {
           last: { from: square(move.from), to: square(move.to) },
@@ -195,7 +200,7 @@ export class BattleScreen {
     if (result.reason === 'checkmate' && result.winner !== 'draw') {
       this.showEval(checkmateEval(result.winner === mine ? 'w' : 'b'));
     }
-    return { result, moves, evals };
+    return { result, moves, evals, worstDeficit };
   }
 
   /**
@@ -279,7 +284,10 @@ export class BattleScreen {
         check: game.isCheck(),
       });
       this.renderSides(game.fen, game.spec.files);
+      const now = material(game.fen);
+      this.manualWorstDeficit = Math.max(this.manualWorstDeficit, now.b - now.w);
     };
+    this.manualWorstDeficit = 0;
     this.showSides(true);
     draw();
 
@@ -413,6 +421,8 @@ export class BattleScreen {
   private waiting = false;
   /** Set by abort(): the battle being played stops at its next move. */
   private aborted = false;
+  /** The most points the player was behind in the last Play it game (for records). */
+  manualWorstDeficit = 0;
   /** True while a Play it game is on screen; pauseRequested makes it stop at the player's next turn. */
   private inManual = false;
   private pauseRequested = false;

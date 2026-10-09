@@ -149,3 +149,27 @@ test('a multiplayer match against bots plays a round with health and moves on', 
   await expect(page.locator('#match-round')).toContainText('Round 2 · Shop');
   await expect(page.locator('#match-timer')).toHaveText(/\d+s/);
 });
+
+test('the profile shows records from play, by tab', async ({ page }) => {
+  await startRun(page);
+  await placeKing(page);
+  await page.locator('#fight').click();
+  await page.locator('#skip').click();
+  await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
+  await page.locator('#next').click();
+
+  await page.locator('#menu-button').click();
+  await page.locator('#menu-profile').click();
+  await expect(page.locator('#profile')).toBeVisible();
+  await expect(page.locator('#profile-name')).toHaveText(/\w+ \w+ \d+/);
+  // The round just played counts in this mode's record.
+  await expect(page.locator('#profile-body .record-card h3')).toHaveText('Growing board · Normal');
+  await expect(page.locator('#profile-body')).toContainText('Rounds W/L/D');
+  for (const tab of ['multi', 'history', 'fun']) {
+    await page.locator(`#profile-tabs [data-tab="${tab}"]`).click();
+    await expect(page.locator(`#profile-tabs [data-tab="${tab}"]`)).toHaveAttribute('aria-selected', 'true');
+  }
+  await expect(page.locator('#profile-body')).toContainText('Best win streak');
+  await page.locator('#profile-back').click();
+  await expect(page.locator('#menu')).toBeVisible();
+});

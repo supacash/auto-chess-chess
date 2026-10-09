@@ -19,11 +19,13 @@ import { randomSeed, seededRng } from '../rules/rng';
 import { BattleAborted, type BattleScreen } from './battleScreen';
 import { $, escapeHtml, sleep } from './dom';
 import type { PlacementScreen } from './placementScreen';
+import type { RecordBook } from './recordBook';
 
 export interface MatchDeps {
   placement: PlacementScreen;
   battle: BattleScreen;
   ensureEngine: () => Promise<Engine>;
+  records: RecordBook;
   /** Back to the main menu. */
   onExit: () => void;
 }
@@ -291,7 +293,7 @@ export class MatchController {
     const otherSide = flip ? 'w' : 'b';
     const other = m.player(flip ? pairing.white : pairing.black);
     const opponent = pairing.copy === otherSide ? `a copy of ${other.name}` : other.name;
-    const { result } = await this.deps.battle.play(
+    const { result, worstDeficit } = await this.deps.battle.play(
       engine,
       start.fen,
       start.firstMover,
@@ -299,6 +301,7 @@ export class MatchController {
       seededRng(pairing.seed),
       { flip, opponent, announceSide: true },
     );
+    this.deps.records.battle(result, flip ? 'b' : 'w', worstDeficit);
     return { pairing, winner: result.winner, material: result.material };
   }
 
@@ -342,6 +345,7 @@ export class MatchController {
 
     if (m.phase === 'over') {
       const place = m.me.place ?? 1;
+      this.deps.records.matchEnd(this.online !== null, m.settings.blitz, place);
       if (this.online) void this.online.client.markDone(this.online.code, this.online.fought).catch(console.warn);
       this.deps.battle.showCard({
         title: place === 1 ? 'You win the match!' : `You finished ${ordinal(place)}`,

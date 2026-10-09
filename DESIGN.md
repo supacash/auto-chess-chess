@@ -29,6 +29,12 @@ Draft and place a chess army, then watch an engine play the round for both sides
   - **Reveal opponent's placement:** an easier option that shows where the AI's pieces are during placement.
   - Starting a new run while one is in progress warns that it will be abandoned.
 - **Best score** is kept per mode and difficulty.
+- **Profile** (from the menu): the player's generated name (*New name* picks another; it's what friends see online) and records kept on this device, by tab:
+  - *Single*: per board mode and difficulty, runs, best and average score, rounds won/lost/drawn (best scores from before records existed are carried over).
+  - *Multiplayer*: online and vs bots, normal and Blitz: matches, wins, average place, top-2 rate and a 1st–4th bar.
+  - *History*: the last 20 finished runs and matches.
+  - *Fun*: most-bought piece (offers, upgrades and fusions), best and current win streak, checkmates delivered, biggest comeback (largest material deficit turned into a win).
+  - Signing in to keep records across devices is planned (anonymous records would carry over).
 - **Replays:** the last finished battle is kept (start position, seed, moves, evals); *Watch replay* on the result screen and *Watch your last battle* on placement play it back. Auto battles are deterministic from their start position and seed.
 - **Saving:** the run (army, gold, lives, record, settings and the current opponent) is saved after every change, so a reload resumes it. Saves carry a format version and are migrated when the format changes; runs saved before game modes existed load as Classic.
 - **No replays:** when a battle ends, the game moves straight to the next round and drafts its opponent, so reloading on the result screen can't replay a round. Leaving or reloading *during* a battle counts as a loss on the next load (with a notice). A battle that fails with an error doesn't count.
