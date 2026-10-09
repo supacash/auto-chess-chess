@@ -12,13 +12,13 @@
 import { availableParallelism } from 'node:os';
 import { parseArgs } from 'node:util';
 import { runBattle, SEARCH_DEPTH } from '../../src/game/runBattle';
-import { aiBudget, AI_STYLES, draftAiArmy, pickStyle, placeAiArmy } from '../../src/rules/aiArmy';
+import { aiBudget, AI_STYLES, draftAiArmy, pickStyle, placeAiArmy, placeForBattle } from '../../src/rules/aiArmy';
 import { type BoardSpec, plyLimit } from '../../src/chess/boardSpec';
 import { gameMode } from '../../src/rules/mode';
+import { difficulty, isDifficultyId } from '../../src/rules/difficulty';
 import { type BattleLimits, type BattleResult, material } from '../../src/rules/battle';
 import { rollOffers, roundIncome, START_GOLD, startingShop } from '../../src/rules/economy';
 import { type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
-import { startPosition } from '../../src/rules/position';
 import { randomInt, seededRng } from '../../src/rules/rng';
 import { formatMargin, meanMargin } from './stats';
 import { loadRulesForNode } from '../../src/chess/testRules';
@@ -26,8 +26,6 @@ import { EngineFailure, NodeEngine } from './nodeEngine';
 import { armyValue, spendGold } from './shopPlayer';
 
 const LIVES = 3;
-/** Placement retries when both kings start in check (the game re-places the AI army). */
-const MAX_REPLACE = 20;
 
 const { values: opts } = parseArgs({
   options: {
@@ -46,6 +44,8 @@ const { values: opts } = parseArgs({
     board: { type: 'string', default: 'schedule' },
     decisive: { type: 'string' },
     fairy: { type: 'string', default: 'none' },
+    difficulty: { type: 'string', default: 'normal' },
+    side: { type: 'string', default: 'white' },
     json: { type: 'boolean', default: false },
   },
 });
@@ -86,6 +86,14 @@ const FAIRY = opts.fairy!;
 if (!['none', 'ai', 'both'].includes(FAIRY)) throw new Error('--fairy must be none, ai or both');
 const AI_FAIRY = FAIRY !== 'none';
 const PLAYER_FAIRY = FAIRY === 'both';
+/** `--difficulty easy|normal|hard`: the AI's points per round, as in the New run window. */
+const DIFFICULTY = opts.difficulty!;
+if (!isDifficultyId(DIFFICULTY)) throw new Error('--difficulty must be easy, normal or hard');
+const PER_ROUND = difficulty(DIFFICULTY).perRound;
+/** `--side white|black|random`: who moves first (the player as White moves first, the game's default). */
+const SIDE = opts.side!;
+if (!['white', 'black', 'random'].includes(SIDE)) throw new Error('--side must be white, black or random');
+const playerFirst = (rng: () => number) => (SIDE === 'random' ? rng() < 0.5 : SIDE === 'white');
 const MODE = gameMode(BOARD_MODE === '8' ? 'classic' : 'growing');
 const boardFor = (round: number): BoardSpec => MODE.board(round);
 /** `--plies N` replaces the board's move limit (10 × size + 10). */
@@ -142,7 +150,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     const aiStyle = AI_STYLE === 'random' ? pickStyle(rng, AI_FAIRY) : AI_STYLES.find((s) => s.id === AI_STYLE)!;
     const aiPoints = AI_BUDGET
       ? Math.max(1, AI_BUDGET[0] + AI_BUDGET[1] * round + randomInt(rng, 3) - 1)
-      : aiBudget(round, rng, 6, MODE.roundOneDiscount, MODE.aiBonus);
+      : aiBudget(round, rng, PER_ROUND, MODE.roundOneDiscount, MODE.aiBonus);
     if (PLAYER_POINTS === 'ai') playerPoints = aiPoints;
     let playerTypes: PieceType[];
     if (PLAYER === 'shop') {
@@ -153,16 +161,11 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       playerTypes = draftAiArmy(playerPoints, runStyle, rng, spec, PLAYER_FAIRY);
     }
     // A shop army bigger than the board leaves its cheapest pieces on the bench (placement drops them).
-    let player = placeAiArmy(playerTypes, runStyle, rng, spec);
+    const player = placeAiArmy(playerTypes, runStyle, rng, spec);
     const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec, AI_FAIRY);
 
-    let start = startPosition(player, placeAiArmy(aiTypes, aiStyle, rng, spec), rng() < 0.5, spec);
-    for (let i = 0; !start.ok && i < MAX_REPLACE; i++) {
-      // Big armies can make every AI placement fail against one player placement; re-place both then.
-      if (i >= MAX_REPLACE / 2) player = placeAiArmy(playerTypes, runStyle, rng, spec);
-      start = startPosition(player, placeAiArmy(aiTypes, aiStyle, rng, spec), rng() < 0.5, spec);
-    }
-    if (!start.ok) throw new Error(`run ${run} round ${round}: could not place armies`);
+    // As in the game: the AI re-places (falling back to other layouts) until both kings aren't in check.
+    const { start } = placeForBattle(player, aiTypes, aiStyle, rng, spec, playerFirst(rng));
 
     let peakLead = 0;
     let peakLeader: 'w' | 'b' | null = null;

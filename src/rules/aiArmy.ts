@@ -2,6 +2,7 @@ import { BOARD_8, type BoardSpec, pawnSquares } from '../chess/boardSpec';
 import { UPGRADES, upgradeCost } from './economy';
 import { isPawnLike, makePiece, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
 import { armyCap, BACK_RANK, canPlace, frontRank, pieceAt } from './placement';
+import { type StartPosition, startPosition } from './position';
 import { type Rng, randomInt, weightedPick } from './rng';
 
 // All squares here are AI-local: rank 0 is the AI's back row, rank homeRows − 1 its front row.
@@ -327,4 +328,36 @@ function allSquares(spec: BoardSpec): Square[] {
 
 function points(types: PieceType[]): number {
   return types.reduce((s, t) => s + PIECE_VALUE[t], 0);
+}
+
+/**
+ * Places the AI army against `player` so the battle can start: both kings may not begin in check.
+ * Re-places a few times in the style, then in the other styles' layouts (their kings stand on other
+ * files), and as a last resort drops the AI's least valuable pieces until the start is legal (a lone
+ * king can't give check, so this always ends). Needs the chess rules loaded.
+ */
+export function placeForBattle(
+  player: Piece[],
+  aiTypes: PieceType[],
+  style: AiStyle,
+  rng: Rng,
+  spec: BoardSpec,
+  playerFirst: boolean,
+): { ai: Piece[]; start: Extract<StartPosition, { ok: true }> } {
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const layout = attempt < 20 ? style : AI_STYLES[attempt % AI_STYLES.length];
+    const ai = placeAiArmy(aiTypes, layout, rng, spec);
+    const start = startPosition(player, ai, playerFirst, spec);
+    if (start.ok) return { ai, start };
+  }
+  const types = [...aiTypes].sort((a, b) => PIECE_VALUE[b] - PIECE_VALUE[a]);
+  for (;;) {
+    const ai = placeAiArmy(types, style, rng, spec);
+    const start = startPosition(player, ai, playerFirst, spec);
+    if (start.ok) return { ai, start };
+    let drop = types.length - 1;
+    while (drop >= 0 && types[drop] === 'K') drop--;
+    if (drop < 0) throw new Error('No legal start position');
+    types.splice(drop, 1);
+  }
 }

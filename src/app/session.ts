@@ -12,7 +12,15 @@ import {
   saveReplay,
 } from '../game/storage';
 import { RULES_VERSION } from '../game/version';
-import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, pickStyle, placeAiArmy } from '../rules/aiArmy';
+import {
+  AI_STYLES,
+  type AiStyle,
+  aiBudget,
+  draftAiArmy,
+  pickStyle,
+  placeAiArmy,
+  placeForBattle,
+} from '../rules/aiArmy';
 import type { BattleResult } from '../rules/battle';
 import { difficulty, type RunSettings } from '../rules/difficulty';
 import { rerollOffers, rollOffers, type Shop, type ShopResult } from '../rules/economy';
@@ -228,17 +236,13 @@ export class Session implements PlacementSession {
 
   /** The battle's start position, re-placing the AI army if both kings would start in check. */
   resolveStart(): Extract<StartPosition, { ok: true }> {
-    for (;;) {
-      const spec = this.board;
-      const start = startPosition(this.run.shop.pieces, this.aiPieces, this.run.color === 'w', spec);
-      if (start.ok) return start;
-      this.aiPieces = placeAiArmy(
-        this.aiPieces.map((p) => p.type),
-        this.aiStyle,
-        this.rng,
-        spec,
-      );
-    }
+    const playerFirst = this.run.color === 'w';
+    const start = startPosition(this.run.shop.pieces, this.aiPieces, playerFirst, this.board);
+    if (start.ok) return start;
+    const types = this.aiPieces.map((p) => p.type);
+    const placed = placeForBattle(this.run.shop.pieces, types, this.aiStyle, this.rng, this.board, playerFirst);
+    this.aiPieces = placed.ai;
+    return placed.start;
   }
 
   /**
