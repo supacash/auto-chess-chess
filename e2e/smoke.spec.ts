@@ -67,6 +67,17 @@ test('leaving during an auto battle counts as a loss', async ({ page }) => {
 test('Play it: move, resume after a reload, undo and resign', async ({ page }) => {
   await startRun(page);
   await placeKing(page);
+  // A fixed opponent (king and a pawn, nowhere near our king) so the game always starts the same
+  // way: a random army can start with our king in check.
+  await page.evaluate(() => {
+    const save = JSON.parse(localStorage.getItem('acc.run.v1')!);
+    save.ai.pieces = [
+      { id: 'ai-k', type: 'K', square: { file: 4, rank: 0 } },
+      { id: 'ai-p', type: 'P', square: { file: 0, rank: 1 } },
+    ];
+    localStorage.setItem('acc.run.v1', JSON.stringify(save));
+  });
+  await page.reload();
   await page.locator('#play').click();
   const status = page.locator('#battle-status');
   await expect(status).toHaveText('Your move', { timeout: 60_000 });
