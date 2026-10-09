@@ -67,8 +67,9 @@ export const AI_STYLES: AiStyle[] = [
   {
     id: 'heavy',
     name: 'Heavy Artillery',
-    pawnShare: 0.15,
-    weights: { N: 0.5, B: 0.5, R: 2.5, Q: 3 },
+    // Was 0.15 pawns and Q 3: too few pieces and pawns to shield the king (players beat it 71%).
+    pawnShare: 0.2,
+    weights: { N: 0.5, B: 0.8, R: 2.5, Q: 2 },
     fairyWeights: { X: 1.5, C: 1.5, A: 0.8, Z: 1.2 },
     berolinaShare: 0.2,
     kingFiles: [4, 3],
@@ -81,7 +82,8 @@ export const AI_STYLES: AiStyle[] = [
     id: 'cavalry',
     name: 'Cavalry Charge',
     pawnShare: 0.25,
-    weights: { N: 3, B: 2.5, R: 0.5, Q: 0.5 },
+    // Was N 3, B 2.5, R 0.5: at equal points it beat players 59% of the time.
+    weights: { N: 2, B: 2, R: 1, Q: 0.7 },
     // Jumpers and knight compounds.
     fairyWeights: { L: 1.5, T: 1.2, A: 1.5, G: 0.4 },
     berolinaShare: 0.3,
@@ -127,7 +129,23 @@ export function aiBudget(
   roundOneDiscount = ROUND_ONE_DISCOUNT,
   bonus = 0,
 ): number {
-  return perRound * round + bonus + randomInt(rng, 3) - 1 - (round === 1 ? roundOneDiscount : 0);
+  return Math.round(perRound * round) + bonus + randomInt(rng, 3) - 1 - (round === 1 ? roundOneDiscount : 0);
+}
+
+/**
+ * Moving second is a real handicap (Black won ~35% of Normal games to White's ~53%, and the gap grows
+ * with the armies: SIMULATION.md §13), so when the player is Black the AI's army is this much smaller.
+ */
+export const BLACK_DISCOUNT = 0.1;
+
+/** The AI's budget once the player's side is known: smaller when the player moves second. */
+export function budgetForSide(budget: number, playerFirst: boolean): number {
+  return playerFirst ? budget : budget - Math.round(budget * BLACK_DISCOUNT);
+}
+
+/** The most an army can be worth on `spec`: a full board of queens around the king. */
+export function maxArmyValue(spec: BoardSpec): number {
+  return (armyCap(spec) - 1) * PIECE_VALUE.Q;
 }
 
 /** A random style; fairy-only styles only when `fairy` is on. */
@@ -161,6 +179,8 @@ export function draftAiArmy(
   spec: BoardSpec = BOARD_8,
   fairy = false,
 ): PieceType[] {
+  // Budget past a full board of queens can't be spent; capping it keeps the numbers honest.
+  budget = Math.min(budget, maxArmyValue(spec));
   const types: PieceType[] = ['K'];
   const capacity = armyCap(spec);
   const pawnCap = Math.min(MAX_PAWNS, pawnSquares(spec));
@@ -181,16 +201,28 @@ export function draftAiArmy(
   const pawns = Math.max(0, Math.min(left, pawnCap, capacity - types.length));
   for (let i = 0; i < pawns; i++) types.push(fairy && rng() < style.berolinaShare ? 'E' : 'P');
   left -= pawns;
+  // Pawns capped out with squares still free: more of the style's pieces before any upgrades, so
+  // armies keep their character as budgets grow (upgrades turn everything into rooks and queens).
+  while (types.length < capacity) {
+    const affordable = options.filter((t) => PIECE_VALUE[t] <= left);
+    if (affordable.length === 0) break;
+    const pick = weightedPick(affordable, (t) => weights[t]!, rng);
+    types.push(pick);
+    left -= PIECE_VALUE[pick];
+  }
   // Gold upgrades cost 2 or 4, so an odd leftover can't be spent; trade a pawn back to make it even.
   // (Fusion upgrades include odd costs, so with fairy pieces on the leftover usually gets spent anyway.)
-  if (!fairy && left % 2 === 1 && pawns > 0) {
+  if (!fairy && left % 2 === 1 && pawns > 0 && types.at(-1) !== undefined && isPawnLike(types.at(-1)!)) {
     types.pop();
     left++;
   }
 
-  // Spend leftovers on upgrades, cheapest pieces first.
+  // Spend leftovers on upgrades, cheapest pieces first but pawns last: upgrading pawns first used to
+  // strip pawn-heavy styles of every pawn once the budget grew (Fortress had none at 40 points).
   for (;;) {
-    const order = types.map((t, i) => [t, i] as const).sort(([a], [b]) => PIECE_VALUE[a] - PIECE_VALUE[b]);
+    const order = types
+      .map((t, i) => [t, i] as const)
+      .sort(([a], [b]) => Number(isPawnLike(a)) - Number(isPawnLike(b)) || PIECE_VALUE[a] - PIECE_VALUE[b]);
     const found = order
       .map(([from, i]) => ({
         i,

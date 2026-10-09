@@ -3,14 +3,15 @@ export type DifficultyId = 'easy' | 'normal' | 'hard';
 export interface Difficulty {
   id: DifficultyId;
   name: string;
-  /** AI army points per round (the budget is perRound × round, ±1). */
+  /** AI army points per round (the budget is perRound × round rounded, ±1). */
   perRound: number;
 }
 
 export const DIFFICULTIES: Difficulty[] = [
-  { id: 'easy', name: 'Easy', perRound: 5 },
+  // 5 and 7 were too far apart (Easy won 92% of games, Hard 13%: SIMULATION.md §13).
+  { id: 'easy', name: 'Easy', perRound: 5.5 },
   { id: 'normal', name: 'Normal', perRound: 6 },
-  { id: 'hard', name: 'Hard', perRound: 7 },
+  { id: 'hard', name: 'Hard', perRound: 6.5 },
 ];
 
 import type { ModeId } from './mode';
@@ -20,7 +21,7 @@ export type SideId = 'white' | 'black' | 'random';
 
 export const SIDES: { id: SideId; name: string }[] = [
   { id: 'white', name: 'White (you move first)' },
-  { id: 'black', name: 'Black (opponent moves first)' },
+  { id: 'black', name: 'Black (opponent moves first; their army is 10% smaller)' },
   { id: 'random', name: 'Random each round' },
 ];
 

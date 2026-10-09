@@ -11,6 +11,7 @@ import type { Rng } from '../rules/rng';
 import {
   alive,
   applyRound,
+  BLACK_GOLD,
   botArmy,
   type MatchPlayer,
   type MatchSettings,
@@ -220,6 +221,7 @@ export class MatchSession implements PlacementSession {
     this.players = applyRound(this.players, this.round, results);
     const mine = results.find((r) => r.pairing === this.myPairing());
     const myResult = mine ? fromSide(mine.winner, mine.pairing.white === this.myId ? 'w' : 'b') : 'draw';
+    const playedBlack = mine !== undefined && mine.pairing.black === this.myId && mine.pairing.copy !== 'b';
     if (matchOver(this.players) || this.me.place !== null) {
       this.phase = 'over';
       return;
@@ -227,7 +229,7 @@ export class MatchSession implements PlacementSession {
     this.round++;
     this.shop = {
       ...this.shop,
-      gold: this.shop.gold + matchIncome(myResult, this.streaks.get(this.myId) ?? 0),
+      gold: this.shop.gold + matchIncome(myResult, this.streaks.get(this.myId) ?? 0) + (playedBlack ? BLACK_GOLD : 0),
       offers: rollOffers(this.round, this.rng, false),
     };
     this.pairings = [];

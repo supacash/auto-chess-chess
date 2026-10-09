@@ -12,13 +12,21 @@
 import { availableParallelism } from 'node:os';
 import { parseArgs } from 'node:util';
 import { runBattle, SEARCH_DEPTH } from '../../src/game/runBattle';
-import { aiBudget, AI_STYLES, draftAiArmy, pickStyle, placeAiArmy, placeForBattle } from '../../src/rules/aiArmy';
+import {
+  aiBudget,
+  AI_STYLES,
+  budgetForSide,
+  draftAiArmy,
+  pickStyle,
+  placeAiArmy,
+  placeForBattle,
+} from '../../src/rules/aiArmy';
 import { type BoardSpec, plyLimit } from '../../src/chess/boardSpec';
 import { gameMode } from '../../src/rules/mode';
 import { difficulty, isDifficultyId } from '../../src/rules/difficulty';
 import { type BattleLimits, type BattleResult, material } from '../../src/rules/battle';
 import { rollOffers, roundIncome, START_GOLD, startingShop } from '../../src/rules/economy';
-import { type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
+import { makePiece, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
 import { randomInt, seededRng } from '../../src/rules/rng';
 import { formatMargin, meanMargin } from './stats';
 import { loadRulesForNode } from '../../src/chess/testRules';
@@ -148,13 +156,14 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
   for (let round = 1; round <= ROUNDS; round++) {
     const spec = boardFor(round);
     const aiStyle = AI_STYLE === 'random' ? pickStyle(rng, AI_FAIRY) : AI_STYLES.find((s) => s.id === AI_STYLE)!;
+    const first = playerFirst(rng);
     const aiPoints = AI_BUDGET
       ? Math.max(1, AI_BUDGET[0] + AI_BUDGET[1] * round + randomInt(rng, 3) - 1)
-      : aiBudget(round, rng, PER_ROUND, MODE.roundOneDiscount, MODE.aiBonus);
+      : budgetForSide(aiBudget(round, rng, PER_ROUND, MODE.roundOneDiscount, MODE.aiBonus), first);
     if (PLAYER_POINTS === 'ai') playerPoints = aiPoints;
     let playerTypes: PieceType[];
     if (PLAYER === 'shop') {
-      shop = spendGold({ ...shop, offers: rollOffers(round, rng, PLAYER_FAIRY) }, runStyle, rng, spec);
+      shop = spendGold({ ...shop, offers: rollOffers(round, rng, PLAYER_FAIRY) }, runStyle, rng, spec, PLAYER_FAIRY);
       playerPoints = armyValue(shop);
       playerTypes = shop.pieces.map((p) => p.type);
     } else {
@@ -162,10 +171,17 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     }
     // A shop army bigger than the board leaves its cheapest pieces on the bench (placement drops them).
     const player = placeAiArmy(playerTypes, runStyle, rng, spec);
+    if (PLAYER === 'shop') {
+      // The shop now holds the placed army (so its pieces don't count against the bench), plus any
+      // pieces that didn't fit, on the bench.
+      const left = [...playerTypes];
+      for (const p of player) left.splice(left.indexOf(p.type), 1);
+      shop = { ...shop, pieces: [...player, ...left.map((t) => makePiece(t))] };
+    }
     const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec, AI_FAIRY);
 
     // As in the game: the AI re-places (falling back to other layouts) until both kings aren't in check.
-    const { start } = placeForBattle(player, aiTypes, aiStyle, rng, spec, playerFirst(rng));
+    const { start } = placeForBattle(player, aiTypes, aiStyle, rng, spec, first);
 
     let peakLead = 0;
     let peakLeader: 'w' | 'b' | null = null;

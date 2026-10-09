@@ -4,10 +4,12 @@ import {
   AI_STYLES,
   type AiStyle,
   aiBudget,
+  budgetForSide,
   draftAiArmy,
   MAX_PAWNS,
   pickStyle,
   placeAiArmy,
+  maxArmyValue,
   placeForBattle,
 } from './aiArmy';
 import { BOARDS, homeSquares, pawnSquares } from '../chess/boardSpec';
@@ -77,6 +79,27 @@ describe('draftAiArmy', () => {
     expect(avg('fortress', 'P')).toBeGreaterThan(avg('heavy', 'P'));
     expect(avg('heavy', 'Q') + avg('heavy', 'R')).toBeGreaterThan(avg('cavalry', 'Q') + avg('cavalry', 'R'));
     expect(avg('cavalry', 'N') + avg('cavalry', 'B')).toBeGreaterThan(avg('heavy', 'N') + avg('heavy', 'B'));
+  });
+});
+
+describe('budget caps and sides', () => {
+  it('drafts no more than a full board can hold', () => {
+    const spec = BOARDS[8];
+    const types = draftAiArmy(1000, style('heavy'), seededRng(1), spec);
+    expect(points(types)).toBeLessThanOrEqual(maxArmyValue(spec));
+    expect(maxArmyValue(spec)).toBe((armyCap(spec) - 1) * PIECE_VALUE.Q);
+  });
+
+  it('gives a player moving second a smaller opponent', () => {
+    expect(budgetForSide(30, true)).toBe(30);
+    expect(budgetForSide(30, false)).toBe(27);
+    expect(budgetForSide(5, false)).toBe(4);
+  });
+
+  it('keeps pawn-heavy styles’ pawns as budgets grow', () => {
+    for (let seed = 0; seed < 20; seed++) {
+      expect(count(draftAiArmy(40, style('fortress'), seededRng(seed)), 'P')).toBeGreaterThanOrEqual(6);
+    }
   });
 });
 

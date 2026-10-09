@@ -16,6 +16,7 @@ import {
   AI_STYLES,
   type AiStyle,
   aiBudget,
+  budgetForSide,
   draftAiArmy,
   pickStyle,
   placeAiArmy,
@@ -163,12 +164,9 @@ export class Session implements PlacementSession {
     const { settings } = this.run;
     const mode = gameMode(settings.mode);
     this.aiStyle = pickStyle(this.rng, settings.fairy);
-    const budget = aiBudget(
-      this.run.round,
-      this.rng,
-      difficulty(settings.difficulty).perRound,
-      mode.roundOneDiscount,
-      mode.aiBonus,
+    const budget = budgetForSide(
+      aiBudget(this.run.round, this.rng, difficulty(settings.difficulty).perRound, mode.roundOneDiscount, mode.aiBonus),
+      this.run.color === 'w',
     );
     this.aiPieces = placeAiArmy(
       draftAiArmy(budget, this.aiStyle, this.rng, spec, settings.fairy),

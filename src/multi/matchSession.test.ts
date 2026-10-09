@@ -5,7 +5,7 @@ import { BASE_INCOME } from '../rules/economy';
 import { makePiece, PIECES } from '../rules/pieces';
 import { armyErrors } from '../rules/placement';
 import { seededRng } from '../rules/rng';
-import { botArmy, pairRound, START_HP } from './match';
+import { BLACK_GOLD, botArmy, pairRound, START_HP } from './match';
 import { MatchSession, withKingPlaced } from './matchSession';
 
 beforeAll(loadRulesForNode);
@@ -66,9 +66,20 @@ describe('MatchSession', () => {
     expect(m.me.hp).toBe(START_HP - 3); // round 1 + 10/5
     expect(m.round).toBe(2);
     expect(m.phase).toBe('shop');
-    expect(m.shop.gold).toBe(goldBefore + 5); // loss income (no streak yet)
+    expect(m.shop.gold).toBe(goldBefore + 5 + (iAmWhite ? 0 : BLACK_GOLD)); // loss income (no streak yet), +1 as Black
     expect(m.streaks.get('me')).toBe(-1);
     expect(m.pairings).toEqual([]);
+  });
+
+  it('pays the Black bonus to whoever played Black', () => {
+    for (let seed = 1; seed <= 6; seed++) {
+      const m = match(seed);
+      m.lockArmies();
+      const mine = m.myPairing()!;
+      const before = m.shop.gold;
+      m.finishRound([{ pairing: mine, winner: 'draw', material: { w: 0, b: 0 } }]);
+      expect(m.shop.gold - before).toBe(6 + (mine.black === 'me' ? BLACK_GOLD : 0));
+    }
   });
 
   it('ends for the player when they are knocked out', () => {

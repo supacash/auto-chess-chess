@@ -212,6 +212,12 @@ export function matchIncome(outcome: Winner, streakAfter: number): number {
   return BASE_INCOME + (outcome === 'w' ? MATCH_WIN_BONUS : 0) + streakBonus(streakAfter);
 }
 
+/**
+ * Extra gold for having played Black (moving second is worth ~18 points of win rate: SIMULATION.md
+ * §13). Paid with the round's income; sides are random each round, so it evens out over a match.
+ */
+export const BLACK_GOLD = 1;
+
 /** Each player's streak after a round's results (the owner of a copied army isn't affected). */
 export function nextStreaks(streaks: Map<string, number>, results: PairingResult[]): Map<string, number> {
   const next = new Map(streaks);
