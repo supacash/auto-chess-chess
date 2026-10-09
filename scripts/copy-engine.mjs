@@ -10,3 +10,5 @@ mkdirSync(dest, { recursive: true });
 for (const file of ['stockfish-19-lite-single.js', 'stockfish-19-lite-single.wasm']) {
   copyFileSync(join(src, file), join(dest, file));
 }
+// Stockfish is GPLv3: ship its license text alongside the engine.
+copyFileSync(join(src, '..', 'Copying.txt'), join(dest, 'STOCKFISH-LICENSE.txt'));

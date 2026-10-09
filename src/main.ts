@@ -88,7 +88,15 @@ app.innerHTML = `
       <p id="result-detail"></p>
       <button type="button" id="next" class="primary">Next round</button>
     </div>
-  </section>`;
+  </section>
+
+  <footer class="credits">
+    Chess engine: <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> 19 via
+    <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>, licensed under the
+    <a href="engine/STOCKFISH-LICENSE.txt" target="_blank" rel="noopener">GPLv3</a>
+    (<a href="https://github.com/nmrugg/stockfish.js/tree/v19.0.0" target="_blank" rel="noopener">source</a>).
+    Game code: <a href="https://github.com/supacash/auto-chess-chess" target="_blank" rel="noopener">MIT</a>.
+  </footer>`;
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 const placementEl = $('#placement');

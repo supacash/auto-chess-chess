@@ -1,6 +1,6 @@
 import { type Candidate, parseInfo } from './pick';
 
-const ENGINE_URL = '/engine/stockfish-19-lite-single.js';
+const ENGINE_URL = `${import.meta.env.BASE_URL}engine/stockfish-19-lite-single.js`;
 /** Lines of analysis per search; pickMove chooses among the close ones. */
 const MULTI_PV = 3;
 

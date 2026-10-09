@@ -450,3 +450,15 @@ header .link {
     transition: none !important;
   }
 }
+
+.credits {
+  margin-top: 28px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+}
+
+.credits a {
+  color: inherit;
+}
