@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyResult, isRunOver, newRun, nextRound, runScore, START_LIVES } from './run';
+import { applyResult, hasStarted, isRunOver, newRun, nextRound, runScore, START_LIVES } from './run';
 
 describe('run', () => {
   it('starts at round 1 with full lives and the starting shop', () => {
@@ -30,6 +30,16 @@ describe('run', () => {
     }
     expect(isRunOver(run)).toBe(true);
     expect(runScore(run)).toBe(1);
+  });
+
+  it('keeps its settings across rounds and knows when it has started', () => {
+    const settings = { difficulty: 'hard', reveal: true } as const;
+    let run = newRun(settings);
+    expect(newRun().settings).toEqual({ difficulty: 'normal', reveal: false });
+    expect(hasStarted(run)).toBe(false);
+    run = nextRound(applyResult(run, 'draw'));
+    expect(hasStarted(run)).toBe(true);
+    expect(run.settings).toEqual(settings);
   });
 
   it('does not mutate the input', () => {

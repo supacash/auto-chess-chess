@@ -80,9 +80,12 @@ const CENTER = [0, 0.3, 0.7, 1, 1, 0.7, 0.3, 0];
 /** Penalty for stacking a pawn on a file that already has one. */
 const DOUBLED_PAWN = 2;
 
-/** AI army point budget for a round: 6×round, ±1 random (tracks the player's income; see SIMULATION.md). */
-export function aiBudget(round: number, rng: Rng): number {
-  return 6 * round + randomInt(rng, 3) - 1;
+/**
+ * AI army point budget for a round: perRound × round, ±1 random. Normal difficulty is 6 per round,
+ * which tracks the player's income (see SIMULATION.md); see difficulty.ts for the others.
+ */
+export function aiBudget(round: number, rng: Rng, perRound = 6): number {
+  return perRound * round + randomInt(rng, 3) - 1;
 }
 
 export function pickStyle(rng: Rng): AiStyle {

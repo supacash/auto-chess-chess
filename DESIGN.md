@@ -17,8 +17,12 @@ Draft and place a chess army, then watch an engine play the round for both sides
 
 ## Run Structure
 - 3 lives. Lose one per lost round. A draw costs no life.
-- The score is the number of rounds won. Best score is saved.
+- The score is the number of rounds won. Each difficulty saves its own best score.
 - Each round, the AI army's point budget grows (see AI Opponent).
+- **Run settings** are picked on the placement screen and fixed for the whole run:
+  - **Difficulty:** how fast the AI budget grows. Easy is 5×round, Normal (the default) 6×round, Hard 7×round.
+  - **Reveal opponent's placement:** shows where the AI's pieces are during placement, not just its piece list. It's an easier mode and off by default.
+  - Before the first battle a change applies straight away (the opponent is redrafted if the difficulty changed). After that, changing a setting asks to start a new run.
 - The run in progress (army, gold, lives, record and the current opponent) is saved to localStorage after every change, so a reload resumes it. When a round ends, the game moves to the next round and drafts its opponent straight away, so reloading on the result screen can't replay a round.
 - Leaving or reloading *during* a battle counts as a loss (−1 life, normal loss income) on the next load, with a notice explaining why. The save is flagged when a battle starts and the flag is cleared when it finishes. If the battle fails with an error, it doesn't count.
 
@@ -57,7 +61,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **Engine:** Stockfish (WASM, in a web worker) plays both sides at the same settings. The player's skill is in drafting and placement, not in having a better engine.
 - **Speed:** a depth-8 search per move. To add variety, it picks randomly among the top 3 moves when they score within ~50 centipawns of each other.
 - **Engine failures:** if Stockfish refuses a position or a search takes over 10 seconds (Stockfish lite can hang on some positions with two same-coloured bishops), that move is a random legal move instead, and a hung engine is restarted.
-- **Army budget:** 6×round points, plus or minus 1 random. This roughly matches the player's army value (6 at the start, then +5 to +7 income per round). The earlier 4 + 2×round fell far behind from round 2 (see SIMULATION.md). A new opponent is drafted each round, and its style is shown during placement.
+- **Army budget:** 6×round points on Normal (5× Easy, 7× Hard), plus or minus 1 random. This roughly matches the player's army value (6 at the start, then +5 to +7 income per round). The earlier 4 + 2×round fell far behind from round 2 (see SIMULATION.md). A new opponent is drafted each round, and its style is shown during placement.
 - **Styles:** each sets the share of the budget spent on pawns, draft weights for the other pieces, preferred king files, and how far forward pieces sit.
   | Style | Draft | Layout |
   |---|---|---|

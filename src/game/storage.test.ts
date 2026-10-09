@@ -39,6 +39,16 @@ describe('parseSave', () => {
     }
   });
 
+  it('keeps run settings, and gives saves from before settings existed the defaults', () => {
+    const g: any = JSON.parse(JSON.stringify(sample()));
+    g.run.settings = { difficulty: 'easy', reveal: true };
+    expect(parseSave(g)?.run.settings).toEqual({ difficulty: 'easy', reveal: true });
+    delete g.run.settings;
+    expect(parseSave(g)?.run.settings).toEqual({ difficulty: 'normal', reveal: false });
+    g.run.settings = { difficulty: 'insane', reveal: 1 };
+    expect(parseSave(g)?.run.settings).toEqual({ difficulty: 'normal', reveal: false });
+  });
+
   it('keeps the battle-in-progress flag only when it is true', () => {
     expect(parseSave({ ...sample(), battleInProgress: true })?.battleInProgress).toBe(true);
     expect(parseSave({ ...sample(), battleInProgress: 'yes' })).not.toHaveProperty('battleInProgress');

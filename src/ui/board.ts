@@ -1,5 +1,6 @@
 import { type Piece, type Square, PIECE_NAME } from '../rules/pieces';
 import { HOME_RANKS, movePiece, pieceAt, placementError } from '../rules/placement';
+import { mirror } from '../rules/position';
 import { fillGlyph, label, squareEl } from './boardDom';
 
 /** Pointer travel (px) before a press becomes a drag instead of a tap. */
@@ -25,6 +26,8 @@ export interface PlacementBoardOptions {
 /** Interactive placement board: drag or tap pieces between the bench and the home rows. */
 export class PlacementBoard {
   private pieces: Piece[];
+  /** The opponent's army (AI-local squares), shown read-only when revealed; null = hidden. */
+  private enemy: Piece[] | null = null;
   private selected: string | null = null;
   private reportedSelection: string | null = null;
   private press: Press | null = null;
@@ -58,6 +61,12 @@ export class PlacementBoard {
     this.render();
   }
 
+  /** Shows the opponent's placed army in its rows, or hides it again with null. */
+  setEnemy(pieces: Piece[] | null): void {
+    this.enemy = pieces;
+    this.render();
+  }
+
   clearSelection(): void {
     this.selected = null;
     this.render();
@@ -70,6 +79,7 @@ export class PlacementBoard {
     const legal = active ? this.legalTargets(active) : new Set<string>();
 
     this.boardEl.replaceChildren();
+    this.boardEl.classList.toggle('revealed', this.enemy !== null);
     for (let rank = 7; rank >= 0; rank--) {
       for (let file = 0; file < 8; file++) {
         const cell = squareEl(file, rank);
@@ -78,6 +88,8 @@ export class PlacementBoard {
         if (legal.has(`${file},${rank}`)) cell.classList.add('legal');
         const piece = pieceAt(this.pieces, { file, rank });
         if (piece) cell.appendChild(this.pieceEl(piece));
+        const foe = this.enemy?.find((p) => p.square && mirror(p.square).file === file && mirror(p.square).rank === rank);
+        if (foe) cell.appendChild(enemyEl(foe));
         this.boardEl.appendChild(cell);
       }
     }
@@ -119,7 +131,7 @@ export class PlacementBoard {
 
   private onPointerDown(e: PointerEvent): void {
     if (e.button !== 0) return;
-    const pieceEl = (e.target as HTMLElement).closest<HTMLElement>('.piece');
+    const pieceEl = (e.target as HTMLElement).closest<HTMLElement>('.piece[data-id]');
     this.press = { pieceId: pieceEl?.dataset.id ?? null, x: e.clientX, y: e.clientY, dragging: false, ghost: null };
     if (pieceEl) e.preventDefault();
   }
@@ -198,6 +210,15 @@ export class PlacementBoard {
     }
     return "Can't move there";
   }
+}
+
+/** A read-only opponent piece: no data-id, so it can't be picked up. */
+function enemyEl(p: Piece): HTMLElement {
+  const el = document.createElement('div');
+  el.className = 'piece black enemy-piece';
+  fillGlyph(el, p.type);
+  el.title = `Opponent's ${PIECE_NAME[p.type]}`;
+  return el;
 }
 
 function dropTargetAt(x: number, y: number): DropTarget | null {

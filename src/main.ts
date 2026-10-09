@@ -5,6 +5,7 @@ import { runBattle } from './game/runBattle';
 import { clearGame, loadBest, loadGame, saveBest, saveGame } from './game/storage';
 import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, pickStyle, placeAiArmy } from './rules/aiArmy';
 import { type BattleResult, type EndReason, material, PLY_LIMIT } from './rules/battle';
+import { DIFFICULTIES, difficulty, isDifficultyId, type RunSettings } from './rules/difficulty';
 import {
   buyPawn,
   PAWN_COST,
@@ -19,7 +20,7 @@ import {
 import { MAX_ARMY, type Piece, type PieceType, PIECE_NAME, PIECE_VALUE } from './rules/pieces';
 import { armyErrors } from './rules/placement';
 import { type StartPosition, startPosition } from './rules/position';
-import { applyResult, isRunOver, newRun, nextRound, type Run, runScore, START_LIVES } from './rules/run';
+import { applyResult, hasStarted, isRunOver, newRun, nextRound, type Run, runScore, START_LIVES } from './rules/run';
 import { BattleView } from './ui/battleView';
 import { inlineGlyph } from './ui/boardDom';
 import { PlacementBoard } from './ui/board';
@@ -59,6 +60,14 @@ app.innerHTML = `
       Place your king and any other pieces in your three rows, spend gold on pawns and upgrades, then press
       <strong>Fight</strong>. The engine plays both sides. Lose a round and you lose a life.
     </p>
+    <div class="settings">
+      <label>Difficulty
+        <select id="difficulty">
+          ${DIFFICULTIES.map((d) => `<option value="${d.id}">${d.name} (+${d.perRound} AI pts/round)</option>`).join('')}
+        </select>
+      </label>
+      <label><input type="checkbox" id="reveal" /> Reveal opponent's placement</label>
+    </div>
     <p class="opponent" id="opponent"></p>
     <div id="board-root"></div>
     <div class="shop">
@@ -137,11 +146,13 @@ function restoreOrStart(): string {
   if (!saved || !style) {
     state.run = newRun();
     draftOpponent();
+    state.best = loadBest(state.run.settings.difficulty);
     return '';
   }
   state.run = saved.run;
   state.aiStyle = style;
   state.aiPieces = saved.ai.pieces;
+  state.best = loadBest(state.run.settings.difficulty);
   if (!saved.battleInProgress) return '';
 
   // The page was closed or reloaded mid-battle: count it as a loss.
@@ -151,9 +162,9 @@ function restoreOrStart(): string {
     const newBest = score > state.best;
     if (newBest) {
       state.best = score;
-      saveBest(score);
+      saveBest(score, state.run.settings.difficulty);
     }
-    state.run = newRun();
+    state.run = newRun(state.run.settings);
     draftOpponent();
     persist();
     return (
@@ -171,7 +182,42 @@ function restoreOrStart(): string {
 
 function draftOpponent(): void {
   state.aiStyle = pickStyle(rng);
-  state.aiPieces = placeAiArmy(draftAiArmy(aiBudget(state.run.round, rng), state.aiStyle, rng), state.aiStyle, rng);
+  const budget = aiBudget(state.run.round, rng, difficulty(state.run.settings.difficulty).perRound);
+  state.aiPieces = placeAiArmy(draftAiArmy(budget, state.aiStyle, rng), state.aiStyle, rng);
+}
+
+/** Syncs the settings controls and the revealed opponent with the run. */
+function renderSettings(): void {
+  const { settings } = state.run;
+  $<HTMLSelectElement>('#difficulty').value = settings.difficulty;
+  $<HTMLInputElement>('#reveal').checked = settings.reveal;
+  board.setEnemy(settings.reveal ? state.aiPieces : null);
+}
+
+/**
+ * Settings are fixed for a run. Before the first battle they apply straight away (keeping the
+ * player's army); after that, changing them starts a new run.
+ */
+function changeSettings(): void {
+  const value = $<HTMLSelectElement>('#difficulty').value;
+  const settings: RunSettings = {
+    difficulty: isDifficultyId(value) ? value : state.run.settings.difficulty,
+    reveal: $<HTMLInputElement>('#reveal').checked,
+  };
+  if (hasStarted(state.run)) {
+    if (!window.confirm('Settings apply to a whole run. Abandon this run and start a new one?')) {
+      renderSettings();
+      return;
+    }
+    startNewRun(settings);
+    return;
+  }
+  const redraft = settings.difficulty !== state.run.settings.difficulty;
+  state.run = { ...state.run, settings };
+  state.best = loadBest(settings.difficulty);
+  if (redraft) draftOpponent();
+  persist();
+  showPlacement();
 }
 
 function renderOpponent(): void {
@@ -193,7 +239,9 @@ function renderHeader(round = state.run.round): void {
   ).join('');
   livesEl.setAttribute('aria-label', `${lives} of ${START_LIVES} lives`);
   $('#record').textContent = `${record.w}W ${record.l}L ${record.d}D`;
-  $('#best').textContent = `Best ${Math.max(state.best, runScore(state.run))}`;
+  const level = difficulty(state.run.settings.difficulty);
+  $('#best').textContent =
+    `Best ${Math.max(state.best, runScore(state.run))}` + (level.id === 'normal' ? '' : ` (${level.name})`);
   const { w, l, d } = record;
   $('#help').hidden = w + l + d > 0;
 }
@@ -253,6 +301,7 @@ function showPlacement(): void {
   placementEl.hidden = false;
   messageEl.textContent = '';
   board.setPieces(state.run.shop.pieces);
+  renderSettings();
   renderOpponent();
   renderHeader();
   updatePlacement(state.run.shop.pieces);
@@ -288,6 +337,8 @@ $('#piece-actions').addEventListener('click', (e) => {
 });
 
 fightBtn.addEventListener('click', () => void fight());
+$('#difficulty').addEventListener('change', changeSettings);
+$('#reveal').addEventListener('change', changeSettings);
 
 $('#playback').addEventListener('click', (e) => {
   const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
@@ -304,14 +355,15 @@ $('#next').addEventListener('click', () => {
 
 $('#new-run').addEventListener('click', () => {
   if (state.busy) return;
-  const started = state.run.round > 1 || state.run.record.w + state.run.record.l + state.run.record.d > 0;
-  if (started && !window.confirm('Abandon this run and start over?')) return;
+  if (hasStarted(state.run) && !window.confirm('Abandon this run and start over?')) return;
   startNewRun();
 });
 
-function startNewRun(): void {
+/** Starts over, keeping the current settings unless new ones are given. */
+function startNewRun(settings: RunSettings = state.run.settings): void {
   clearGame();
-  state.run = newRun();
+  state.run = newRun(settings);
+  state.best = loadBest(settings.difficulty);
   state.selected = null;
   draftOpponent();
   showPlacement();
@@ -406,7 +458,7 @@ function showResult(result: BattleResult): void {
   if (over) {
     if (newBest) {
       state.best = score;
-      saveBest(score);
+      saveBest(score, state.run.settings.difficulty);
     }
     clearGame();
   } else {

@@ -1,4 +1,5 @@
 import { AI_STYLES } from '../rules/aiArmy';
+import { DEFAULT_SETTINGS, type DifficultyId, isDifficultyId, type RunSettings } from '../rules/difficulty';
 import type { Piece } from '../rules/pieces';
 import { HOME_RANKS } from '../rules/placement';
 import type { Run } from '../rules/run';
@@ -43,18 +44,23 @@ export function clearGame(): void {
   }
 }
 
-export function loadBest(): number {
+/** Each difficulty has its own best score. Normal keeps the original key so earlier bests carry over. */
+function bestKey(difficulty: DifficultyId): string {
+  return difficulty === 'normal' ? BEST_KEY : `acc.best.${difficulty}.v1`;
+}
+
+export function loadBest(difficulty: DifficultyId = 'normal'): number {
   try {
-    const best = Number(localStorage.getItem(BEST_KEY));
+    const best = Number(localStorage.getItem(bestKey(difficulty)));
     return Number.isInteger(best) && best > 0 ? best : 0;
   } catch {
     return 0;
   }
 }
 
-export function saveBest(score: number): void {
+export function saveBest(score: number, difficulty: DifficultyId = 'normal'): void {
   try {
-    localStorage.setItem(BEST_KEY, String(score));
+    localStorage.setItem(bestKey(difficulty), String(score));
   } catch {
     // ignore
   }
@@ -76,6 +82,12 @@ export function parseSave(data: unknown): SavedGame | null {
   if (pieces.filter((p) => p.type === 'K').length !== 1) return null;
 
   const record = run.record as Run['record'];
+  // Saves from before settings existed (or with bad values) fall back to the defaults.
+  const s = isObject(run.settings) ? run.settings : {};
+  const settings: RunSettings = {
+    difficulty: isDifficultyId(s.difficulty) ? s.difficulty : DEFAULT_SETTINGS.difficulty,
+    reveal: typeof s.reveal === 'boolean' ? s.reveal : DEFAULT_SETTINGS.reveal,
+  };
   return {
     version: 1,
     run: {
@@ -83,6 +95,7 @@ export function parseSave(data: unknown): SavedGame | null {
       lives: run.lives,
       record: { w: record.w, l: record.l, d: record.d },
       shop: { gold: run.shop.gold, pieces },
+      settings,
     },
     ai: { styleId: ai.styleId, pieces: aiPieces },
     ...(data.battleInProgress === true ? { battleInProgress: true } : {}),

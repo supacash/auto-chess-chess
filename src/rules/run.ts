@@ -1,4 +1,5 @@
 import type { Winner } from './battle';
+import { DEFAULT_SETTINGS, type RunSettings } from './difficulty';
 import { roundIncome, type Shop, startingShop } from './economy';
 
 export const START_LIVES = 3;
@@ -9,10 +10,17 @@ export interface Run {
   lives: number;
   record: { w: number; l: number; d: number };
   shop: Shop;
+  settings: RunSettings;
 }
 
-export function newRun(): Run {
-  return { round: 1, lives: START_LIVES, record: { w: 0, l: 0, d: 0 }, shop: startingShop() };
+export function newRun(settings: RunSettings = DEFAULT_SETTINGS): Run {
+  return { round: 1, lives: START_LIVES, record: { w: 0, l: 0, d: 0 }, shop: startingShop(), settings };
+}
+
+/** True once the player has fought a battle; settings can then only change by starting a new run. */
+export function hasStarted(run: Run): boolean {
+  const { w, l, d } = run.record;
+  return run.round > 1 || w + l + d > 0;
 }
 
 /** Applies a finished battle: record, lives (a loss costs one) and income. The round advances separately. */
