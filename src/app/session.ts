@@ -48,6 +48,8 @@ export class Session implements PlacementSession {
   manual: ManualState | null = null;
   /** The last finished battle, for Watch replay (kept across reloads). */
   lastReplay: BattleRecord | null = null;
+  /** True once the run has been saved (the player has started it), so the menu offers Resume. */
+  saved = false;
 
   constructor(private readonly rng: Rng = Math.random) {}
 
@@ -72,6 +74,7 @@ export class Session implements PlacementSession {
 
   /** `battleInProgress` marks a battle as started, so leaving mid-battle counts as a loss on the next load. */
   persist(battleInProgress = false): void {
+    this.saved = true;
     saveGame({
       version: SAVE_VERSION,
       run: this.run,
@@ -96,6 +99,7 @@ export class Session implements PlacementSession {
       return { notice: '', firstVisit: true };
     }
     this.run = saved.run;
+    this.saved = true;
     this.aiStyle = style;
     this.aiPieces = saved.ai.pieces;
     this.manual = saved.manual ?? null;
@@ -138,6 +142,7 @@ export class Session implements PlacementSession {
     this.run = newRun(settings, this.rng);
     this.best = this.loadBest();
     this.draftOpponent();
+    this.persist(); // a run the player chose: the menu offers Resume from now on
   }
 
   /** Drafts this round's opponent and stocks the shop with fresh offers. */

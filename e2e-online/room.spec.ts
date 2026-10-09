@@ -5,13 +5,12 @@ async function player(browser: Browser): Promise<Page> {
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto('./');
-  // Skip the single-player New run window.
-  await page.locator('#new-run-dialog').getByRole('button', { name: 'Start run' }).click();
+  await expect(page.locator('#menu')).toBeVisible();
   return page;
 }
 
 async function openMultiplayer(page: Page): Promise<void> {
-  await page.locator('#multiplayer').click();
+  await page.locator('#menu-multiplayer').click();
   await expect(page.locator('#match-dialog')).toBeVisible();
 }
 
@@ -51,6 +50,7 @@ test('two players create and join a room, play a round together, and move on to 
     await expect(page.locator('#match-players .player')).toHaveCount(4);
     await expect(page.locator('#match-players small', { hasText: 'bot' })).toHaveCount(2);
     await expect(page.locator('#match-round')).toContainText(`Round 1 · Shop · 4 left · Room ${code}`);
+    await expect(page.locator('#opponent')).toContainText('Next opponent');
   }
 
   // The host readies first and waits; the guest's Ready closes the shop for both.

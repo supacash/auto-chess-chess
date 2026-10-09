@@ -947,8 +947,7 @@ button.muted {
 body.in-match .run-bar,
 body.in-match #help,
 body.in-match #last-replay,
-body.in-match #new-run,
-body.in-match #multiplayer {
+body.in-match #menu-button {
   display: none;
 }
 
@@ -1103,8 +1102,7 @@ body.in-match #multiplayer {
 body.in-lobby .run-bar,
 body.in-lobby #help,
 body.in-lobby #placement,
-body.in-lobby #new-run,
-body.in-lobby #multiplayer {
+body.in-lobby #menu-button {
   display: none;
 }
 
@@ -1198,4 +1196,81 @@ body.in-lobby #multiplayer {
   background: none;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
+}
+
+/* ---- main menu ---- */
+
+h1 sup,
+.menu-title sup {
+  font-size: 0.55em;
+  color: var(--accent);
+}
+
+body.in-menu .run-bar,
+body.in-menu #help,
+body.in-menu #placement,
+body.in-menu #battle,
+body.in-menu header {
+  display: none;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 8px 8px;
+  text-align: center;
+  animation: fade-in 0.25s ease-out;
+}
+
+.menu-logo {
+  width: 104px;
+  height: 104px;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+}
+
+.menu-title {
+  margin: 18px 0 4px;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.menu-tagline {
+  margin: 0 0 22px;
+  max-width: 300px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.menu-notice {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  max-width: 340px;
+  font-size: 0.9rem;
+  color: var(--gold);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(100%, 320px);
+}
+
+.menu-buttons button {
+  min-height: 54px;
+  font-size: 1.05rem;
+}
+
+.menu-buttons button small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.8;
 }

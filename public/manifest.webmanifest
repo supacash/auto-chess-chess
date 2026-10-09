@@ -1,6 +1,6 @@
 {
-  "name": "Auto Chess Chess",
-  "short_name": "Auto Chess",
+  "name": "Auto Chess²",
+  "short_name": "Auto Chess²",
   "description": "Draft and place a chess army; an engine plays the battle.",
   "start_url": ".",
   "scope": ".",
@@ -9,8 +9,22 @@
   "background_color": "#1d1f24",
   "theme_color": "#1d1f24",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
   ]
 }

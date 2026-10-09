@@ -17,7 +17,7 @@ import {
 import { MAX_ARMY, type Piece, PIECE_NAME, PIECE_VALUE, PIECES, type PieceType } from '../rules/pieces';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
-import { $ } from './dom';
+import { $, escapeHtml } from './dom';
 import type { PlacementSession } from './placementSession';
 
 /** King first, then most to least valuable. */
@@ -198,10 +198,17 @@ export class PlacementScreen {
       this.renderFoeInfo();
       return;
     }
+    const label = this.mode.onReady ? 'Next opponent' : 'Opponent';
+    const name = escapeHtml(opponent.name);
+    if (opponent.pieces.length === 0) {
+      $('#opponent').innerHTML = `${label} · <strong>${name}</strong>: nothing placed yet`;
+      this.renderFoeInfo();
+      return;
+    }
     const types = opponent.pieces.map((p) => p.type).sort(pieceOrder);
     const points = types.reduce((s, t) => s + PIECE_VALUE[t], 0);
     $('#opponent').innerHTML =
-      `Opponent · <strong>${opponent.name}</strong>: ` +
+      `${label} · <strong>${name}</strong>: ` +
       `<span class="glyphs">${types
         .map(
           (t) =>
@@ -209,6 +216,14 @@ export class PlacementScreen {
         )
         .join('')}</span> · ${points} pts`;
     this.renderFoeInfo();
+  }
+
+  /** Redraws the opponent line (e.g. when a multiplayer opponent's preview changes). */
+  refreshOpponent(): void {
+    if (this.section.hidden) return;
+    const shown = this.foeInfo;
+    this.renderOpponent();
+    if (shown) this.toggleFoeInfo(shown);
   }
 
   private toggleFoeInfo(type: PieceType): void {

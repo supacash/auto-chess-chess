@@ -4,7 +4,7 @@ import type { Color } from '../chess/fen';
 import type { Winner } from '../rules/battle';
 import { rerollOffers, rollOffers, type Shop, type ShopResult, startingShop } from '../rules/economy';
 import { gameMode } from '../rules/mode';
-import type { Piece } from '../rules/pieces';
+import { makePiece, type Piece, type PieceType } from '../rules/pieces';
 import { armyErrors, canPlace, pieceAt } from '../rules/placement';
 import { startPosition } from '../rules/position';
 import type { Rng } from '../rules/rng';
@@ -53,6 +53,10 @@ export class MatchSession implements PlacementSession {
   /** Each player's win (+n) or loss (−n) streak. */
   streaks = new Map<string, number>();
   private locked = new Map<string, Piece[]>();
+  /** Other people's piece lists (types only, from the room) shown as previews during the shop. */
+  previews = new Map<string, PieceType[]>();
+  /** Called when the player's placed pieces change (online: shared as a preview, types only). */
+  onArmyChange: ((types: PieceType[]) => void) | null = null;
 
   constructor(
     readonly seed: number,
@@ -83,9 +87,23 @@ export class MatchSession implements PlacementSession {
     return this.players.find((p) => p.id === id)!;
   }
 
-  /** Opponents stay secret until the round's battles start. */
-  opponent(): null {
-    return null;
+  /**
+   * The player's next opponent and the pieces they have placed (types only: squares stay secret
+   * until the battle). Pairings come from the match seed, so they're known as soon as the shop opens.
+   * Null when the player is out, or a person hasn't shared a preview yet.
+   */
+  opponent(): { name: string; pieces: Piece[] } | null {
+    const pairing = pairingOf(pairRound(this.players, this.seed, this.round), this.myId);
+    if (!pairing) return null;
+    const otherSide = pairing.white === this.myId ? 'b' : 'w';
+    const id = otherSide === 'w' ? pairing.white : pairing.black;
+    const other = this.player(id);
+    const name = pairing.copy === otherSide ? `a copy of ${other.name}` : other.name;
+    const types = other.bot
+      ? botArmy(this.seed, this.round, id, this.board).map((p) => p.type)
+      : (this.previews.get(id) ?? null);
+    if (!types) return { name, pieces: [] };
+    return { name, pieces: types.map((t) => makePiece(t)) };
   }
 
   armyErrors(): string[] {
@@ -94,10 +112,21 @@ export class MatchSession implements PlacementSession {
 
   setPieces(pieces: Piece[]): void {
     this.shop = { ...this.shop, pieces };
+    this.armyChanged();
   }
 
   setShop(shop: Shop): void {
     this.shop = shop;
+    this.armyChanged();
+  }
+
+  /** The types of the player's placed pieces (what a preview shows). */
+  placedTypes(): PieceType[] {
+    return this.shop.pieces.filter((p) => p.square).map((p) => p.type);
+  }
+
+  private armyChanged(): void {
+    if (this.phase === 'shop') this.onArmyChange?.(this.placedTypes());
   }
 
   rerollOffers(): ShopResult {

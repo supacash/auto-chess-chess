@@ -31,20 +31,30 @@ const placement = new PlacementScreen(
 );
 const battle = new BattleScreen(
   () => {
-    if (isRunOver(session.run)) openNewRun();
+    if (isRunOver(session.run)) showMenu();
     else showPlacement();
   },
   () => void watchReplay(),
 );
 const newRun = new NewRunDialog(startNewRun);
-$('#new-run').addEventListener('click', openNewRun);
+$('#menu-button').addEventListener('click', () => {
+  if (!busy) showMenu();
+});
+$('#menu-new').addEventListener('click', openNewRun);
+$('#menu-resume').addEventListener('click', () => {
+  if (session.manual) {
+    hideMenu();
+    resumeManual();
+  } else showPlacement();
+});
+$('#menu-replay').addEventListener('click', () => void watchReplay());
 const match = new MatchController({
   placement,
   battle,
   ensureEngine,
   onExit: () => {
     placement.use(session, { header: () => renderHeader(session) });
-    showPlacement();
+    showMenu();
   },
 });
 const lobby = new LobbyScreen(
@@ -54,12 +64,12 @@ const lobby = new LobbyScreen(
   },
   () => {
     document.body.classList.remove('in-lobby');
-    showPlacement();
+    showMenu();
   },
   () => [1, 2, 3].map(() => generateName(Math.random)),
 );
 const matchDialog = $<HTMLDialogElement>('#match-dialog');
-$('#multiplayer').addEventListener('click', () => {
+$('#menu-multiplayer').addEventListener('click', () => {
   if (busy) return;
   $('#mp-error').textContent = '';
   matchDialog.showModal();
@@ -67,8 +77,10 @@ $('#multiplayer').addEventListener('click', () => {
 matchDialog.querySelector('form')?.addEventListener('submit', (e) => {
   const action = (e.submitter as HTMLButtonElement | null)?.value;
   const blitz = $<HTMLInputElement>('#mp-blitz').checked;
-  if (action === 'bots') match.startOffline({ blitz });
-  else if (action === 'create' || action === 'join') {
+  if (action === 'bots') {
+    hideMenu();
+    match.startOffline({ blitz });
+  } else if (action === 'create' || action === 'join') {
     e.preventDefault(); // keep the window open until the room is ready (or show what went wrong)
     void openRoom(action, blitz);
   }
@@ -103,6 +115,7 @@ async function openRoom(action: 'create' | 'join', blitz: boolean): Promise<void
     const roomCode = action === 'create' ? await client.createRoom(name, { blitz }, Math.random) : code;
     if (action === 'join') await client.joinRoom(code, name);
     matchDialog.close();
+    hideMenu();
     placement.hide();
     battle.hide();
     document.body.classList.add('in-lobby');
@@ -117,8 +130,33 @@ let engine: Engine | null = null;
 let busy = false;
 
 function showPlacement(): void {
+  hideMenu();
   battle.hide();
   placement.show();
+}
+
+/** The main menu: resume the single-player run, start a new one, or play multiplayer. */
+function showMenu(notice = ''): void {
+  battle.hide();
+  placement.hide();
+  document.body.classList.add('in-menu');
+  $('#menu').hidden = false;
+  const inProgress = session.manual !== null || (session.saved && !isRunOver(session.run));
+  $('#menu-resume').hidden = !inProgress;
+  const { round, lives } = session.run;
+  $('#menu-resume-detail').textContent = session.manual
+    ? `Round ${round} · your game is in progress`
+    : `Round ${round} · ${lives} ${lives === 1 ? 'life' : 'lives'} left`;
+  $('#menu-new').classList.toggle('primary', !inProgress);
+  $('#menu-replay').hidden = !session.lastReplay;
+  const note = $('#menu-notice');
+  note.hidden = !notice;
+  note.textContent = notice;
+}
+
+function hideMenu(): void {
+  document.body.classList.remove('in-menu');
+  $('#menu').hidden = true;
 }
 
 function openNewRun(): void {
@@ -215,18 +253,20 @@ async function playManual(loaded: Engine, game: ManualBattle): Promise<BattleRes
   }
 }
 
-/** Replays the last finished battle (from the result screen, or from placement). */
+/** Replays the last finished battle (from the result screen, placement or the menu). */
 async function watchReplay(): Promise<void> {
   const record = session.lastReplay;
   if (busy || !record) return;
+  const fromMenu = !$('#menu').hidden;
   try {
     await loadRules(); // the replay steps through moves with the rules library (normally loaded with the engine)
   } catch (err) {
     placement.setMessage(`Couldn't load the replay: ${err instanceof Error ? err.message : String(err)}`);
     return;
   }
+  hideMenu();
   placement.hide();
-  await battle.replay(record, showPlacement);
+  await battle.replay(record, fromMenu ? () => showMenu() : showPlacement);
 }
 
 /** Picks a saved manual game back up after a reload. */
@@ -271,11 +311,9 @@ function boot(): void {
       // ignore
     }
   }
-  const { notice, firstVisit } = session.restore();
-  showPlacement();
-  placement.setMessage(notice);
-  if (firstVisit) openNewRun();
-  else if (session.manual) resumeManual();
+  const { notice } = session.restore();
+  renderHeader(session);
+  showMenu(notice);
 }
 
 /**

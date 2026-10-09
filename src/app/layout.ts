@@ -9,12 +9,25 @@ export const SPEEDS = [1, 2, 4];
 export function renderLayout(root: HTMLElement): void {
   root.innerHTML = `
   <header>
-    <h1><img class="logo" src="${import.meta.env.BASE_URL}icon.svg" alt="" width="28" height="28" />Auto Chess Chess</h1>
+    <h1><img class="logo" src="${import.meta.env.BASE_URL}icon.svg" alt="" width="28" height="28" /><span>Auto Chess<sup>2</sup></span></h1>
     <div class="header-actions">
-      <button id="multiplayer" type="button" class="link">Multiplayer</button>
-      <button id="new-run" type="button" class="link">New run</button>
+      <button id="menu-button" type="button" class="link">Menu</button>
     </div>
   </header>
+  <section id="menu" class="menu" hidden>
+    <img class="menu-logo" src="${import.meta.env.BASE_URL}icon.svg" alt="" width="104" height="104" />
+    <h2 class="menu-title">Auto Chess<sup>2</sup></h2>
+    <p class="menu-tagline">Draft an army, place it, and let the engine fight it out.</p>
+    <p class="menu-notice" id="menu-notice" hidden></p>
+    <div class="menu-buttons">
+      <button type="button" id="menu-resume" class="primary">
+        Resume game<small id="menu-resume-detail"></small>
+      </button>
+      <button type="button" id="menu-new">New game</button>
+      <button type="button" id="menu-multiplayer">Multiplayer</button>
+    </div>
+    <button type="button" id="menu-replay" class="link-button" hidden>Watch your last battle</button>
+  </section>
   <section id="match-hud" class="match-hud" hidden>
     <div class="match-top">
       <span id="match-round"></span>

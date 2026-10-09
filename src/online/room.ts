@@ -42,6 +42,8 @@ export interface Room {
   ready: Record<string, number>;
   /** The round each person last finished (computed and watched the battles) in. */
   done: Record<string, number>;
+  /** Each person's placed piece types during the shop (no squares), so opponents can see what's coming. */
+  preview: Record<string, PieceType[]>;
 }
 
 export function isRoomCode(code: string): boolean {
@@ -76,6 +78,7 @@ export function newRoom(code: string, host: string, hostName: string, settings: 
     players: [],
     ready: {},
     done: {},
+    preview: {},
   };
 }
 
@@ -117,6 +120,7 @@ export function startRoom(room: Room, seed: number, botNames: string[]): Room {
     players,
     ready: {},
     done: {},
+    preview: {},
   };
 }
 

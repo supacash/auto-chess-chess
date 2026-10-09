@@ -1,4 +1,4 @@
-# Auto Chess Chess — Design Document
+# Auto Chess² — Design Document
 
 The source of truth for how the game works. Update it whenever a rule or tuning decision changes.
 Balance numbers come from the simulator; see [SIMULATION.md](SIMULATION.md) for the data behind them.
@@ -20,7 +20,8 @@ Draft and place a chess army, then watch an engine play the round for both sides
 
 ## Runs
 - **3 lives.** A loss costs one; a draw costs none. The score is rounds won.
-- **New run window** (opens from *New run*, from the game-over screen, and on a first visit) sets the run's settings, which are fixed for the whole run:
+- **Main menu** (the landing screen, and *Menu* in the header): *Resume game* (shown while a run or a Play it game is in progress, with its round and lives), *New game*, *Multiplayer*, and *Watch your last battle*. A battle interrupted by a reload is reported here.
+- **New run window** (opens from *New game*) sets the run's settings, which are fixed for the whole run:
   - **Board (game mode):** *Growing board* (default; 5×5 growing to 8×8, see Board sizes) or *Classic* (8×8 throughout).
   - **Difficulty:** how fast the AI's budget grows: Easy 5×round, Normal 6×round (default), Hard 7×round.
   - **Play as:** White (default; you move first), Black (the opponent moves first) or Random each round. Your pieces are always white to the engine; playing Black only swaps the colours on screen and who moves first.
@@ -137,7 +138,7 @@ In Growing mode the board opens up during the run:
 ## Multiplayer
 Live, TFT-style matches for 4 players. Everything that decides a match is deterministic from the match seed (pairings, bot armies, battles), so each client computes the results itself: there's no game server.
 - **Health:** everyone starts at 20 HP. Losing a battle costs the round number plus 1 per 5 points of material the winner has left; a draw costs nothing. At 0 HP you're out; lower HP places worse among players knocked out in the same round. Last one standing wins (places 1st–4th).
-- **Rounds:** everyone shops and places at the same time for 45 seconds (15 in Blitz), ending early when all are Ready. Opponents stay hidden until the round's battles start (enforced by the Firestore rules). If your king is still on the bench when the timer ends, it's placed for you.
+- **Rounds:** everyone shops and places at the same time for 45 seconds (15 in Blitz), ending early when all are Ready. Your next opponent is known as soon as the shop opens (pairings come from the match seed), and you see the pieces they've placed (types only, updated as they shop); where they stand stays hidden until the battle starts (army positions are protected by the Firestore rules). If your king is still on the bench when the timer ends, it's placed for you.
 - **Pairings and sides:** random each round from the match seed, including who is White; White moves first. Your side is announced before the battle ("You're Black against …"), and your pieces are drawn in your colour at the bottom of the board. With an odd number left, the last player fights a copy of another player's army; only the odd player can take damage or extend a streak in that battle.
 - **Income:** base 5, +1 for a win (+1 for a draw), plus a streak bonus for win or loss streaks: 2 in a row +1, 3 +2, 4 or more +3. Draws neither extend nor break a streak and pay no streak bonus. Streaks show in the health list (🔥 wins, ❄️ losses).
 - **Battles:** auto only (no Play it in multiplayer). You watch your own; the others are computed and summarized.

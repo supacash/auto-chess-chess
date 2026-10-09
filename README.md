@@ -1,4 +1,4 @@
-# Auto Chess Chess
+# Auto Chess²
 
 An auto-battler built on chess. Draft an army, place it in your home rows, and press **Fight**: a chess engine plays the round for both sides. Survive as many rounds as you can against stronger and stronger AI armies.
 

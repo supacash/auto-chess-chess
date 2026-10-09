@@ -14,7 +14,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import type { MatchPlayer, MatchSettings } from '../multi/match';
-import type { Piece } from '../rules/pieces';
+import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
 import { type Rng, randomSeed } from '../rules/rng';
 import {
   armyDoc,
@@ -186,6 +186,11 @@ export class RoomClient {
     return armies;
   }
 
+  /** Shares the player's placed piece types (no squares) with the room. */
+  async sharePreview(code: string, types: PieceType[]): Promise<void> {
+    await updateDoc(doc(this.db, 'rooms', code), { [`preview.${this.uid}`]: types });
+  }
+
   /** Marks the player as finished with the round's battles. */
   async markDone(code: string, round: number): Promise<void> {
     await updateDoc(doc(this.db, 'rooms', code), { [`done.${this.uid}`]: round });
@@ -219,5 +224,16 @@ function fromStored(data: Record<string, unknown>): Room {
     phaseStartedAt: started instanceof Timestamp ? started.toMillis() : null,
     ready: (data.ready as Record<string, number>) ?? {},
     done: (data.done as Record<string, number>) ?? {},
+    preview: parsePreviews(data.preview),
   };
+}
+
+/** Other players' previews: kept only if they're lists of known piece types (at most a full army). */
+function parsePreviews(data: unknown): Record<string, PieceType[]> {
+  const out: Record<string, PieceType[]> = {};
+  if (typeof data !== 'object' || data === null) return out;
+  for (const [uid, types] of Object.entries(data)) {
+    if (Array.isArray(types) && types.length <= 16 && types.every(isPieceType)) out[uid] = types;
+  }
+  return out;
 }

@@ -4,7 +4,7 @@ import { loadRulesForNode } from '../chess/testRules';
 import { PIECES } from '../rules/pieces';
 import { armyErrors } from '../rules/placement';
 import { seededRng } from '../rules/rng';
-import { START_HP } from './match';
+import { botArmy, pairRound, START_HP } from './match';
 import { MatchSession, withKingPlaced } from './matchSession';
 
 beforeAll(loadRulesForNode);
@@ -24,13 +24,12 @@ const match = (seed = 11) =>
   );
 
 describe('MatchSession', () => {
-  it('starts in the shop on Classic 8×8 with standard offers only and a hidden opponent', () => {
+  it('starts in the shop on Classic 8×8 with standard offers only', () => {
     const m = match();
     expect(m.phase).toBe('shop');
     expect(m.board).toBe(BOARD_8);
     expect(m.shop.pieces.map((p) => p.type)).toEqual(['K', 'P', 'P', 'P']);
     expect(m.shop.offers?.every((t) => PIECES[t].group === 'standard')).toBe(true);
-    expect(m.opponent()).toBeNull();
     expect(m.players.every((p) => p.hp === START_HP)).toBe(true);
   });
 
@@ -85,5 +84,48 @@ describe('MatchSession', () => {
     const m = match();
     const placed = withKingPlaced(m.shop.pieces, BOARD_8);
     expect(placed.find((p) => p.type === 'K')!.square).toEqual({ file: 3, rank: 0 });
+  });
+
+  it('shows the next opponent’s pieces (types only) as soon as the shop opens', () => {
+    const m = match();
+    const next = m.opponent()!;
+    const pairing = pairRound(m.players, m.seed, 1).find((p) => p.white === 'me' || p.black === 'me')!;
+    const id = pairing.white === 'me' ? pairing.black : pairing.white;
+    expect(next.name).toBe(m.player(id).name);
+    // A bot's army is known; no squares are given away.
+    expect(next.pieces.map((p) => p.type).sort()).toEqual(
+      botArmy(m.seed, 1, id)
+        .map((p) => p.type)
+        .sort(),
+    );
+    expect(next.pieces.every((p) => p.square === null)).toBe(true);
+    // The opponent is the one the round actually pairs.
+    m.lockArmies();
+    const real = m.myPairing()!;
+    expect(real.white === id || real.black === id).toBe(true);
+  });
+
+  it('shows a person’s shared preview, or an empty army until they share one', () => {
+    const m = new MatchSession(
+      3,
+      'me',
+      [
+        { id: 'me', name: 'Me', bot: false },
+        { id: 'friend', name: 'Friend', bot: false },
+      ],
+      { blitz: false },
+      seededRng(3),
+    );
+    expect(m.opponent()).toEqual({ name: 'Friend', pieces: [] });
+    m.previews.set('friend', ['K', 'Q']);
+    expect(m.opponent()!.pieces.map((p) => p.type)).toEqual(['K', 'Q']);
+  });
+
+  it('reports the player’s placed piece types when the army changes', () => {
+    const m = match();
+    const seen: string[][] = [];
+    m.onArmyChange = (types) => seen.push(types);
+    m.setPieces(withKingPlaced(m.shop.pieces, BOARD_8));
+    expect(seen).toEqual([['K']]);
   });
 });

@@ -1,10 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 
-/** Opens a fresh game (no saved run) and starts a Growing-board run from the New run window. */
+/** Opens a fresh game (no saved run) and starts a Growing-board run from the menu's New game. */
 async function startRun(page: Page): Promise<void> {
   await page.goto('./');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await expect(page.locator('#menu')).toBeVisible();
+  await expect(page.locator('#menu-resume')).toBeHidden(); // nothing to resume yet
+  await page.locator('#menu-new').click();
   const dialog = page.locator('#new-run-dialog');
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'Start run' }).click();
@@ -21,7 +24,7 @@ async function placeKing(page: Page): Promise<void> {
   await expect(page.locator('#fight')).toBeEnabled();
 }
 
-test('a first visit opens the New run window and the placement screen works', async ({ page }) => {
+test('a first visit shows the menu, New game starts a run, and the placement screen works', async ({ page }) => {
   await startRun(page);
   await expect(page.locator('#round')).toContainText('Round 1');
   await expect(page.locator('.offer')).toHaveCount(4);
@@ -60,7 +63,8 @@ test('leaving during an auto battle counts as a loss', async ({ page }) => {
   await page.locator('#fight').click();
   await expect(page.locator('#battle-status')).toContainText('Move', { timeout: 60_000 });
   await page.reload();
-  await expect(page.locator('#message')).toContainText('interrupted and counted as a loss');
+  await expect(page.locator('#menu-notice')).toContainText('interrupted and counted as a loss');
+  await page.locator('#menu-resume').click();
   await expect(page.locator('#lives .heart.full')).toHaveCount(2);
 });
 
@@ -78,6 +82,7 @@ test('Play it: move, resume after a reload, undo and resign', async ({ page }) =
     localStorage.setItem('acc.run.v1', JSON.stringify(save));
   });
   await page.reload();
+  await page.locator('#menu-resume').click();
   await page.locator('#play').click();
   const status = page.locator('#battle-status');
   await expect(status).toHaveText('Your move', { timeout: 60_000 });
@@ -89,8 +94,10 @@ test('Play it: move, resume after a reload, undo and resign', async ({ page }) =
   await expect(status).toHaveText(/Your move/, { timeout: 60_000 });
   await expect(page.locator('#undo')).toBeEnabled();
 
-  // A reload picks the game back up instead of counting a loss.
+  // A reload offers the game back from the menu instead of counting a loss.
   await page.reload();
+  await expect(page.locator('#menu-resume-detail')).toContainText('in progress');
+  await page.locator('#menu-resume').click();
   await expect(page.locator('#battle')).toBeVisible();
   await expect(status).toHaveText(/Your move/, { timeout: 60_000 });
   await expect(page.locator('#lives .heart.full')).toHaveCount(3);
@@ -108,7 +115,8 @@ test('Play it: move, resume after a reload, undo and resign', async ({ page }) =
 
 test('a multiplayer match against bots plays a round with health and moves on', async ({ page }) => {
   await startRun(page);
-  await page.locator('#multiplayer').click();
+  await page.locator('#menu-button').click();
+  await page.locator('#menu-multiplayer').click();
   const dialog = page.locator('#match-dialog');
   await dialog.getByRole('button', { name: 'Play vs 3 bots' }).click();
 
@@ -116,7 +124,9 @@ test('a multiplayer match against bots plays a round with health and moves on', 
   await expect(hud).toBeVisible();
   await expect(page.locator('#match-players .player')).toHaveCount(4);
   await expect(page.locator('#match-round')).toContainText('Round 1 · Shop');
-  await expect(page.locator('#opponent')).toHaveText('Your opponent is revealed when the round starts.');
+  // The next opponent (a bot) and its pieces are shown before the round, but not where they stand.
+  await expect(page.locator('#opponent')).toContainText('Next opponent');
+  await expect(page.locator('#opponent .foe').first()).toBeVisible();
   await expect(page.locator('#play')).toBeHidden();
   await expect(page.locator('#fight')).toHaveText('Ready');
 

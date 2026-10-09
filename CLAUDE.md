@@ -1,4 +1,4 @@
-# Auto Chess Chess
+# Auto Chess²
 
 Single-player auto-battler chess for the browser: draft and place an army, then an engine plays the round for both sides. **[DESIGN.md](DESIGN.md) is the source of truth for rules, economy and milestones** — read it before changing game logic, and update it when a design decision changes.
 

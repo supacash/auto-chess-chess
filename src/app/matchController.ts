@@ -24,7 +24,7 @@ export interface MatchDeps {
   placement: PlacementScreen;
   battle: BattleScreen;
   ensureEngine: () => Promise<Engine>;
-  /** Back to the single-player run. */
+  /** Back to the main menu. */
   onExit: () => void;
 }
 
@@ -112,6 +112,14 @@ export class MatchController {
       finished: 0,
     };
     this.online.stopWatching = client.watch(room.code, (r) => this.onRoom(r));
+    // Share what's placed (types only) a moment after each change, so the next opponent can see it.
+    let pending = 0;
+    m.onArmyChange = (types) => {
+      clearTimeout(pending);
+      pending = window.setTimeout(() => {
+        if (this.match === m && this.online) void this.online.client.sharePreview(room.code, types).catch(console.warn);
+      }, 800);
+    };
     document.body.classList.add('in-match');
     this.enterShop();
   }
@@ -136,6 +144,8 @@ export class MatchController {
     battle.hide();
     placement.show();
     placement.setMessage('');
+    // Pieces carry over between rounds: share them right away for the new round's opponent.
+    if (this.online) void this.online.client.sharePreview(this.online.code, m.placedTypes()).catch(console.warn);
     this.startTimer();
   }
 
@@ -209,6 +219,8 @@ export class MatchController {
     const m = this.match;
     if (!o || !m || !room) return;
     o.room = room;
+    m.previews = new Map(Object.entries(room.preview));
+    if (m.phase === 'shop') this.deps.placement.refreshOpponent();
     if (room.phase === 'battle' && room.round === m.round && o.fought < room.round) {
       o.fought = room.round;
       void this.fight();
@@ -335,7 +347,7 @@ export class MatchController {
         title: place === 1 ? 'You win the match!' : `You finished ${ordinal(place)}`,
         detail,
         tone: place === 1 ? 'w' : 'b',
-        button: 'Back to single player',
+        button: 'Back to menu',
         onButton: () => this.exit(),
       });
       return;
