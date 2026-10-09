@@ -26,6 +26,16 @@ export interface PlacementBoardOptions {
   onSelect?: (pieceId: string | null) => void;
   /** Called when an opponent piece is tapped (with Reveal on) while nothing is selected. */
   onFoeTap?: (type: PieceType) => void;
+  /** In pick mode (see setPicking), called when a pickable piece is tapped. */
+  onPick?: (pieceId: string) => void;
+}
+
+/** Pick mode: choosing pieces (e.g. the pawns to fuse) instead of moving them. */
+export interface Picking {
+  /** Pieces that can be picked (highlighted). */
+  pickable: Set<string>;
+  /** Pieces picked so far (circled). */
+  picked: Set<string>;
 }
 
 /** Interactive placement board: drag or tap pieces between the bench and the home rows. */
@@ -36,6 +46,7 @@ export class PlacementBoard {
   private selected: string | null = null;
   private reportedSelection: string | null = null;
   private press: Press | null = null;
+  private picking: Picking | null = null;
   private spec: BoardSpec = BOARD_8;
   private readonly boardEl: HTMLElement;
   private readonly benchEl: HTMLElement;
@@ -84,6 +95,13 @@ export class PlacementBoard {
     this.render();
   }
 
+  /** Enters pick mode (taps pick pieces, nothing moves), updates it, or leaves it with null. */
+  setPicking(picking: Picking | null): void {
+    this.picking = picking;
+    if (picking) this.selected = null;
+    this.render();
+  }
+
   // ---- rendering ----
 
   private render(): void {
@@ -129,6 +147,8 @@ export class PlacementBoard {
     const el = document.createElement('div');
     el.className = 'piece';
     if (p.id === this.selected) el.classList.add('selected');
+    if (this.picking?.pickable.has(p.id)) el.classList.add('pickable');
+    if (this.picking?.picked.has(p.id)) el.classList.add('picked');
     if (this.press?.dragging && p.id === this.press.pieceId) el.classList.add('drag-source');
     el.dataset.id = p.id;
     fillPiece(el, p.type);
@@ -165,7 +185,7 @@ export class PlacementBoard {
 
   private onPointerMove(e: PointerEvent): void {
     const press = this.press;
-    if (!press?.pieceId) return;
+    if (!press?.pieceId || this.picking) return;
     if (!press.dragging) {
       if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < DRAG_THRESHOLD) return;
       press.dragging = true;
@@ -204,6 +224,10 @@ export class PlacementBoard {
   }
 
   private handleTap(pieceId: string | null, target: DropTarget | null): void {
+    if (this.picking) {
+      if (pieceId && this.picking.pickable.has(pieceId)) this.opts.onPick?.(pieceId);
+      return;
+    }
     if (pieceId) {
       if (this.selected === pieceId) this.selected = null;
       else if (this.selected && target?.kind === 'square' && this.tryMove(this.selected, target, true))

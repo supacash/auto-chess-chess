@@ -42,7 +42,7 @@ export const AI_STYLES: AiStyle[] = [
     name: 'Balanced',
     pawnShare: 0.35,
     weights: { N: 2, B: 2, R: 1.5, Q: 1 },
-    fairyWeights: { M: 0.6, L: 0.5, X: 0.7, T: 0.4, A: 0.5, C: 0.4 },
+    fairyWeights: { M: 0.6, L: 0.5, T: 0.4, A: 0.5, C: 0.4 },
     berolinaShare: 0.2,
     kingFiles: [4, 3],
     kingRank: 0,
@@ -55,8 +55,8 @@ export const AI_STYLES: AiStyle[] = [
     name: 'Fortress',
     pawnShare: 0.6,
     weights: { N: 1, B: 1.5, R: 1.5, Q: 0.5 },
-    // Short-range defenders and a cannon behind the pawn wall.
-    fairyWeights: { F: 0.8, W: 0.8, M: 1.2, X: 1, C: 0.3 },
+    // Short-range defenders behind the pawn wall.
+    fairyWeights: { F: 1, W: 1, M: 1.2, C: 0.3 },
     berolinaShare: 0.15,
     kingFiles: [6, 7],
     kingRank: 0,
@@ -69,7 +69,7 @@ export const AI_STYLES: AiStyle[] = [
     name: 'Heavy Artillery',
     pawnShare: 0.15,
     weights: { N: 0.5, B: 0.5, R: 2.5, Q: 3 },
-    fairyWeights: { X: 1.5, C: 1.5, A: 0.8, Z: 1.2 },
+    fairyWeights: { C: 1.5, A: 0.8, Z: 1.2 },
     berolinaShare: 0.2,
     kingFiles: [4, 3],
     kingRank: 0,
@@ -83,7 +83,7 @@ export const AI_STYLES: AiStyle[] = [
     pawnShare: 0.25,
     weights: { N: 3, B: 2.5, R: 0.5, Q: 0.5 },
     // Jumpers and knight compounds.
-    fairyWeights: { L: 1.5, T: 1.2, A: 1.5, G: 0.4 },
+    fairyWeights: { L: 1.5, T: 1.2, A: 1.5 },
     berolinaShare: 0.3,
     kingFiles: [4, 3, 5],
     kingRank: 0,
@@ -97,7 +97,7 @@ export const AI_STYLES: AiStyle[] = [
     fairyOnly: true,
     pawnShare: 0.3,
     weights: { N: 0.5, B: 0.5, R: 0.5, Q: 0.3 },
-    fairyWeights: { F: 1, W: 1, M: 1.2, L: 1.2, G: 1, X: 1.2, T: 1, A: 0.8, C: 0.8, Z: 0.5 },
+    fairyWeights: { F: 1, W: 1, M: 1.2, L: 1.2, T: 1, A: 0.8, C: 0.8, Z: 0.5 },
     berolinaShare: 0.6,
     kingFiles: [4, 3],
     kingRank: 0,
@@ -138,6 +138,8 @@ export function pickStyle(rng: Rng, fairy = false): AiStyle {
 
 /** Gold upgrades plus, with fairy pieces on, the fusions an AI could have made (its partner bought outright). */
 const FAIRY_UPGRADES: Partial<Record<PieceType, PieceType[]>> = {
+  F: ['M'],
+  W: ['M'],
   N: ['T', 'A', 'C'],
   B: ['A'],
   R: ['C'],
