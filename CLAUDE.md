@@ -5,7 +5,7 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 ## Commands
 - `npm run dev` — Vite dev server
 - `npm test` — Vitest (rules unit tests)
-- `npm run typecheck` — `tsc --noEmit` (TypeScript 7)
+- `npm run typecheck` — `tsc --noEmit` for the game, plus `-p scripts` for the simulator (TypeScript 7)
 - `npm run build` — typecheck + production build
 
 ## Layout

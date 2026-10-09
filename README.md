@@ -30,9 +30,9 @@ npm run dev
 |---|---|
 | `npm run dev` | Dev server at http://localhost:5173 |
 | `npm test` | Unit tests (Vitest) |
-| `npm run typecheck` | TypeScript check |
+| `npm run typecheck` | TypeScript check (game and simulator) |
 | `npm run build` | Typecheck + production build in `dist/` |
-| `npm run sim` | Headless balance simulator (work in progress) |
+| `npm run sim` | Headless balance simulator (see [SIMULATION.md](SIMULATION.md)) |
 
 `dev` and `build` first copy the Stockfish WASM engine from `node_modules` into `public/engine/`.
 

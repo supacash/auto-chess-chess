@@ -18,6 +18,7 @@ import { roundIncome, START_ARMY, START_GOLD, startingShop } from '../../src/rul
 import { PIECE_VALUE } from '../../src/rules/pieces';
 import { startPosition } from '../../src/rules/position';
 import { randomInt, seededRng } from '../../src/rules/rng';
+import { formatMargin, meanMargin } from './stats';
 import { EngineFailure, NodeEngine } from './nodeEngine';
 import { armyValue, spendGold } from './shopPlayer';
 
@@ -223,12 +224,13 @@ function add(b: Bucket, g: GameRecord): void {
 const pct = (x: number, n: number) => (n ? `${Math.round((100 * x) / n)}%` : '-');
 
 function table(title: string, rows: [string, Bucket][]): string {
-  const head = ['', 'games', 'pts P/AI', 'win', 'draw', 'loss', 'avg ply', 'limit', 'mate', `lead≥${LEAD}`, 'no mate', 'no win'];
+  const head = ['', 'games', 'pts P/AI', 'win', '±win', 'draw', 'loss', 'avg ply', 'limit', 'mate', `lead≥${LEAD}`, 'no mate', 'no win'];
   const body = rows.map(([label, b]) => [
     label,
     String(b.n),
     b.n ? `${(b.playerPts / b.n).toFixed(1)}/${(b.aiPts / b.n).toFixed(1)}` : '-',
     pct(b.w, b.n),
+    formatMargin(b.w, b.n),
     pct(b.d, b.n),
     pct(b.l, b.n),
     b.n ? (b.plies / b.n).toFixed(1) : '-',
@@ -273,19 +275,21 @@ function report(records: RunRecord[]): string {
     return { score, survived: lives > 0 };
   });
   const avgScore = scores.reduce((s, x) => s + x.score, 0) / scores.length;
+  const scoreMargin = meanMargin(scores.map((x) => x.score));
 
   const out = [
     `Auto Chess Chess sim — ${RUNS} runs × ${ROUNDS} rounds, seed ${SEED}, depth ${DEPTH ?? SEARCH_DEPTH}, ` +
       `ply limit ${LIMITS.plyLimit}${DECISIVE ? `, decisive lead ${DECISIVE[0]} for ${DECISIVE[1]} plies` : ''}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
-      `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round` : '6×round'} ±1`,
+      `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round ±1` : '6×round ±1 (round 1: −1)'}`,
     'W/D/L are from the player\'s side. "lead≥N" = games where a side was ever ≥N points of material ahead;',
     '"no mate"/"no win" = share of those where that side failed to checkmate / failed to win at all.',
+    '"±win" = 95% margin of error on the win rate, in points. Treat gaps smaller than the margins as noise.',
     table('By round', [...byRound.entries()].sort(([a], [b]) => a - b).map(([r, b]) => [`round ${r}`, b])),
     table('By AI style', [...byStyle.entries()]),
     table('By player stand-in style', [...byPlayerStyle.entries()]),
     table('Total', [['all', total]]),
     `\nEnd reasons: ${[...reasons.entries()].map(([r, n]) => `${r} ${pct(n, games.length)}`).join(', ')}`,
-    `Run score (wins before ${LIVES} losses): avg ${avgScore.toFixed(2)}, ` +
+    `Run score (wins before ${LIVES} losses): avg ${avgScore.toFixed(2)} ±${scoreMargin.toFixed(2)}, ` +
       `${pct(scores.filter((s) => s.survived).length, scores.length)} of runs still alive after round ${ROUNDS}`,
   ];
   const all = games.length + rejected.length;

@@ -163,4 +163,5 @@ Wall time is with 14 engines while other sims were running at times, so treat it
 
 - Both stand-in players use AI placement heuristics rather than human placement. `redraft` re-drafts from scratch each round, so it never sells at a loss. `shop` never sells at all, and its greedy plan doesn't save gold for a queen or react to the opponent.
 - Unplayable battles (problems 1 and 2) are left out of W/D/L and count as draws for income. At high budgets that removes many of the most lopsided games.
-- `scripts/sim` is not covered by `npm run typecheck` (no `@types/node` in the project).
+- Tables include a `±win` column: the 95% margin of error on the win rate (normal approximation). The run score line has the same margin. Games within a run aren't fully independent, so the true margins are a little wider. Treat gaps smaller than the margins as noise.
+- `npm run typecheck` covers `scripts/` (see `scripts/tsconfig.json`).

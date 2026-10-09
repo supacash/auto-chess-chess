@@ -1,0 +1,8 @@
+{
+  // Typechecks the Node scripts (simulator) together with the game code they import.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"]
+  },
+  "include": ["sim/**/*.ts", "../src/**/*.ts"]
+}
