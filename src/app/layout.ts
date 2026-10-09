@@ -103,7 +103,7 @@ export function renderLayout(root: HTMLElement): void {
   </section>
 
   <section id="lobby" class="lobby" hidden>
-    <p class="lobby-label">Room code</p>
+    <p class="lobby-label" id="lobby-label">Room code</p>
     <p class="lobby-code" id="lobby-code"></p>
     <p class="dialog-text muted" id="lobby-status"></p>
     <ol class="lobby-seats" id="lobby-seats"></ol>
@@ -155,10 +155,14 @@ export function renderLayout(root: HTMLElement): void {
         (or everyone is ready) you're paired off and the engine plays the battles. Losing costs HP: the round
         number plus 1 per 5 points the winner has left. Last one standing wins.
       </p>
-      <p class="dialog-text muted">Classic 8×8, standard pieces, auto battles.</p>
+      <p class="dialog-text muted">
+        Classic 8×8, standard pieces, auto battles. Quick play matches you with anyone looking for a game in the
+        same mode; empty seats get bots after 30 seconds.
+      </p>
       <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 20-second shop instead of 45</label>
       <div class="actions">
-        <button type="submit" value="create" class="primary">Create room</button>
+        <button type="submit" value="quick" class="primary">Quick play</button>
+        <button type="submit" value="create">Create room</button>
         <button type="submit" value="bots">Play vs 3 bots</button>
       </div>
       <div class="join-row">

@@ -153,13 +153,14 @@ Live, TFT-style matches for 4 players. Everything that decides a match is determ
 - **Offline:** *Multiplayer* → *Play vs 3 bots* (optional Blitz).
 - **Online rooms** (Firebase project `auto-chess-chess`, anonymous sign-in): *Create room* gives a 4-letter code to share; others *Join room* with it; the host starts whenever they like and empty seats become bots. Players have generated names ("Golden Knight 19"). Ready uploads your army; the shop closes when everyone still in is ready or the deadline (server time) passes; the round ends once everyone has watched their battle (or after 2 minutes). Someone who leaves keeps their last army (or a lone king) and plays on until knocked out. *Leave* (two taps) exits a match.
 - **Rejoining:** each device saves its side of an online match (room, shop, gold, streak). After a reload, or after leaving, the menu offers *Rejoin match* while the match is on and the player is still in it (saves older than 6 hours aren't offered). A player who missed rounds gets base income for each one (their last army fought them) and their streak starts over; one who rejoins mid-battle plays their battle, or waits if they had already finished it.
-- **Not yet:** quick match with strangers.
+- **Quick play:** Classic or Classic Blitz for now (fairy pieces and growing boards later). It takes a seat in an open quick play room in that mode, fullest first, or makes one. A quick room has no code to share and no host button: it starts by itself once 4 people are in, or 30 seconds after the last person joined, with bots in the empty seats (anyone in the room may start it when it's due). Rooms nobody joined in the last 40 seconds aren't joined (they've started, or were abandoned). If two people make rooms at the same moment, someone still alone in the newer room moves to the older one.
+- **Not yet:** quick play for the other modes.
 
 ## Roadmap
 Done: reproducible seeded battles, RULES_VERSION, army snapshots, replays, browser smoke tests in CI, game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as.
 
 Next candidates (not yet decided):
-1. **Multiplayer:** quick match and balance runs for 4-player matches (see Multiplayer).
+1. **Multiplayer:** quick play for more modes, and balance runs for 4-player matches (see Multiplayer).
 2. **Daily challenges:** one seed for everyone (battles are already seeded and reproducible).
 3. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
 4. **Bigger boards** past 8×8, with a longer move limit.

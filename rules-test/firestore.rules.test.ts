@@ -5,7 +5,18 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 
 // Runs against the Firestore emulator: npm run test:rules (needs Java).
@@ -62,6 +73,24 @@ describe('rooms', () => {
         seats: [seat('host', 'Host'), seat('p2', 'P2'), seat('zz'), seat(null)],
       }),
     );
+  });
+
+  it('lets a joiner stamp the join time with the server time only', async () => {
+    await seed(lobby());
+    const seats = [seat('host', 'Host'), seat('p2', 'P2'), seat(null), seat(null)];
+    await assertSucceeds(updateDoc(doc(as('p2'), 'rooms/ABCD'), { seats, waitingSince: serverTimestamp() }));
+    const later = [seat('host', 'Host'), seat('p2', 'P2'), seat('p3', 'P3'), seat(null)];
+    await assertFails(updateDoc(doc(as('p3'), 'rooms/ABCD'), { seats: later, waitingSince: Timestamp.fromMillis(0) }));
+  });
+
+  it('lets anyone signed in look for quick play rooms', async () => {
+    await seed({ ...lobby(), quick: true });
+    const rooms = query(
+      collection(as('stranger'), 'rooms'),
+      where('quick', '==', true),
+      where('status', '==', 'lobby'),
+    );
+    await assertSucceeds(getDocs(rooms));
   });
 
   it('lets seated players move the match along, but not strangers', async () => {
