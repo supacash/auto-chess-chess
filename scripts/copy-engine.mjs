@@ -15,4 +15,7 @@ copyFileSync(join(nm, 'ffish-es6', 'ffish.wasm'), join(dest, 'ffish.wasm'));
 // Both are GPLv3: ship the license text alongside them.
 copyFileSync(join(nm, 'fairy-stockfish-nnue.wasm', 'Copying.txt'), join(dest, 'GPL-3.0.txt'));
 // Makes the page cross-origin isolated on hosts that can't send COOP/COEP headers (GitHub Pages).
-copyFileSync(join(nm, 'coi-serviceworker', 'coi-serviceworker.min.js'), join(root, 'public', 'coi-serviceworker.min.js'));
+copyFileSync(
+  join(nm, 'coi-serviceworker', 'coi-serviceworker.min.js'),
+  join(root, 'public', 'coi-serviceworker.min.js'),
+);

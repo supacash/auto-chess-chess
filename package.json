@@ -13,9 +13,12 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p scripts",
     "test": "vitest run",
-    "sim": "tsx scripts/sim/sim.ts"
+    "sim": "tsx scripts/sim/sim.ts",
+    "lint": "biome check .",
+    "format": "biome check --write ."
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@types/node": "^22.20.5",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

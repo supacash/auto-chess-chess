@@ -236,7 +236,13 @@ function draftOpponent(): void {
   state.aiStyle = pickStyle(rng);
   const { settings } = state.run;
   const mode = gameMode(settings.mode);
-  const budget = aiBudget(state.run.round, rng, difficulty(settings.difficulty).perRound, mode.roundOneDiscount, mode.aiBonus);
+  const budget = aiBudget(
+    state.run.round,
+    rng,
+    difficulty(settings.difficulty).perRound,
+    mode.roundOneDiscount,
+    mode.aiBonus,
+  );
   state.aiPieces = placeAiArmy(draftAiArmy(budget, state.aiStyle, rng, spec), state.aiStyle, rng, spec);
 }
 
@@ -251,7 +257,9 @@ const newRunDialog = $<HTMLDialogElement>('#new-run-dialog');
 function openNewRunDialog(): void {
   if (state.busy) return;
   const { settings } = state.run;
-  newRunDialog.querySelectorAll<HTMLInputElement>('input[name="nr-mode"]').forEach((r) => (r.checked = r.value === settings.mode));
+  for (const radio of newRunDialog.querySelectorAll<HTMLInputElement>('input[name="nr-mode"]')) {
+    radio.checked = radio.value === settings.mode;
+  }
   $<HTMLSelectElement>('#nr-difficulty').value = settings.difficulty;
   $<HTMLInputElement>('#nr-reveal').checked = settings.reveal;
   $('#nr-warning').hidden = !hasStarted(state.run) || isRunOver(state.run);
@@ -293,7 +301,7 @@ function renderHeader(round = state.run.round): void {
   $('#record').textContent = `${record.w}W ${record.l}L ${record.d}D`;
   const level = difficulty(state.run.settings.difficulty);
   $('#best').textContent =
-    `Best ${Math.max(state.best, runScore(state.run))}` + (level.id === 'normal' ? '' : ` (${level.name})`);
+    `Best ${Math.max(state.best, runScore(state.run))}${level.id === 'normal' ? '' : ` (${level.name})`}`;
   const { w, l, d } = record;
   $('#help').hidden = w + l + d > 0;
 }
@@ -500,16 +508,27 @@ async function playBattle(fen: string, firstMover: 'w' | 'b'): Promise<void> {
   battleStatusEl.textContent = firstMover === 'w' ? 'You move first' : 'Opponent moves first';
   await sleep(700);
 
-  const result = await runBattle(fen, state.engine!, rng, async (move, game, plies, evalScore) => {
-    const ms = state.skipping ? 0 : MOVE_MS / state.speed;
-    battleView.render(game.fen(), game.spec, { last: move, animateMs: reduceMotion ? 0 : ms * 0.8, check: game.isCheck() });
-    if (evalScore !== null) showEval(evalScore);
-    const mat = material(game.fen());
-    battleStatusEl.textContent = state.skipping
-      ? 'Skipping…'
-      : `Move ${Math.ceil(plies / 2)}/${limit / 2} · Material ${mat.w}–${mat.b}`;
-    if (ms) await sleep(ms);
-  }, { plyLimit: limit }, spec);
+  const result = await runBattle(
+    fen,
+    state.engine!,
+    rng,
+    async (move, game, plies, evalScore) => {
+      const ms = state.skipping ? 0 : MOVE_MS / state.speed;
+      battleView.render(game.fen(), game.spec, {
+        last: move,
+        animateMs: reduceMotion ? 0 : ms * 0.8,
+        check: game.isCheck(),
+      });
+      if (evalScore !== null) showEval(evalScore);
+      const mat = material(game.fen());
+      battleStatusEl.textContent = state.skipping
+        ? 'Skipping…'
+        : `Move ${Math.ceil(plies / 2)}/${limit / 2} · Material ${mat.w}–${mat.b}`;
+      if (ms) await sleep(ms);
+    },
+    { plyLimit: limit },
+    spec,
+  );
 
   if (result.reason === 'checkmate' && result.winner !== 'draw') showEval(checkmateEval(result.winner));
   showResult(result);
@@ -566,8 +585,7 @@ function showResult(result: BattleResult): void {
   if (over) {
     $('#result-title').textContent = 'Game over';
     $('#result-detail').textContent =
-      `${outcome} You won ${score} round${score === 1 ? '' : 's'}. ` +
-      (newBest ? 'New best!' : `Best: ${state.best}.`);
+      `${outcome} You won ${score} round${score === 1 ? '' : 's'}. ${newBest ? 'New best!' : `Best: ${state.best}.`}`;
     $('#next').textContent = 'New run';
   } else {
     const title = winner === 'w' ? 'Victory' : winner === 'b' ? 'Defeat' : 'Draw';

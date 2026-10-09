@@ -12,7 +12,9 @@ describe('game modes', () => {
   it('gives the Growing AI one point more every round, matching the extra pawn', () => {
     const budgets = (id: 'growing' | 'classic', round: number) => {
       const m = gameMode(id);
-      return new Set(Array.from({ length: 30 }, (_, s) => aiBudget(round, seededRng(s), 6, m.roundOneDiscount, m.aiBonus)));
+      return new Set(
+        Array.from({ length: 30 }, (_, s) => aiBudget(round, seededRng(s), 6, m.roundOneDiscount, m.aiBonus)),
+      );
     };
     expect(budgets('growing', 1)).toEqual(new Set([5, 6, 7]));
     expect(budgets('classic', 1)).toEqual(new Set([4, 5, 6]));

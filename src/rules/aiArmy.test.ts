@@ -136,7 +136,9 @@ describe('placeAiArmy', () => {
   it('avoids doubled pawns when there is room', () => {
     for (const s of AI_STYLES) {
       for (let seed = 0; seed < 20; seed++) {
-        const pawns = placeAiArmy(['K', 'P', 'P', 'P', 'P', 'P', 'P'], s, seededRng(seed)).filter((p) => p.type === 'P');
+        const pawns = placeAiArmy(['K', 'P', 'P', 'P', 'P', 'P', 'P'], s, seededRng(seed)).filter(
+          (p) => p.type === 'P',
+        );
         expect(new Set(pawns.map((p) => p.square!.file)).size).toBe(pawns.length);
       }
     }

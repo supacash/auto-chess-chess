@@ -2,7 +2,7 @@ import { BOARD_8, type BoardSpec, homeSquares, pawnSquares } from '../chess/boar
 import { UPGRADES, upgradeCost } from './economy';
 import { makePiece, MAX_ARMY, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
 import { BACK_RANK, canPlace, frontRank, pieceAt } from './placement';
-import { type Rng, randomInt } from './rng';
+import { type Rng, randomInt, weightedPick } from './rng';
 
 // All squares here are AI-local: rank 0 is the AI's back row, rank homeRows − 1 its front row.
 // Style preferences are written for 8 files and 3 home rows and scaled to smaller boards.
@@ -229,7 +229,9 @@ export function squareScore(
     case 'B':
       return ([2, 5].includes(file) ? 1.5 : 0) + [1, 0.8, 0][rank] + style.forward * rank;
     case 'R':
-      return (rank === 0 ? 2 : 0) + ([0, 7].includes(file) ? 1 : [3, 4].includes(file) ? 1.2 : 0) + style.forward * rank;
+      return (
+        (rank === 0 ? 2 : 0) + ([0, 7].includes(file) ? 1 : [3, 4].includes(file) ? 1.2 : 0) + style.forward * rank
+      );
     case 'Q':
       return [1.5, 1, 0][rank] + CENTER[file] * 1.5 + style.forward * rank;
     case 'K':
@@ -239,16 +241,11 @@ export function squareScore(
 
 function allSquares(spec: BoardSpec): Square[] {
   const out: Square[] = [];
-  for (let rank = 0; rank < spec.homeRows; rank++) for (let file = 0; file < spec.files; file++) out.push({ file, rank });
+  for (let rank = 0; rank < spec.homeRows; rank++)
+    for (let file = 0; file < spec.files; file++) out.push({ file, rank });
   return out;
 }
 
 function points(types: PieceType[]): number {
   return types.reduce((s, t) => s + PIECE_VALUE[t], 0);
-}
-
-function weightedPick<T>(items: readonly T[], weight: (item: T) => number, rng: Rng): T {
-  const total = items.reduce((s, it) => s + weight(it), 0);
-  let roll = rng() * total;
-  return items.find((it) => (roll -= weight(it)) < 0) ?? items[items.length - 1];
 }

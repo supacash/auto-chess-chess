@@ -15,7 +15,13 @@ export interface Run {
 }
 
 export function newRun(settings: RunSettings = DEFAULT_SETTINGS): Run {
-  return { round: 1, lives: START_LIVES, record: { w: 0, l: 0, d: 0 }, shop: startingShop(gameMode(settings.mode).startArmy), settings };
+  return {
+    round: 1,
+    lives: START_LIVES,
+    record: { w: 0, l: 0, d: 0 },
+    shop: startingShop(gameMode(settings.mode).startArmy),
+    settings,
+  };
 }
 
 /** True once the player has fought a battle; settings can then only change by starting a new run. */

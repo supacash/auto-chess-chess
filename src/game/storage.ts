@@ -117,11 +117,19 @@ function parsePieces(data: unknown): Piece[] | null {
   if (!Array.isArray(data)) return null;
   const out: Piece[] = [];
   for (const p of data) {
-    if (!isObject(p) || typeof p.id !== 'string' || !['K', 'Q', 'R', 'B', 'N', 'P'].includes(p.type as string)) return null;
+    if (!isObject(p) || typeof p.id !== 'string' || !['K', 'Q', 'R', 'B', 'N', 'P'].includes(p.type as string))
+      return null;
     let square: Piece['square'] = null;
     if (p.square !== null) {
       const sq = p.square;
-      if (!isObject(sq) || !isCount(sq.file, 0) || !isCount(sq.rank, 0) || sq.file >= MAX_FILES || sq.rank >= MAX_HOME_ROWS) return null;
+      if (
+        !isObject(sq) ||
+        !isCount(sq.file, 0) ||
+        !isCount(sq.rank, 0) ||
+        sq.file >= MAX_FILES ||
+        sq.rank >= MAX_HOME_ROWS
+      )
+        return null;
       square = { file: sq.file, rank: sq.rank };
     }
     out.push({ id: p.id, type: p.type as Piece['type'], square });

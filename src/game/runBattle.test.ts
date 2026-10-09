@@ -17,7 +17,14 @@ describe('runBattle', () => {
   it('plays on a small board and tells the engine which variant', async () => {
     const variants: string[] = [];
     const engine: MoveSource = { newGame: async (v) => void variants.push(v), candidates: async () => [] };
-    const result = await runBattle('2k2/1ppp1/5/1PPP1/2K2 w - - 0 1', engine, seededRng(2), async () => {}, { plyLimit: 20 }, BOARDS[0]);
+    const result = await runBattle(
+      '2k2/1ppp1/5/1PPP1/2K2 w - - 0 1',
+      engine,
+      seededRng(2),
+      async () => {},
+      { plyLimit: 20 },
+      BOARDS[0],
+    );
     expect(variants).toEqual(['acc5']);
     expect(result.plies).toBeLessThanOrEqual(20);
   });
@@ -33,7 +40,12 @@ describe('runBattle', () => {
 
   it('never exceeds the ply limit', async () => {
     for (let seed = 0; seed < 5; seed++) {
-      const result = await runBattle('r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w - - 0 1', silentEngine, seededRng(seed), async () => {});
+      const result = await runBattle(
+        'r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w - - 0 1',
+        silentEngine,
+        seededRng(seed),
+        async () => {},
+      );
       expect(result.plies).toBeLessThanOrEqual(PLY_LIMIT);
     }
   });
@@ -54,14 +66,26 @@ describe('runBattle', () => {
       // Black to move, black sees itself +2.5: white's view is -2.5. Then white is silent.
       candidates: async (fen) => (fen.includes(' b ') ? [{ move: 'h7h6', score: 250 }] : []),
     };
-    await runBattle('4k3/7p/8/8/8/8/8/4K3 b - - 0 1', engine, seededRng(1), async (_m, _c, _p, e) => {
-      evals.push(e);
-    }, { plyLimit: 2 });
+    await runBattle(
+      '4k3/7p/8/8/8/8/8/4K3 b - - 0 1',
+      engine,
+      seededRng(1),
+      async (_m, _c, _p, e) => {
+        evals.push(e);
+      },
+      { plyLimit: 2 },
+    );
     expect(evals).toEqual([-250, null]);
   });
 
   it('respects a custom ply limit', async () => {
-    const result = await runBattle('r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w - - 0 1', silentEngine, seededRng(3), async () => {}, { plyLimit: 4 });
+    const result = await runBattle(
+      'r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w - - 0 1',
+      silentEngine,
+      seededRng(3),
+      async () => {},
+      { plyLimit: 4 },
+    );
     expect(result).toMatchObject({ reason: 'move-limit', plies: 4 });
   });
 

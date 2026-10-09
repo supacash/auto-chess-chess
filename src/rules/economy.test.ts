@@ -64,7 +64,10 @@ describe('upgradePiece', () => {
 
   it('rejects upgrades the player cannot afford', () => {
     const rook = makePiece('R');
-    expect(upgradePiece({ gold: 3, pieces: [rook] }, rook.id, 'Q')).toMatchObject({ ok: false, error: 'Not enough gold' });
+    expect(upgradePiece({ gold: 3, pieces: [rook] }, rook.id, 'Q')).toMatchObject({
+      ok: false,
+      error: 'Not enough gold',
+    });
   });
 
   it('keeps gold spent equal to army points', () => {

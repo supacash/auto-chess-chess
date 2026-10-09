@@ -6,6 +6,7 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - `npm run dev` — Vite dev server
 - `npm test` — Vitest (rules unit tests)
 - `npm run typecheck` — `tsc --noEmit` for the game, plus `-p scripts` for the simulator (TypeScript 7)
+- `npm run lint` — Biome lint + format check (CI runs it); `npm run format` fixes formatting and safe lint issues
 - `npm run build` — typecheck + production build
 
 ## Layout
@@ -18,6 +19,7 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - `scripts/copy-engine.mjs` copies Fairy-Stockfish, ffish and coi-serviceworker into `public/` (gitignored). It runs automatically before `dev` and `build`.
 
 ## Conventions
+- Formatting is Biome's (2 spaces, single quotes, 120 columns, LF line endings via `.gitattributes`). Run `npm run format` before committing. ESLint/typescript-eslint can't run on TypeScript 7 (no JS API), which is why the project uses Biome.
 - Coordinates: `Square { file: 0-7, rank: 0-7 }`. The player is always ranks 0–2 (shown at the bottom). The AI is ranks 5–7, mirrored when building engine positions.
 - These rules differ from standard chess and are easy to get wrong: king not on the front home row, no pawns on the back home row, no castling, two-square pawn moves only from rank 2, temporary promotion, 90-ply limit with a material ("on points") tiebreak. See DESIGN.md.
 - Keep rule functions pure and immutable (return new arrays). The UI re-renders from state.

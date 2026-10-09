@@ -43,8 +43,19 @@ describe('run', () => {
   });
 
   it('starts each mode with its own army', () => {
-    expect(newRun({ mode: 'growing', difficulty: 'normal', reveal: false }).shop.pieces.map((p) => p.type)).toEqual(['K', 'P', 'P', 'P', 'P']);
-    expect(newRun({ mode: 'classic', difficulty: 'normal', reveal: false }).shop.pieces.map((p) => p.type)).toEqual(['K', 'P', 'P', 'P']);
+    expect(newRun({ mode: 'growing', difficulty: 'normal', reveal: false }).shop.pieces.map((p) => p.type)).toEqual([
+      'K',
+      'P',
+      'P',
+      'P',
+      'P',
+    ]);
+    expect(newRun({ mode: 'classic', difficulty: 'normal', reveal: false }).shop.pieces.map((p) => p.type)).toEqual([
+      'K',
+      'P',
+      'P',
+      'P',
+    ]);
   });
 
   it('does not mutate the input', () => {

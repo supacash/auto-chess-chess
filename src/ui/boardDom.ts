@@ -31,7 +31,7 @@ export function label(className: string, text: string): HTMLElement {
 /** A board square with colour, data-file/data-rank and edge coordinate labels. Rank 0 is drawn at the bottom. */
 export function squareEl(file: number, rank: number): HTMLElement {
   const cell = document.createElement('div');
-  cell.className = 'square ' + ((file + rank) % 2 === 0 ? 'dark' : 'light');
+  cell.className = `square ${(file + rank) % 2 === 0 ? 'dark' : 'light'}`;
   cell.dataset.file = String(file);
   cell.dataset.rank = String(rank);
   if (file === 0) cell.appendChild(label('rank-label', String(rank + 1)));

@@ -13,7 +13,7 @@ import { type BoardSpec, homeSquares, pawnSquares } from '../../src/chess/boardS
 import type { AiStyle } from '../../src/rules/aiArmy';
 import { buyPawn, type Shop, UPGRADES, upgradeCost, upgradePiece } from '../../src/rules/economy';
 import { type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
-import type { Rng } from '../../src/rules/rng';
+import { type Rng, weightedPick } from '../../src/rules/rng';
 
 export function armyValue(shop: Shop): number {
   return shop.pieces.reduce((s, p) => s + PIECE_VALUE[p.type], 0);
@@ -62,10 +62,4 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
     }
     return shop;
   }
-}
-
-function weightedPick<T>(items: readonly T[], weight: (item: T) => number, rng: Rng): T {
-  const total = items.reduce((s, it) => s + weight(it), 0);
-  let roll = rng() * total;
-  return items.find((it) => (roll -= weight(it)) < 0) ?? items[items.length - 1];
 }

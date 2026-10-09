@@ -2,7 +2,7 @@ import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
 import { type Color, type FenPiece, placementField } from '../chess/fen';
 import { kingInCheck } from '../chess/rules';
 import type { Piece, Square } from './pieces';
-import { type Rng } from './rng';
+import type { Rng } from './rng';
 
 /** Maps an AI-local square (its home rows start at rank 0) onto the board (counted from the top). */
 export function mirror(sq: Square, spec: BoardSpec = BOARD_8): Square {

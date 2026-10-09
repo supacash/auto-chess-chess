@@ -153,7 +153,7 @@ export class NodeEngine implements MoveSource {
   }
 
   private send(cmd: string): void {
-    if (!this.exited) this.proc.stdin.write(cmd + '\n');
+    if (!this.exited) this.proc.stdin.write(`${cmd}\n`);
   }
 
   private sync(): Promise<string> {

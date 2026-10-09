@@ -5,7 +5,11 @@ import { seededRng } from './rng';
 
 describe('difficulty', () => {
   it('scales the AI budget by 5, 6 or 7 points per round', () => {
-    for (const [id, per] of [['easy', 5], ['normal', 6], ['hard', 7]] as const) {
+    for (const [id, per] of [
+      ['easy', 5],
+      ['normal', 6],
+      ['hard', 7],
+    ] as const) {
       for (let seed = 0; seed < 20; seed++) {
         const b = aiBudget(4, seededRng(seed), difficulty(id).perRound);
         expect(b).toBeGreaterThanOrEqual(4 * per - 1);

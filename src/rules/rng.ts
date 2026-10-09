@@ -25,3 +25,14 @@ export function shuffle<T>(items: readonly T[], rng: Rng): T[] {
   }
   return out;
 }
+
+/** Picks one item with probability proportional to its weight. */
+export function weightedPick<T>(items: readonly T[], weight: (item: T) => number, rng: Rng): T {
+  const total = items.reduce((s, it) => s + weight(it), 0);
+  let roll = rng() * total;
+  for (const item of items) {
+    roll -= weight(item);
+    if (roll < 0) return item;
+  }
+  return items[items.length - 1];
+}

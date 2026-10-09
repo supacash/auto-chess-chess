@@ -10,7 +10,7 @@
   /* The board is always this wide; squares shrink or grow with the board size (see .board). */
   --board: min(88vw, 448px);
   --sq: calc(var(--board) / 8);
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--text);
   background: var(--bg);
 }
@@ -77,7 +77,7 @@ h1 {
 
 /* Enemy territory is hidden during placement. */
 .square.enemy::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: rgb(20 22 28 / 0.6);
@@ -85,14 +85,14 @@ h1 {
 
 /* Middle (no-man's-land) rows are dimmed slightly. */
 .square:not(.home):not(.enemy)::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: rgb(20 22 28 / 0.25);
 }
 
 .square.legal::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 30%;
   height: 30%;
@@ -133,7 +133,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'DejaVu Sans', 'Apple Symbols', serif;
+  font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", "Apple Symbols", serif;
   font-size: calc(var(--sq) * 0.8);
   line-height: 1;
   cursor: grab;
@@ -252,7 +252,7 @@ button:disabled {
 }
 
 .opponent .glyphs {
-  font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'DejaVu Sans', 'Apple Symbols', serif;
+  font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", "Apple Symbols", serif;
   font-size: 1.15rem;
   color: var(--text);
   letter-spacing: 0.05em;
@@ -314,10 +314,10 @@ button.speed.active {
   font-size: 1.4rem;
 }
 
-.result[data-winner='w'] h2 {
+.result[data-winner="w"] h2 {
   color: var(--accent);
 }
-.result[data-winner='b'] h2 {
+.result[data-winner="b"] h2 {
   color: var(--danger);
 }
 
@@ -357,7 +357,7 @@ button.speed.active {
 }
 
 .gold::before {
-  content: '';
+  content: "";
   display: inline-block;
   width: 0.8em;
   height: 0.8em;
@@ -575,8 +575,8 @@ dialog#new-run-dialog::backdrop {
   font-size: 0.9rem;
 }
 
-.new-run-form input[type='checkbox'],
-.new-run-form input[type='radio'] {
+.new-run-form input[type="checkbox"],
+.new-run-form input[type="radio"] {
   width: 18px;
   height: 18px;
   margin: 2px 0 0;
@@ -622,7 +622,7 @@ dialog#new-run-dialog::backdrop {
 
 /* Centre tick marks equality. */
 .eval-bar::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   bottom: 0;
@@ -639,13 +639,13 @@ dialog#new-run-dialog::backdrop {
   font-variant-numeric: tabular-nums;
 }
 
-.eval-label[data-side='you'] {
+.eval-label[data-side="you"] {
   color: var(--accent);
 }
-.eval-label[data-side='them'] {
+.eval-label[data-side="them"] {
   color: var(--danger);
 }
-.eval-label[data-side='even'] {
+.eval-label[data-side="even"] {
   color: var(--muted);
 }
 

@@ -17,7 +17,7 @@ import { type BoardSpec, plyLimit } from '../../src/chess/boardSpec';
 import { gameMode } from '../../src/rules/mode';
 import { type BattleLimits, type BattleResult, material } from '../../src/rules/battle';
 import { roundIncome, START_GOLD, startingShop } from '../../src/rules/economy';
-import { PIECE_VALUE } from '../../src/rules/pieces';
+import { type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
 import { startPosition } from '../../src/rules/position';
 import { randomInt, seededRng } from '../../src/rules/rng';
 import { formatMargin, meanMargin } from './stats';
@@ -132,7 +132,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       ? Math.max(1, AI_BUDGET[0] + AI_BUDGET[1] * round + randomInt(rng, 3) - 1)
       : aiBudget(round, rng, 6, MODE.roundOneDiscount, MODE.aiBonus);
     if (PLAYER_POINTS === 'ai') playerPoints = aiPoints;
-    let playerTypes;
+    let playerTypes: PieceType[];
     if (PLAYER === 'shop') {
       shop = spendGold(shop, runStyle, rng, spec);
       playerPoints = armyValue(shop);
@@ -157,15 +157,22 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     let plies = 0;
     let result: BattleResult;
     try {
-      result = await runBattle(start.fen, engine, rng, async (_move, game, ply) => {
-        plies = ply;
-        const m = material(game.fen());
-        const lead = Math.abs(m.w - m.b);
-        if (lead > peakLead) {
-          peakLead = lead;
-          peakLeader = m.w > m.b ? 'w' : 'b';
-        }
-      }, limitsFor(spec), spec);
+      result = await runBattle(
+        start.fen,
+        engine,
+        rng,
+        async (_move, game, ply) => {
+          plies = ply;
+          const m = material(game.fen());
+          const lead = Math.abs(m.w - m.b);
+          if (lead > peakLead) {
+            peakLead = lead;
+            peakLeader = m.w > m.b ? 'w' : 'b';
+          }
+        },
+        limitsFor(spec),
+        spec,
+      );
     } catch (e) {
       if (!(e instanceof EngineFailure)) throw e;
       const side = e.kind === 'hung' ? null : /WHITE/.test(e.detail) ? 'player' : 'AI';
@@ -214,7 +221,18 @@ interface Bucket {
 }
 
 const emptyBucket = (): Bucket => ({
-  n: 0, w: 0, d: 0, l: 0, plies: 0, limit: 0, mate: 0, playerPts: 0, aiPts: 0, bigLead: 0, bigLeadNoMate: 0, bigLeadNoWin: 0,
+  n: 0,
+  w: 0,
+  d: 0,
+  l: 0,
+  plies: 0,
+  limit: 0,
+  mate: 0,
+  playerPts: 0,
+  aiPts: 0,
+  bigLead: 0,
+  bigLeadNoMate: 0,
+  bigLeadNoWin: 0,
 });
 
 function add(b: Bucket, g: GameRecord): void {
@@ -238,7 +256,21 @@ function add(b: Bucket, g: GameRecord): void {
 const pct = (x: number, n: number) => (n ? `${Math.round((100 * x) / n)}%` : '-');
 
 function table(title: string, rows: [string, Bucket][]): string {
-  const head = ['', 'games', 'pts P/AI', 'win', '±win', 'draw', 'loss', 'avg ply', 'limit', 'mate', `lead≥${LEAD}`, 'no mate', 'no win'];
+  const head = [
+    '',
+    'games',
+    'pts P/AI',
+    'win',
+    '±win',
+    'draw',
+    'loss',
+    'avg ply',
+    'limit',
+    'mate',
+    `lead≥${LEAD}`,
+    'no mate',
+    'no win',
+  ];
   const body = rows.map(([label, b]) => [
     label,
     String(b.n),
@@ -298,7 +330,10 @@ function report(records: RunRecord[]): string {
     'W/D/L are from the player\'s side. "lead≥N" = games where a side was ever ≥N points of material ahead;',
     '"no mate"/"no win" = share of those where that side failed to checkmate / failed to win at all.',
     '"±win" = 95% margin of error on the win rate, in points. Treat gaps smaller than the margins as noise.',
-    table('By round', [...byRound.entries()].sort(([a], [b]) => a - b).map(([r, b]) => [`round ${r}`, b])),
+    table(
+      'By round',
+      [...byRound.entries()].sort(([a], [b]) => a - b).map(([r, b]) => [`round ${r}`, b]),
+    ),
     table('By AI style', [...byStyle.entries()]),
     table('By player stand-in style', [...byPlayerStyle.entries()]),
     table('Total', [['all', total]]),
@@ -361,13 +396,15 @@ async function main(): Promise<void> {
   if (!opts.json) process.stderr.write('\n');
 
   if (opts.json) console.log(JSON.stringify(results, null, 1));
-  else console.log(report(results) + 
-      `\n\nTook ${((Date.now() - t0) / 1000).toFixed(0)}s with ${WORKERS} engines ` +
-      `(${engines.reduce((s, e) => s + e.restarts, 0)} stalled searches restarted).`);
+  else
+    console.log(
+      report(results) +
+        `\n\nTook ${((Date.now() - t0) / 1000).toFixed(0)}s with ${WORKERS} engines ` +
+        `(${engines.reduce((s, e) => s + e.restarts, 0)} stalled searches restarted).`,
+    );
 }
 
 main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
-

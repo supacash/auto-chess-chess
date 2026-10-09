@@ -105,7 +105,12 @@ describe('small boards', () => {
   });
 
   it('benches pieces that do not fit the board', () => {
-    const pieces = [makePiece('K', sq(4, 0)), makePiece('R', sq(7, 0)), makePiece('P', sq(1, 2)), makePiece('N', sq(4, 0))];
+    const pieces = [
+      makePiece('K', sq(4, 0)),
+      makePiece('R', sq(7, 0)),
+      makePiece('P', sq(1, 2)),
+      makePiece('N', sq(4, 0)),
+    ];
     const fitted = fitToBoard(pieces, b5);
     expect(fitted.map((p) => p.square)).toEqual([sq(4, 0), null, null, null]);
     expect(armyErrors(fitted, b5)).toEqual([]);

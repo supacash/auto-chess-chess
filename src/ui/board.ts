@@ -192,7 +192,8 @@ export class PlacementBoard {
   private handleTap(pieceId: string | null, target: DropTarget | null): void {
     if (pieceId) {
       if (this.selected === pieceId) this.selected = null;
-      else if (this.selected && target?.kind === 'square' && this.tryMove(this.selected, target, true)) this.selected = null;
+      else if (this.selected && target?.kind === 'square' && this.tryMove(this.selected, target, true))
+        this.selected = null;
       else this.selected = pieceId;
     } else if (this.selected && target) {
       if (this.tryMove(this.selected, target)) this.selected = null;

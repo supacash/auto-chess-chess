@@ -10,7 +10,17 @@
     {
       "name": "preview-pages",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "preview", "--base", "/auto-chess-chess/", "--port", "4319", "--strictPort", "--host", "127.0.0.1"],
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--base",
+        "/auto-chess-chess/",
+        "--port",
+        "4319",
+        "--strictPort",
+        "--host",
+        "127.0.0.1"
+      ],
       "port": 4319
     }
   ]

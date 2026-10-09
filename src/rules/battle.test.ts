@@ -26,13 +26,20 @@ describe('battleResult', () => {
   });
 
   it('treats stalemate as a draw', () => {
-    expect(battleResult(load('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1'), 5)).toMatchObject({ winner: 'draw', reason: 'stalemate' });
+    expect(battleResult(load('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1'), 5)).toMatchObject({
+      winner: 'draw',
+      reason: 'stalemate',
+    });
   });
 
   it('decides on material at the ply limit', () => {
     const fen = '4k3/pp6/8/8/8/8/8/R3K3 w - - 0 1';
     expect(battleResult(load(fen), PLY_LIMIT - 1)).toBeNull();
-    expect(battleResult(load(fen), PLY_LIMIT)).toMatchObject({ winner: 'w', reason: 'move-limit', material: { w: 5, b: 2 } });
+    expect(battleResult(load(fen), PLY_LIMIT)).toMatchObject({
+      winner: 'w',
+      reason: 'move-limit',
+      material: { w: 5, b: 2 },
+    });
   });
 
   it('is a draw at the ply limit with equal material', () => {
@@ -42,19 +49,31 @@ describe('battleResult', () => {
   it('uses a custom ply limit', () => {
     const fen = '4k3/pp6/8/8/8/8/8/R3K3 w - - 0 1';
     expect(battleResult(load(fen), 89, { plyLimit: 90 })).toBeNull();
-    expect(battleResult(load(fen), 90, { plyLimit: 90 })).toMatchObject({ winner: 'w', reason: 'move-limit', plies: 90 });
+    expect(battleResult(load(fen), 90, { plyLimit: 90 })).toMatchObject({
+      winner: 'w',
+      reason: 'move-limit',
+      plies: 90,
+    });
   });
 
   it('ends on a decisive lead only when enabled and held long enough', () => {
     const fen = '4k3/8/8/8/8/8/8/QR2K3 w - - 0 1'; // white +14
     const limits = { plyLimit: 60, decisive: { lead: 10, plies: 6 } };
     expect(battleResult(load(fen), 20, limits, { side: 'w', plies: 5 })).toBeNull();
-    expect(battleResult(load(fen), 20, limits, { side: 'w', plies: 6 })).toMatchObject({ winner: 'w', reason: 'decisive' });
+    expect(battleResult(load(fen), 20, limits, { side: 'w', plies: 6 })).toMatchObject({
+      winner: 'w',
+      reason: 'decisive',
+    });
     expect(battleResult(load(fen), 20, { plyLimit: 60 }, { side: 'w', plies: 6 })).toBeNull();
   });
 
   it('prefers checkmate over a decisive lead', () => {
-    const r = battleResult(load('R5k1/5ppp/8/8/8/8/8/Q5K1 b - - 0 1'), 10, { plyLimit: 60, decisive: { lead: 10, plies: 1 } }, { side: 'w', plies: 3 });
+    const r = battleResult(
+      load('R5k1/5ppp/8/8/8/8/8/Q5K1 b - - 0 1'),
+      10,
+      { plyLimit: 60, decisive: { lead: 10, plies: 1 } },
+      { side: 'w', plies: 3 },
+    );
     expect(r).toMatchObject({ winner: 'w', reason: 'checkmate' });
   });
 });
