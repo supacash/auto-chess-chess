@@ -4,8 +4,9 @@
  *
  *   npm run sim -- --rounds 10 --games 50
  *
- * The "player" is a stand-in: each round it re-drafts its whole army with an AI style at its
- * current army value (start army + gold + income so far) and places it with placeAiArmy.
+ * The "player" is a stand-in with an AI style, placed with placeAiArmy. `--player redraft`
+ * re-drafts its whole army each round at its current army value (start army + gold + income so far);
+ * `--player shop` keeps a persistent Shop and spends gold greedily (shopPlayer.ts).
  * See SIMULATION.md.
  */
 import { availableParallelism } from 'node:os';
@@ -13,11 +14,12 @@ import { parseArgs } from 'node:util';
 import { runBattle, SEARCH_DEPTH } from '../../src/game/runBattle';
 import { aiBudget, AI_STYLES, draftAiArmy, pickStyle, placeAiArmy } from '../../src/rules/aiArmy';
 import { type BattleResult, material, PLY_LIMIT } from '../../src/rules/battle';
-import { roundIncome, START_ARMY, START_GOLD } from '../../src/rules/economy';
+import { roundIncome, START_ARMY, START_GOLD, startingShop } from '../../src/rules/economy';
 import { PIECE_VALUE } from '../../src/rules/pieces';
 import { startPosition } from '../../src/rules/position';
 import { randomInt, seededRng } from '../../src/rules/rng';
 import { EngineFailure, NodeEngine } from './nodeEngine';
+import { armyValue, spendGold } from './shopPlayer';
 
 const LIVES = 3;
 /** Placement retries when both kings start in check (the game re-places the AI army). */
@@ -30,6 +32,7 @@ const { values: opts } = parseArgs({
     seed: { type: 'string', default: '1' },
     depth: { type: 'string' },
     workers: { type: 'string' },
+    player: { type: 'string', default: 'redraft' },
     'player-style': { type: 'string', default: 'random' },
     lead: { type: 'string', default: '5' },
     'player-points': { type: 'string', default: 'economy' },
@@ -52,6 +55,10 @@ const AI_BUDGET = opts['ai-budget']?.split(',').map(Number);
 if (AI_BUDGET && (AI_BUDGET.length !== 2 || AI_BUDGET.some(Number.isNaN))) {
   throw new Error('--ai-budget must be base,perRound (e.g. 0,6)');
 }
+/** redraft = re-draft the whole army each round at full value; shop = persistent Shop, greedy spending. */
+const PLAYER = opts.player!;
+if (PLAYER !== 'redraft' && PLAYER !== 'shop') throw new Error('--player must be redraft or shop');
+if (PLAYER === 'shop' && PLAYER_POINTS !== 'economy') throw new Error('--player shop needs --player-points economy');
 if (PLAYER_POINTS !== 'economy' && PLAYER_POINTS !== 'ai') throw new Error('--player-points must be economy or ai');
 if (PLAYER_STYLE !== 'random' && !AI_STYLES.some((s) => s.id === PLAYER_STYLE)) {
   throw new Error(`--player-style must be random or one of: ${AI_STYLES.map((s) => s.id).join(', ')}`);
@@ -91,6 +98,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
   const rejected: RejectedRecord[] = [];
   const runStyle = PLAYER_STYLE === 'random' ? pickStyle(rng) : AI_STYLES.find((s) => s.id === PLAYER_STYLE)!;
   let playerPoints = START_ARMY.reduce((s, t) => s + PIECE_VALUE[t], 0) + START_GOLD;
+  let shop = startingShop();
 
   for (let round = 1; round <= ROUNDS; round++) {
     const aiStyle = pickStyle(rng);
@@ -98,7 +106,15 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       ? Math.max(1, AI_BUDGET[0] + AI_BUDGET[1] * round + randomInt(rng, 3) - 1)
       : aiBudget(round, rng);
     if (PLAYER_POINTS === 'ai') playerPoints = aiPoints;
-    const player = placeAiArmy(draftAiArmy(playerPoints, runStyle, rng), runStyle, rng);
+    let playerTypes;
+    if (PLAYER === 'shop') {
+      shop = spendGold(shop, runStyle, rng);
+      playerPoints = armyValue(shop);
+      playerTypes = shop.pieces.map((p) => p.type);
+    } else {
+      playerTypes = draftAiArmy(playerPoints, runStyle, rng);
+    }
+    const player = placeAiArmy(playerTypes, runStyle, rng);
     const aiTypes = draftAiArmy(aiPoints, aiStyle, rng);
 
     let start = startPosition(player, placeAiArmy(aiTypes, aiStyle, rng), rng);
@@ -126,6 +142,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       const side = e.kind === 'hung' ? null : /WHITE/.test(e.detail) ? 'player' : 'AI';
       rejected.push({ kind: e.kind, round, plies, fen: e.fen, side });
       playerPoints += roundIncome('draw');
+      shop = { ...shop, gold: shop.gold + roundIncome('draw') };
       onGame();
       continue;
     }
@@ -142,6 +159,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       peakLeader,
     });
     playerPoints += roundIncome(result.winner);
+    shop = { ...shop, gold: shop.gold + roundIncome(result.winner) };
   }
   return { games: records, rejected };
 }
@@ -244,7 +262,7 @@ function report(records: RunRecord[]): string {
 
   const out = [
     `Auto Chess Chess sim — ${RUNS} runs × ${ROUNDS} rounds, seed ${SEED}, depth ${DEPTH ?? SEARCH_DEPTH}, ` +
-      `ply limit ${PLY_LIMIT}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
+      `ply limit ${PLY_LIMIT}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
       `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round` : '6×round'} ±1`,
     'W/D/L are from the player\'s side. "lead≥N" = games where a side was ever ≥N points of material ahead;',
     '"no mate"/"no win" = share of those where that side failed to checkmate / failed to win at all.',

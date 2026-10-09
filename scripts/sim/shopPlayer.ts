@@ -1,0 +1,68 @@
+/**
+ * The `--player shop` stand-in: keeps one persistent Shop for the whole run and spends its gold
+ * each round with a simple greedy plan, like a player who never sells.
+ *
+ * Per step: buy a pawn while pawns are below the style's pawn share of the army's total value
+ * (army + gold); otherwise make an affordable upgrade, picked by the style's weights for the
+ * target piece; otherwise buy a pawn if there's room. Gold that fits nothing carries over.
+ * Every purchase goes through buyPawn/upgradePiece, so the army cap and the piece-composition
+ * limit (composition.ts) apply exactly as in the real shop.
+ */
+import type { AiStyle } from '../../src/rules/aiArmy';
+import { buyPawn, type Shop, UPGRADES, upgradeCost, upgradePiece } from '../../src/rules/economy';
+import { type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
+import type { Rng } from '../../src/rules/rng';
+
+export function armyValue(shop: Shop): number {
+  return shop.pieces.reduce((s, p) => s + PIECE_VALUE[p.type], 0);
+}
+
+export function spendGold(start: Shop, style: AiStyle, rng: Rng): Shop {
+  let shop = start;
+  for (;;) {
+    const pawnValue = shop.pieces.filter((p) => p.type === 'P').length * PIECE_VALUE.P;
+    const wantPawn = pawnValue < style.pawnShare * (armyValue(shop) + shop.gold);
+    if (wantPawn) {
+      const r = buyPawn(shop);
+      if (r.ok) {
+        shop = r.shop;
+        continue;
+      }
+    }
+
+    // Every legal, affordable upgrade (only one per piece type and target: pieces of a type are interchangeable).
+    const options: { id: string; to: PieceType }[] = [];
+    const seen = new Set<string>();
+    for (const p of shop.pieces) {
+      for (const to of UPGRADES[p.type]) {
+        const key = `${p.type}>${to}`;
+        if (seen.has(key) || upgradeCost(p.type, to) > shop.gold) continue;
+        seen.add(key);
+        if (upgradePiece(shop, p.id, to).ok) options.push({ id: p.id, to });
+      }
+    }
+    if (options.length > 0) {
+      const pick = weightedPick(options, (o) => style.weights[o.to] ?? 0.1, rng);
+      const r = upgradePiece(shop, pick.id, pick.to);
+      if (r.ok) {
+        shop = r.shop;
+        continue;
+      }
+    }
+
+    if (!wantPawn) {
+      const r = buyPawn(shop);
+      if (r.ok) {
+        shop = r.shop;
+        continue;
+      }
+    }
+    return shop;
+  }
+}
+
+function weightedPick<T>(items: readonly T[], weight: (item: T) => number, rng: Rng): T {
+  const total = items.reduce((s, it) => s + weight(it), 0);
+  let roll = rng() * total;
+  return items.find((it) => (roll -= weight(it)) < 0) ?? items[items.length - 1];
+}
