@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buyOffer,
   fusePawns,
+  fusePawnSet,
   pawnFusionOptions,
   fusePieces,
   fusionOptions,
@@ -228,7 +229,7 @@ describe('pawn fusion', () => {
     expect(pawnFusionOptions(three, three.pieces[0].id, true)).toEqual([]);
   });
 
-  it('is free, keeps points, puts the result on the chosen pawn and uses benched pawns first', () => {
+  it('is free, keeps points, puts the result on the chosen pawn and uses its own kind, benched first', () => {
     const chosen = makePiece('P', { file: 2, rank: 1 });
     const placed = makePiece('P', { file: 3, rank: 1 });
     const bench1 = makePiece('E');
@@ -236,9 +237,29 @@ describe('pawn fusion', () => {
     const shop: Shop = { gold: 0, pieces: [makePiece('K'), chosen, placed, bench1, bench2] };
     const next = ok(fusePawns(shop, chosen.id, 'B', false));
     expect(next.gold).toBe(0);
-    expect(next.pieces.map((p) => p.id)).toEqual([shop.pieces[0].id, chosen.id, placed.id]);
+    // The Berolina pawn is kept: plain pawns go first (the benched one, then the placed one).
+    expect(next.pieces.map((p) => p.id)).toEqual([shop.pieces[0].id, chosen.id, bench1.id]);
     expect(next.pieces[1]).toEqual({ ...chosen, type: 'B' });
     expect(points(next)).toBe(points(shop));
+  });
+
+  it('fuses exactly the picked pawns, onto the first picked one on the board', () => {
+    const benched = makePiece('E');
+    const placed = makePiece('E', { file: 1, rank: 1 });
+    const plain = makePiece('P');
+    const spare = makePiece('P');
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), benched, placed, plain, spare] };
+    const next = ok(fusePawnSet(shop, [benched.id, placed.id, plain.id], 'N', true));
+    expect(next.pieces.map((p) => p.id)).toEqual([shop.pieces[0].id, placed.id, spare.id]);
+    expect(next.pieces[1]).toEqual({ ...placed, type: 'N' });
+    expect(fusePawnSet(shop, [benched.id, placed.id], 'N', true).ok).toBe(false);
+    expect(fusePawnSet(shop, [benched.id, benched.id, plain.id], 'N', true).ok).toBe(false);
+    expect(fusePawnSet(shop, [benched.id, plain.id, shop.pieces[0].id], 'N', true).ok).toBe(false);
+  });
+
+  it('fuses a Ferz and a Wazir into a Man', () => {
+    expect(fusionResult('F', 'W')).toBe('M');
+    expect(fusionResult('W', 'F')).toBe('M');
   });
 
   it('rejects other results, the Man without fairy pieces, and too few pawns', () => {

@@ -98,8 +98,6 @@ export const OFFER_WEIGHTS: Partial<Record<PieceType, number>> = {
   W: 2,
   M: 1.5,
   L: 1.5,
-  G: 1.5,
-  X: 1.5,
   R: 1.5,
   Q: 0.75,
 };
@@ -156,6 +154,7 @@ export const FUSIONS: FusionRecipe[] = [
   { parts: ['N', 'R'], result: 'C' }, // Chancellor
   { parts: ['N', 'Q'], result: 'Z' }, // Amazon
   { parts: ['N', 'M'], result: 'T' }, // Centaur (the Man stands in for the king)
+  { parts: ['F', 'W'], result: 'M' }, // Man: diagonal and straight steps together (worth 3 from 1 + 1)
 ];
 
 /** What `a` and `b` fuse into, or null. Order doesn't matter. */
@@ -212,13 +211,20 @@ export function pawnFusionResults(fairy: boolean): PieceType[] {
   return fairy ? ['N', 'B', 'M'] : ['N', 'B'];
 }
 
-/** The two other pawns `pieceId` would fuse with (benched ones first), or null if there aren't enough. */
-function pawnPartners(shop: Shop, pieceId: string): Piece[] | null {
+/**
+ * The two other pawns `pieceId` would fuse with by default, or null if there aren't enough: pawns of
+ * its own kind first (so Berolina pawns aren't used up by accident), benched ones before placed ones.
+ */
+export function pawnPartners(shop: Shop, pieceId: string): Piece[] | null {
   const piece = shop.pieces.find((p) => p.id === pieceId);
   if (!piece || !isPawnLike(piece.type)) return null;
   const others = shop.pieces
     .filter((p) => p.id !== pieceId && isPawnLike(p.type))
-    .sort((x, y) => Number(x.square !== null) - Number(y.square !== null));
+    .sort(
+      (x, y) =>
+        Number(x.type !== piece.type) - Number(y.type !== piece.type) ||
+        Number(x.square !== null) - Number(y.square !== null),
+    );
   return others.length >= PAWN_FUSION_COUNT - 1 ? others.slice(0, PAWN_FUSION_COUNT - 1) : null;
 }
 
@@ -227,13 +233,25 @@ export function pawnFusionOptions(shop: Shop, pieceId: string, fairy: boolean): 
   return pawnPartners(shop, pieceId) ? pawnFusionResults(fairy) : [];
 }
 
-/** Fuses the pawn `pieceId` and two other pawns into `result`, which takes `pieceId`'s place. */
+/** Fuses the pawn `pieceId` and its default partners (see pawnPartners) into `result`. */
 export function fusePawns(shop: Shop, pieceId: string, result: PieceType, fairy: boolean): ShopResult {
-  if (!pawnFusionResults(fairy).includes(result))
-    return { ok: false, error: `Pawns can't become a ${PIECE_NAME[result]}` };
   const partners = pawnPartners(shop, pieceId);
   if (!partners) return { ok: false, error: `Fusing needs ${PAWN_FUSION_COUNT} pawns` };
-  const used = new Set(partners.map((p) => p.id));
+  return fusePawnSet(shop, [pieceId, ...partners.map((p) => p.id)], result, fairy);
+}
+
+/**
+ * Fuses exactly the pawns `ids` (the player's pick) into `result`. It takes the place of the first
+ * of them that's on the board (or the first one, if all are benched).
+ */
+export function fusePawnSet(shop: Shop, ids: string[], result: PieceType, fairy: boolean): ShopResult {
+  if (!pawnFusionResults(fairy).includes(result))
+    return { ok: false, error: `Pawns can't become a ${PIECE_NAME[result]}` };
+  const chosen = ids.map((id) => shop.pieces.find((p) => p.id === id));
+  if (new Set(ids).size !== PAWN_FUSION_COUNT || chosen.some((p) => !p || !isPawnLike(p.type)))
+    return { ok: false, error: `Pick ${PAWN_FUSION_COUNT} pawns to fuse` };
+  const pieceId = (chosen.find((p) => p!.square) ?? chosen[0])!.id;
+  const used = new Set(ids.filter((id) => id !== pieceId));
   return {
     ok: true,
     shop: {

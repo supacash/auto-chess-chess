@@ -1,10 +1,12 @@
 import {
   buyOffer,
-  fusePawns,
+  fusePawnSet,
   fusePieces,
   fusionOptions,
   PAWN_FUSION_COUNT,
   pawnFusionOptions,
+  pawnFusionResults,
+  pawnPartners,
   REROLL_COST,
   type ShopResult,
   sellPiece,
@@ -13,7 +15,7 @@ import {
   upgradeCost,
   upgradePiece,
 } from '../rules/economy';
-import { type Piece, PIECE_NAME, PIECE_VALUE, PIECES, type PieceType } from '../rules/pieces';
+import { isPawnLike, type Piece, PIECE_NAME, PIECE_VALUE, PIECES, type PieceType } from '../rules/pieces';
 import { armyCap, BENCH_SIZE, benchCount } from '../rules/placement';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
@@ -40,6 +42,8 @@ export class PlacementScreen {
   private readonly playBtn = $<HTMLButtonElement>('#play');
   private readonly board: PlacementBoard;
   private selected: string | null = null;
+  /** Picking the pawns to fuse: the ones circled so far (in order), or null when not picking. */
+  private fusing: string[] | null = null;
   /** The shop offer being looked at (its index), shown with its description and a Buy button. */
   private selectedOffer: number | null = null;
   /** The opponent piece type whose description is showing. */
@@ -68,6 +72,7 @@ export class PlacementScreen {
         if (id) this.selectedOffer = null;
         this.renderShop();
       },
+      onPick: (id) => this.togglePick(id),
     });
 
     $('#clear').addEventListener('click', () => {
@@ -78,8 +83,19 @@ export class PlacementScreen {
     });
     $('#piece-actions').addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
-      if (!btn || !this.selected) return;
+      if (!btn) return;
       const shop = this.session.run.shop;
+      if (this.fusing) {
+        if (btn.hasAttribute('data-cancel-fuse')) this.stopFusing();
+        else if (btn.dataset.fuseTo) {
+          const to = btn.dataset.fuseTo as PieceType;
+          const picked = this.fusing;
+          this.stopFusing();
+          this.applyShop(fusePawnSet(shop, picked, to, this.session.run.settings.fairy), to);
+        }
+        return;
+      }
+      if (!this.selected) return;
       if (btn.dataset.upgrade) {
         const to = btn.dataset.upgrade as PieceType;
         this.applyShop(upgradePiece(shop, this.selected, to), to);
@@ -87,10 +103,8 @@ export class PlacementScreen {
         const result = fusePieces(shop, this.selected, btn.dataset.fuse);
         const id = this.selected;
         this.applyShop(result, result.ok ? result.shop.pieces.find((p) => p.id === id)?.type : undefined);
-      } else if (btn.dataset.fusePawns) {
-        const fairy = this.session.run.settings.fairy;
-        const to = btn.dataset.fusePawns as PieceType;
-        this.applyShop(fusePawns(shop, this.selected, to, fairy), to);
+      } else if (btn.hasAttribute('data-fuse-pawns')) {
+        this.startFusing(this.selected);
       } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
     });
     // Tapping an opponent piece in the list explains what it does (the board reports taps via onFoeTap).
@@ -103,7 +117,10 @@ export class PlacementScreen {
       if (!card) return;
       const index = Number(card.dataset.offer);
       this.selectedOffer = this.selectedOffer === index ? null : index;
-      if (this.selectedOffer !== null) this.deselectPiece();
+      if (this.selectedOffer !== null) {
+        this.stopFusing();
+        this.deselectPiece();
+      }
       this.renderShop();
     });
     $('#offer-detail').addEventListener('click', (e) => {
@@ -164,6 +181,59 @@ export class PlacementScreen {
     this.shownBoard = null;
     this.selected = null;
     this.selectedOffer = null;
+    this.stopFusing();
+  }
+
+  // ---- picking pawns to fuse ----
+
+  /** Starts picking pawns to fuse, with `pieceId` and its default partners (same kind first) circled. */
+  private startFusing(pieceId: string): void {
+    const partners = pawnPartners(this.session.run.shop, pieceId) ?? [];
+    this.fusing = [pieceId, ...partners.map((p) => p.id)];
+    this.selected = null;
+    this.selectedOffer = null;
+    this.syncPicking();
+  }
+
+  private stopFusing(): void {
+    if (!this.fusing) return;
+    this.fusing = null;
+    this.board.setPicking(null);
+    this.renderShop();
+  }
+
+  /** Circles or un-circles a pawn (at most PAWN_FUSION_COUNT). */
+  private togglePick(id: string): void {
+    if (!this.fusing) return;
+    if (this.fusing.includes(id)) this.fusing = this.fusing.filter((x) => x !== id);
+    else if (this.fusing.length < PAWN_FUSION_COUNT) this.fusing = [...this.fusing, id];
+    else this.setMessage(`${PAWN_FUSION_COUNT} pawns are picked: tap one to swap it out.`);
+    this.syncPicking();
+  }
+
+  private syncPicking(): void {
+    if (!this.fusing) return;
+    const pawns = this.session.run.shop.pieces.filter((p) => isPawnLike(p.type));
+    this.board.setPicking({ pickable: new Set(pawns.map((p) => p.id)), picked: new Set(this.fusing) });
+    this.renderShop();
+  }
+
+  /** The fuse panel: which pawns are picked, the results, and Cancel. */
+  private renderFusing(picked: string[]): string {
+    const { pieces } = this.session.run.shop;
+    const types = picked.map((id) => pieces.find((p) => p.id === id)!.type);
+    const ready = picked.length === PAWN_FUSION_COUNT;
+    const chosen = types.length ? types.map((t) => inlinePiece(t)).join('') : 'none yet';
+    const results = pawnFusionResults(this.session.run.settings.fairy)
+      .map(
+        (to) =>
+          `<button type="button" class="fuse" data-fuse-to="${to}" ${ready ? '' : 'disabled'}>→ ${inlinePiece(to)} ${PIECE_NAME[to]}</button>`,
+      )
+      .join('');
+    return (
+      `<p class="piece-info"><strong>Fuse ${PAWN_FUSION_COUNT} pawns</strong> · tap pawns on the board or bench to pick them (${picked.length}/${PAWN_FUSION_COUNT}): ${chosen}</p>` +
+      `${results}<button type="button" data-cancel-fuse>Cancel</button>`
+    );
   }
 
   setMessage(text: string): void {
@@ -173,7 +243,10 @@ export class PlacementScreen {
   /** While a battle is starting, Fight is disabled and nothing stays selected. */
   setBusy(busy: boolean): void {
     this.busy = busy;
-    if (busy) this.board.clearSelection();
+    if (busy) {
+      this.stopFusing();
+      this.board.clearSelection();
+    }
     this.updateFight();
   }
 
@@ -288,6 +361,12 @@ export class PlacementScreen {
     $('#gold').textContent = `${gold}g`;
 
     const actions = $('#piece-actions');
+    if (this.fusing) {
+      // Pawns sold or moved away meanwhile drop out of the pick.
+      this.fusing = this.fusing.filter((id) => pieces.some((p) => p.id === id));
+      actions.innerHTML = this.renderFusing(this.fusing);
+      return;
+    }
     const piece = pieces.find((p) => p.id === this.selected);
     if (!piece) {
       actions.innerHTML = `<span class="hint">Tap a piece to upgrade, fuse or sell it.</span>`;
@@ -311,13 +390,11 @@ export class PlacementScreen {
         return `<button type="button" class="fuse" data-fuse="${partnerId}" title="Uses up a ${PIECE_NAME[partner.type]}">+ ${inlinePiece(partner.type)} → ${inlinePiece(result)} ${PIECE_NAME[result]}</button>`;
       })
       .join('');
-    // Three pawns → one piece: same points, two squares freed.
-    const pawnFusions = pawnFusionOptions(this.session.run.shop, piece.id, this.session.run.settings.fairy)
-      .map(
-        (to) =>
-          `<button type="button" class="fuse" data-fuse-pawns="${to}" title="Uses up ${PAWN_FUSION_COUNT - 1} more pawns">${PAWN_FUSION_COUNT}×${inlinePiece(piece.type)} → ${inlinePiece(to)} ${PIECE_NAME[to]}</button>`,
-      )
-      .join('');
+    // Three pawns → one piece: same points, two squares freed. Opens the picker to choose which pawns.
+    const pawnResults = pawnFusionOptions(this.session.run.shop, piece.id, this.session.run.settings.fairy);
+    const pawnFusions = pawnResults.length
+      ? `<button type="button" class="fuse" data-fuse-pawns title="Choose the ${PAWN_FUSION_COUNT} pawns to fuse">Fuse ${PAWN_FUSION_COUNT} pawns… → ${pawnResults.map((t) => inlinePiece(t)).join(' ')}</button>`
+      : '';
     actions.innerHTML =
       `<p class="piece-info"><strong>${PIECE_NAME[piece.type]}</strong> · ${PIECE_VALUE[piece.type]} pts. ${PIECES[piece.type].description}</p>` +
       `${upgrades}${fusions}${pawnFusions}${sell}`;
