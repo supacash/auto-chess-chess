@@ -2,7 +2,7 @@ import type { PlacementSession } from '../app/placementSession';
 import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
 import type { Color } from '../chess/fen';
 import type { Winner } from '../rules/battle';
-import { rerollOffers, rollOffers, type Shop, type ShopResult, startingShop } from '../rules/economy';
+import { BASE_INCOME, rerollOffers, rollOffers, type Shop, type ShopResult, startingShop } from '../rules/economy';
 import { gameMode } from '../rules/mode';
 import { makePiece, type Piece, type PieceType } from '../rules/pieces';
 import { armyErrors, canPlace, pieceAt } from '../rules/placement';
@@ -195,6 +195,22 @@ export class MatchSession implements PlacementSession {
     // White moves first, as in chess (a king that starts in check still moves first).
     const start = startPosition(white, black, true, this.board);
     return { pairing, start: start.ok ? { fen: start.fen, firstMover: start.firstMover } : null };
+  }
+
+  /**
+   * Rejoining after a reload, in the room's `round`: the saved shop and streak, plus base income for
+   * any rounds missed meanwhile (the player's last army fought them; their streak starts over).
+   */
+  resume(saved: { round: number; shop: Shop; streak: number }, round: number): void {
+    const missed = Math.max(0, round - saved.round);
+    this.round = round;
+    this.shop =
+      missed === 0
+        ? saved.shop
+        : { ...saved.shop, gold: saved.shop.gold + missed * BASE_INCOME, offers: rollOffers(round, this.rng, false) };
+    this.streaks = new Map([[this.myId, missed === 0 ? saved.streak : 0]]);
+    this.pairings = [];
+    this.phase = 'shop';
   }
 
   /** Applies the round's results: health, knockouts, the player's income, then the next round's shop. */

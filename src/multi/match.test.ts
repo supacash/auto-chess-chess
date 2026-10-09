@@ -74,6 +74,39 @@ describe('pairRound', () => {
     expect(pairingOf(pairs, 'd')).toBeNull();
   });
 
+  it('never repeats last round’s opponent while another pairing exists', () => {
+    const draw = (pairs: ReturnType<typeof pairRound>) =>
+      pairs.map((pairing) => ({ pairing, winner: 'draw' as const, material: { w: 0, b: 0 } }));
+    const opponents = (pairs: ReturnType<typeof pairRound>) =>
+      new Map(pairs.flatMap((p) => [[p.white, p.black] as const, [p.black, p.white] as const]));
+    for (const start of [four(), out(four(), 'd')]) {
+      for (let seed = 0; seed < 30; seed++) {
+        let players = start;
+        let before = new Map<string, string>();
+        for (let round = 1; round <= 8; round++) {
+          const pairs = pairRound(players, seed, round);
+          const now = opponents(pairs.filter((p) => !p.copy));
+          for (const [id, other] of now) expect(before.get(id)).not.toBe(other);
+          before = now;
+          players = applyRound(players, round, draw(pairs));
+        }
+      }
+    }
+  });
+
+  it('remembers who each player fought (the copy’s owner keeps their own opponent)', () => {
+    const three = out(four(), 'd');
+    const pairs = pairRound(three, 9, 3);
+    const after = applyRound(
+      three,
+      3,
+      pairs.map((pairing) => ({ pairing, winner: 'draw', material: { w: 0, b: 0 } })),
+    );
+    const real = pairs.find((p) => !p.copy)!;
+    expect(after.find((p) => p.id === real.white)!.lastOpponent).toBe(real.black);
+    expect(after.find((p) => p.id === real.black)!.lastOpponent).toBe(real.white);
+  });
+
   it('pairs nobody when one player is left', () => {
     expect(pairRound(out(four(), 'b', 'c', 'd'), 1, 5)).toEqual([]);
   });

@@ -2,7 +2,7 @@ import { BOARDS } from '../chess/boardSpec';
 import { AI_STYLES } from '../rules/aiArmy';
 import { DEFAULT_SETTINGS, type DifficultyId, isDifficultyId, isSideId, type RunSettings } from '../rules/difficulty';
 import { isModeId, type ModeId } from '../rules/mode';
-import { OFFER_COUNT } from '../rules/economy';
+import { OFFER_COUNT, type Shop } from '../rules/economy';
 import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
 import type { Run } from '../rules/run';
 import type { ManualState } from './manualBattle';
@@ -21,6 +21,8 @@ const RECORDS_KEY = 'acc.records.v1';
 /** The last finished battle, for Watch replay. */
 const REPLAY_KEY = 'acc.replay.v1';
 const BEST_KEY = 'acc.best.v1';
+/** The online match in progress (see SavedMatch). */
+const MATCH_KEY = 'acc.match.v1';
 
 /** Current save format. Bump it and add a MIGRATIONS step whenever SavedGame changes shape. */
 export const SAVE_VERSION = 3;
@@ -89,6 +91,59 @@ export function saveRecords(records: Records): void {
   } catch {
     // ignore
   }
+}
+
+/**
+ * The player's side of an online match, so a reload can rejoin it: the room, and the shop and
+ * streak that only this device knows (health and pairings come from the room).
+ */
+export interface SavedMatch {
+  code: string;
+  uid: string;
+  round: number;
+  shop: Shop;
+  streak: number;
+  /** When it was saved (ms), so a long-abandoned match isn't offered. */
+  at: number;
+}
+
+/** Matches saved longer ago than this aren't offered for rejoining. */
+const MATCH_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
+export function loadMatch(now = Date.now()): SavedMatch | null {
+  try {
+    const raw = localStorage.getItem(MATCH_KEY);
+    const match = raw ? parseMatch(JSON.parse(raw)) : null;
+    return match && now - match.at < MATCH_MAX_AGE_MS ? match : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveMatch(match: SavedMatch): void {
+  try {
+    localStorage.setItem(MATCH_KEY, JSON.stringify(match));
+  } catch {
+    // ignore
+  }
+}
+
+export function clearMatch(): void {
+  try {
+    localStorage.removeItem(MATCH_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export function parseMatch(data: unknown): SavedMatch | null {
+  if (!isObject(data) || !isObject(data.shop)) return null;
+  const { code, uid, round, streak, at } = data;
+  if (typeof code !== 'string' || typeof uid !== 'string' || !isCount(round, 1) || !isCount(at, 0)) return null;
+  if (typeof streak !== 'number' || !Number.isInteger(streak)) return null;
+  const pieces = parsePieces(data.shop.pieces);
+  if (!pieces || !isCount(data.shop.gold, 0)) return null;
+  return { code, uid, round, streak, at, shop: { gold: data.shop.gold, pieces, ...parseOffers(data.shop.offers) } };
 }
 
 export function clearGame(): void {
