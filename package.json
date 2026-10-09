@@ -2,6 +2,7 @@
   "name": "auto-chess-chess",
   "private": true,
   "version": "0.0.1",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "copy-engine": "node scripts/copy-engine.mjs",

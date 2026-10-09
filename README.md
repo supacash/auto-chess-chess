@@ -52,6 +52,6 @@ Built with [Vite](https://vite.dev), TypeScript, [chess.js](https://github.com/j
 
 ## License
 
-No license has been chosen for this project's code yet.
+This project's code is released under the [MIT License](LICENSE).
 
-Stockfish is licensed under the GPLv3. It isn't stored in this repo and is installed from npm. Any build you distribute that includes it must comply with the GPLv3, including crediting Stockfish and offering its source.
+Stockfish is licensed under the GPLv3 and is not covered by the MIT License. It isn't stored in this repo and is installed from npm. Any build you distribute that includes it must comply with the GPLv3, including crediting Stockfish and offering its source.
