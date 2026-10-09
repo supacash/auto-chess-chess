@@ -17,6 +17,12 @@ describe('aiBudget', () => {
       expect(b).toBeLessThanOrEqual(19);
     }
   });
+
+  it('is one point smaller in round 1', () => {
+    const budgets = new Set(Array.from({ length: 40 }, (_, seed) => aiBudget(1, seededRng(seed))));
+    expect(budgets).toEqual(new Set([4, 5, 6]));
+    expect(aiBudget(1, seededRng(0), 7)).toBeGreaterThanOrEqual(5);
+  });
 });
 
 describe('pickStyle', () => {

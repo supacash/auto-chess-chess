@@ -61,14 +61,14 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **Engine:** Stockfish (WASM, in a web worker) plays both sides at the same settings. The player's skill is in drafting and placement, not in having a better engine.
 - **Speed:** a depth-8 search per move. To add variety, it picks randomly among the top 3 moves when they score within ~50 centipawns of each other.
 - **Engine failures:** if Stockfish refuses a position or a search takes over 10 seconds (Stockfish lite can hang on some positions with two same-coloured bishops), that move is a random legal move instead, and a hung engine is restarted.
-- **Army budget:** 6×round points on Normal (5× Easy, 7× Hard), plus or minus 1 random. This roughly matches the player's army value (6 at the start, then +5 to +7 income per round). The earlier 4 + 2×round fell far behind from round 2 (see SIMULATION.md). A new opponent is drafted each round, and its style is shown during placement.
+- **Army budget:** 6×round points on Normal (5× Easy, 7× Hard), plus or minus 1 random, and 1 point less in round 1 so the first battle isn't a coin flip. This roughly matches the player's army value (6 at the start, then +5 to +7 income per round). The earlier 4 + 2×round fell far behind from round 2 (see SIMULATION.md). A new opponent is drafted each round, and its style is shown during placement.
 - **Styles:** each sets the share of the budget spent on pawns, draft weights for the other pieces, preferred king files, and how far forward pieces sit.
   | Style | Draft | Layout |
   |---|---|---|
   | Balanced | ~35% pawns, an even mix | King on d/e behind a pawn shield |
   | Fortress | ~60% pawns, minor pieces and rooks | King tucked on g/h (or b/a) behind a full pawn wall |
   | Heavy Artillery | ~15% pawns, queens and rooks | Rooks on the back row and open files, queen in the centre |
-  | Cavalry Charge | ~25% pawns, knights and bishops | Pieces pushed to the front row |
+  | Cavalry Charge | ~25% pawns, knights and bishops | Pieces pushed to the front row. Labelled **tough** in the opponent line: it beats the player more often than the other styles (SIMULATION.md §8). |
 - **Drafting:** non-pawn pieces are picked by the style's weights and the rest of the budget goes on pawns (at most 8). Anything left once the pawn cap is hit goes into upgrades. Every step stays within the piece limit, so very large budgets may go partly unspent.
 - **Placement:** every square is scored per piece for the style (rooks prefer the back row, bishops c/f, pawns shield the king and avoid doubling up), with small random noise and a random left/right flip. The king goes first, then pieces from most to least valuable. It follows the same rules as the player.
 

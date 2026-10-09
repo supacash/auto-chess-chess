@@ -559,3 +559,18 @@ header .link {
 .eval-label[data-side='even'] {
   color: var(--muted);
 }
+
+.tough {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #10240f;
+  background: #f2c94c;
+  border-radius: 3px;
+  vertical-align: 0.1em;
+}

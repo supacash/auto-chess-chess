@@ -25,6 +25,8 @@ export interface AiStyle {
   pawnFront: number;
   /** Bonus for pawns directly in front of (or diagonal to) the king. */
   shield: number;
+  /** Shown next to the name: a style that is measurably harder to beat (see SIMULATION.md). */
+  tough?: boolean;
 }
 
 export const AI_STYLES: AiStyle[] = [
@@ -71,6 +73,9 @@ export const AI_STYLES: AiStyle[] = [
     forward: 0.8,
     pawnFront: 1,
     shield: 0.5,
+    // Knight/bishop-heavy armies beat rook/queen-heavy ones at equal points in this format; smaller
+    // weight/push tweaks barely changed that, so Cavalry stays the hard style and is labelled instead.
+    tough: true,
   },
 ];
 
@@ -84,8 +89,11 @@ const DOUBLED_PAWN = 2;
  * AI army point budget for a round: perRound × round, ±1 random. Normal difficulty is 6 per round,
  * which tracks the player's income (see SIMULATION.md); see difficulty.ts for the others.
  */
+/** Round 1 AI armies are this much smaller, so the first battle is less of a coin flip. */
+export const ROUND_ONE_DISCOUNT = 1;
+
 export function aiBudget(round: number, rng: Rng, perRound = 6): number {
-  return perRound * round + randomInt(rng, 3) - 1;
+  return perRound * round + randomInt(rng, 3) - 1 - (round === 1 ? ROUND_ONE_DISCOUNT : 0);
 }
 
 export function pickStyle(rng: Rng): AiStyle {

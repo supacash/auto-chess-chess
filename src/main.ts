@@ -235,7 +235,9 @@ function renderOpponent(): void {
   const types = state.aiPieces.map((p) => p.type).sort((a, b) => PIECE_ORDER.indexOf(a) - PIECE_ORDER.indexOf(b));
   const points = types.reduce((s, t) => s + PIECE_VALUE[t], 0);
   $('#opponent').innerHTML =
-    `Opponent · <strong>${state.aiStyle.name}</strong>: ` +
+    `Opponent · <strong>${state.aiStyle.name}</strong>` +
+    (state.aiStyle.tough ? ` <span class="tough" title="This style wins more often than the others">tough</span>` : '') +
+    `: ` +
     `<span class="glyphs">${types.map(inlineGlyph).join('')}</span> · ${points} pts`;
 }
 

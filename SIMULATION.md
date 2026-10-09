@@ -105,6 +105,37 @@ Wall time is with 14 engines while other sims were running at times, so treat it
 
 **Recommendation: raise `PLY_LIMIT` to 90** (45 moves each). Mates become the most common ending and the existing balance holds, for about 6 s more per battle. This needs the user's OK and a DESIGN.md update ("Move limit"). Don't adopt the decisive-material end.
 
+### 8. At 90 plies: Cavalry Charge and round 1 (2026-10-09, seed 1, 300 runs × 10 rounds, shop player, 6×round)
+
+`npm run sim -- --rounds 10 --games 300 --player shop`. With ~750 games per AI style, each percentage is about ±3.5 points; with 300 games per round, about ±5.
+
+**Cavalry Charge is the hardest AI style, and small tweaks don't change that.** Player wins against each AI style:
+
+| Cavalry variant | vs Cavalry | vs Balanced / Fortress / Heavy | Run score |
+|---|---|---|---|
+| Current (knight weight 3, forward 0.8) | 25% | 33% / 32% / 39% | 2.76 |
+| Knight weight 2 | 24% | 32% / 33% / 40% | 2.81 |
+| Knight weight 2.5 | 25% | 32% / 32% / 40% | 2.78 |
+| Forward 0.4 | 29% | 32% / 31% / 38% | 2.75 |
+| Forward 0.6 | 24% | 32% / 31% / 41% | 2.74 |
+| Knight 2 + forward 0.4 | 27% | 32% / 33% / 38% | 2.72 |
+
+- The style is strong from either side: the stand-in player wins 49–55% when it plays Cavalry, 22–25% with the other styles. Heavy Artillery is always the easiest AI style. At equal points, knight/bishop-heavy armies beat rook/queen-heavy ones in this format, so it is a piece-value effect rather than a Cavalry layout quirk.
+- **Decision:** keep Cavalry as it is and label it "tough" in the opponent line.
+
+**Round 1 discount.** Round 1 at 90 plies was 28 / 38 / 34 (W/D/L, 6 v 6 points). With the AI budget 1 point lower in round 1 only (`ROUND_ONE_DISCOUNT`):
+
+| | Before | Round 1 −1 |
+|---|---|---|
+| Round 1 W/D/L | 28 / 38 / 34 | 57 / 29 / 14 |
+| Round 2 wins | 42% | 56% |
+| All rounds W/D/L | 32 / 11 / 57 | 43 / 10 / 47 |
+| Run score | 2.76 | 3.97 |
+| Runs alive after round 10 | 24% | 33% |
+
+- The round 1 win bonus (+2 gold) carries through the run, so the discount also offsets the extra difficulty the 90-ply limit added (shop player run score at 60 plies was 3.19). **Decision:** ship it and let playtests decide whether Normal needs further easing (Easy is 5×round).
+- Stockfish still hung in about 1 in 1000 battles, all with 3+ bishops. The browser's 10 s timeout falls back to a random move.
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.
