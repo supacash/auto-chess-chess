@@ -218,7 +218,7 @@ export class PlacementScreen {
         ? ''
         : `<button type="button" class="sell" data-sell>Sell · +${sellValue(piece.type)}g</button>`;
     // Fusion is free: the selected piece becomes the compound where it stands, and the partner is used up.
-    const fusions = fusionOptions(this.session.run.shop, piece.id)
+    const fusions = (this.session.run.settings.fairy ? fusionOptions(this.session.run.shop, piece.id) : [])
       .map(({ partnerId, result }) => {
         const partner = pieces.find((p) => p.id === partnerId)!;
         return `<button type="button" class="fuse" data-fuse="${partnerId}" title="Uses up a ${PIECE_NAME[partner.type]}">+ ${inlinePiece(partner.type)} → ${inlinePiece(result)} ${PIECE_NAME[result]}</button>`;

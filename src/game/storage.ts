@@ -144,6 +144,8 @@ export function parseSave(raw: unknown): SavedGame | null {
     difficulty: isDifficultyId(s.difficulty) ? s.difficulty : DEFAULT_SETTINGS.difficulty,
     reveal: typeof s.reveal === 'boolean' ? s.reveal : DEFAULT_SETTINGS.reveal,
     side: isSideId(s.side) ? s.side : DEFAULT_SETTINGS.side,
+    // Runs saved before the setting existed already had fairy pieces in the shop.
+    fairy: typeof s.fairy === 'boolean' ? s.fairy : true,
   };
   return {
     version: SAVE_VERSION,

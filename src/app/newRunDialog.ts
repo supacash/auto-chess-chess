@@ -2,7 +2,7 @@ import { DEFAULT_SETTINGS, isDifficultyId, isSideId, type RunSettings } from '..
 import { isModeId } from '../rules/mode';
 import { $ } from './dom';
 
-/** The New run window: board (game mode), difficulty, side and reveal. Runs start only from here. */
+/** The New run window: board (game mode), difficulty, side, fairy pieces and reveal. Runs start only from here. */
 export class NewRunDialog {
   private readonly dialog = $<HTMLDialogElement>('#new-run-dialog');
 
@@ -19,6 +19,7 @@ export class NewRunDialog {
         difficulty: isDifficultyId(level) ? level : DEFAULT_SETTINGS.difficulty,
         reveal: $<HTMLInputElement>('#nr-reveal').checked,
         side: isSideId(side) ? side : DEFAULT_SETTINGS.side,
+        fairy: $<HTMLInputElement>('#nr-fairy').checked,
       });
     });
   }
@@ -31,6 +32,7 @@ export class NewRunDialog {
     $<HTMLSelectElement>('#nr-difficulty').value = current.difficulty;
     $<HTMLInputElement>('#nr-reveal').checked = current.reveal;
     $<HTMLSelectElement>('#nr-side').value = current.side;
+    $<HTMLInputElement>('#nr-fairy').checked = current.fairy;
     $('#nr-warning').hidden = !warnAbandon;
     this.dialog.showModal();
   }

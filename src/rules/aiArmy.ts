@@ -18,6 +18,12 @@ export interface AiStyle {
   pawnShare: number;
   /** Relative draft weights for the non-pawn pieces. */
   weights: Partial<Record<PieceType, number>>;
+  /** Extra draft weights for fairy pieces (fusion pieces included), used only with fairy pieces on. */
+  fairyWeights: Partial<Record<PieceType, number>>;
+  /** With fairy pieces on, the share of pawns drafted as Berolina pawns. */
+  berolinaShare: number;
+  /** Only drafted with fairy pieces on. */
+  fairyOnly?: boolean;
   /** Preferred king files (before random left/right flip) on rank `kingRank`. */
   kingFiles: number[];
   kingRank: number;
@@ -35,6 +41,8 @@ export const AI_STYLES: AiStyle[] = [
     name: 'Balanced',
     pawnShare: 0.35,
     weights: { N: 2, B: 2, R: 1.5, Q: 1 },
+    fairyWeights: { M: 0.6, L: 0.5, X: 0.7, T: 0.4, A: 0.5, C: 0.4 },
+    berolinaShare: 0.2,
     kingFiles: [4, 3],
     kingRank: 0,
     forward: 0.2,
@@ -46,6 +54,9 @@ export const AI_STYLES: AiStyle[] = [
     name: 'Fortress',
     pawnShare: 0.6,
     weights: { N: 1, B: 1.5, R: 1.5, Q: 0.5 },
+    // Short-range defenders and a cannon behind the pawn wall.
+    fairyWeights: { F: 0.8, W: 0.8, M: 1.2, X: 1, C: 0.3 },
+    berolinaShare: 0.15,
     kingFiles: [6, 7],
     kingRank: 0,
     forward: -0.3,
@@ -57,6 +68,8 @@ export const AI_STYLES: AiStyle[] = [
     name: 'Heavy Artillery',
     pawnShare: 0.15,
     weights: { N: 0.5, B: 0.5, R: 2.5, Q: 3 },
+    fairyWeights: { X: 1.5, C: 1.5, A: 0.8, Z: 1.2 },
+    berolinaShare: 0.2,
     kingFiles: [4, 3],
     kingRank: 0,
     forward: 0,
@@ -68,11 +81,28 @@ export const AI_STYLES: AiStyle[] = [
     name: 'Cavalry Charge',
     pawnShare: 0.25,
     weights: { N: 3, B: 2.5, R: 0.5, Q: 0.5 },
+    // Jumpers and knight compounds.
+    fairyWeights: { L: 1.5, T: 1.2, A: 1.5, G: 0.4 },
+    berolinaShare: 0.3,
     kingFiles: [4, 3, 5],
     kingRank: 0,
     forward: 0.8,
     pawnFront: 1,
     shield: 0.5,
+  },
+  {
+    id: 'menagerie',
+    name: 'Menagerie',
+    fairyOnly: true,
+    pawnShare: 0.3,
+    weights: { N: 0.5, B: 0.5, R: 0.5, Q: 0.3 },
+    fairyWeights: { F: 1, W: 1, M: 1.2, L: 1.2, G: 1, X: 1.2, T: 1, A: 0.8, C: 0.8, Z: 0.5 },
+    berolinaShare: 0.6,
+    kingFiles: [4, 3],
+    kingRank: 0,
+    forward: 0.3,
+    pawnFront: 0.5,
+    shield: 1,
   },
 ];
 
@@ -99,35 +129,60 @@ export function aiBudget(
   return perRound * round + bonus + randomInt(rng, 3) - 1 - (round === 1 ? roundOneDiscount : 0);
 }
 
-export function pickStyle(rng: Rng): AiStyle {
-  return AI_STYLES[randomInt(rng, AI_STYLES.length)];
+/** A random style; fairy-only styles only when `fairy` is on. */
+export function pickStyle(rng: Rng, fairy = false): AiStyle {
+  const styles = AI_STYLES.filter((s) => fairy || !s.fairyOnly);
+  return styles[randomInt(rng, styles.length)];
+}
+
+/** Gold upgrades plus, with fairy pieces on, the fusions an AI could have made (its partner bought outright). */
+const FAIRY_UPGRADES: Partial<Record<PieceType, PieceType[]>> = {
+  N: ['T', 'A', 'C'],
+  B: ['A'],
+  R: ['C'],
+  Q: ['Z'],
+};
+
+function upgradesFor(type: PieceType, fairy: boolean): PieceType[] {
+  return fairy ? [...UPGRADES[type], ...(FAIRY_UPGRADES[type] ?? [])] : UPGRADES[type];
 }
 
 /**
  * Picks piece types (always including the king) whose values sum to at most `budget` and that
  * fit `spec`'s home rows: non-pawn pieces by the style's weights, the rest as pawns, and any budget
- * left once the board or the pawn cap is full goes into upgrades.
+ * left once the board or the pawn cap is full goes into upgrades. With `fairy`, the style's fairy
+ * pieces join the draft, some pawns are Berolina pawns, and upgrades include fusions.
  */
-export function draftAiArmy(budget: number, style: AiStyle, rng: Rng, spec: BoardSpec = BOARD_8): PieceType[] {
+export function draftAiArmy(
+  budget: number,
+  style: AiStyle,
+  rng: Rng,
+  spec: BoardSpec = BOARD_8,
+  fairy = false,
+): PieceType[] {
   const types: PieceType[] = ['K'];
   const capacity = Math.min(MAX_ARMY, homeSquares(spec));
   const pawnCap = Math.min(MAX_PAWNS, pawnSquares(spec));
   let pieceBudget = budget - Math.round(budget * style.pawnShare);
-  const options = (['Q', 'R', 'B', 'N'] as const).filter((t) => (style.weights[t] ?? 0) > 0);
+  const weights: Partial<Record<PieceType, number>> = fairy
+    ? { ...style.weights, ...style.fairyWeights }
+    : style.weights;
+  const options = (Object.keys(weights) as PieceType[]).filter((t) => (weights[t] ?? 0) > 0 && !isPawnLike(t));
   while (types.length < capacity) {
     const affordable = options.filter((t) => PIECE_VALUE[t] <= pieceBudget);
     if (affordable.length === 0) break;
-    const pick = weightedPick(affordable, (t) => style.weights[t]!, rng);
+    const pick = weightedPick(affordable, (t) => weights[t]!, rng);
     types.push(pick);
     pieceBudget -= PIECE_VALUE[pick];
   }
 
   let left = budget - points(types);
   const pawns = Math.max(0, Math.min(left, pawnCap, capacity - types.length));
-  for (let i = 0; i < pawns; i++) types.push('P');
+  for (let i = 0; i < pawns; i++) types.push(fairy && rng() < style.berolinaShare ? 'E' : 'P');
   left -= pawns;
-  // Upgrades cost 2 or 4, so an odd leftover can't be spent; trade a pawn back to make it even.
-  if (left % 2 === 1 && pawns > 0) {
+  // Gold upgrades cost 2 or 4, so an odd leftover can't be spent; trade a pawn back to make it even.
+  // (Fusion upgrades include odd costs, so with fairy pieces on the leftover usually gets spent anyway.)
+  if (!fairy && left % 2 === 1 && pawns > 0) {
     types.pop();
     left++;
   }
@@ -138,11 +193,11 @@ export function draftAiArmy(budget: number, style: AiStyle, rng: Rng, spec: Boar
     const found = order
       .map(([from, i]) => ({
         i,
-        to: UPGRADES[from].filter((to) => upgradeCost(from, to) <= left),
+        to: upgradesFor(from, fairy).filter((to) => upgradeCost(from, to) <= left),
       }))
       .find((o) => o.to.length > 0);
     if (!found) break;
-    const to = weightedPick(found.to, (t) => style.weights[t] ?? 0.1, rng);
+    const to = weightedPick(found.to, (t) => weights[t] ?? 0.1, rng);
     left -= upgradeCost(types[found.i], to);
     types[found.i] = to;
   }

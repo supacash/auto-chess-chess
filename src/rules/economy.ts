@@ -116,9 +116,11 @@ export function maxOfferCost(round: number): number {
   return 2 + 2 * round;
 }
 
-/** A fresh set of offers for `round`. Prices are the pieces' values. */
-export function rollOffers(round: number, rng: Rng): PieceType[] {
-  const pool = (Object.keys(OFFER_WEIGHTS) as PieceType[]).filter((t) => PIECE_VALUE[t] <= maxOfferCost(round));
+/** A fresh set of offers for `round`. Prices are the pieces' values. Without `fairy`, standard pieces only. */
+export function rollOffers(round: number, rng: Rng, fairy = true): PieceType[] {
+  const pool = (Object.keys(OFFER_WEIGHTS) as PieceType[]).filter(
+    (t) => PIECE_VALUE[t] <= maxOfferCost(round) && (fairy || PIECES[t].group === 'standard'),
+  );
   return Array.from({ length: OFFER_COUNT }, () => weightedPick(pool, (t) => OFFER_WEIGHTS[t] ?? 0, rng));
 }
 
@@ -141,9 +143,9 @@ export function buyOffer(shop: Shop, index: number): ShopResult {
 }
 
 /** Pays REROLL_COST for a fresh set of offers. */
-export function rerollOffers(shop: Shop, round: number, rng: Rng): ShopResult {
+export function rerollOffers(shop: Shop, round: number, rng: Rng, fairy = true): ShopResult {
   if (shop.gold < REROLL_COST) return { ok: false, error: 'Not enough gold' };
-  return { ok: true, shop: { ...shop, gold: shop.gold - REROLL_COST, offers: rollOffers(round, rng) } };
+  return { ok: true, shop: { ...shop, gold: shop.gold - REROLL_COST, offers: rollOffers(round, rng, fairy) } };
 }
 
 // ---- fusion ----

@@ -74,7 +74,10 @@ export class Session {
     this.aiStyle = style;
     this.aiPieces = saved.ai.pieces;
     if (!this.run.shop.offers) {
-      this.run = { ...this.run, shop: { ...this.run.shop, offers: rollOffers(this.run.round, this.rng) } };
+      this.run = {
+        ...this.run,
+        shop: { ...this.run.shop, offers: rollOffers(this.run.round, this.rng, this.run.settings.fairy) },
+      };
     }
     this.best = this.loadBest();
     if (!saved.battleInProgress) return { notice: '', firstVisit: false };
@@ -112,11 +115,14 @@ export class Session {
 
   /** Drafts this round's opponent and stocks the shop with fresh offers. */
   draftOpponent(): void {
-    this.run = { ...this.run, shop: { ...this.run.shop, offers: rollOffers(this.run.round, this.rng) } };
+    this.run = {
+      ...this.run,
+      shop: { ...this.run.shop, offers: rollOffers(this.run.round, this.rng, this.run.settings.fairy) },
+    };
     const spec = this.board;
     const { settings } = this.run;
     const mode = gameMode(settings.mode);
-    this.aiStyle = pickStyle(this.rng);
+    this.aiStyle = pickStyle(this.rng, settings.fairy);
     const budget = aiBudget(
       this.run.round,
       this.rng,
@@ -124,12 +130,17 @@ export class Session {
       mode.roundOneDiscount,
       mode.aiBonus,
     );
-    this.aiPieces = placeAiArmy(draftAiArmy(budget, this.aiStyle, this.rng, spec), this.aiStyle, this.rng, spec);
+    this.aiPieces = placeAiArmy(
+      draftAiArmy(budget, this.aiStyle, this.rng, spec, settings.fairy),
+      this.aiStyle,
+      this.rng,
+      spec,
+    );
   }
 
   /** Pays for a fresh set of shop offers (doesn't apply it: see setShop). */
   rerollOffers(): ShopResult {
-    return rerollOffers(this.run.shop, this.run.round, this.rng);
+    return rerollOffers(this.run.shop, this.run.round, this.rng, this.run.settings.fairy);
   }
 
   setPieces(pieces: Piece[]): void {

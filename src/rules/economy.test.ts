@@ -139,6 +139,13 @@ describe('shop offers', () => {
     expect(Object.keys(OFFER_WEIGHTS)).not.toContain('K');
   });
 
+  it('offers only standard pieces with fairy pieces off', () => {
+    const rng = seededRng(4);
+    for (let i = 0; i < 100; i++) {
+      for (const t of rollOffers(6, rng, false)) expect(PIECES[t].group).toBe('standard');
+    }
+  });
+
   it('holds back rooks until round 2 and queens until round 4', () => {
     const rng = seededRng(1);
     const seen = (round: number) => new Set(Array.from({ length: 200 }, () => rollOffers(round, rng)).flat());
@@ -149,7 +156,7 @@ describe('shop offers', () => {
   });
 
   it('buys an offer onto the bench for its value and removes it from the shop', () => {
-    const shop: Shop = { gold: 5, pieces: [makePiece('K')], offers: ['X', 'F', 'E'] };
+    const shop: Shop = { gold: PIECE_VALUE.X + 1, pieces: [makePiece('K')], offers: ['X', 'F', 'E'] };
     const next = ok(buyOffer(shop, 0));
     expect(next.gold).toBe(1);
     expect(next.offers).toEqual(['F', 'E']);
