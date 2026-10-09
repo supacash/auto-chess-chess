@@ -213,7 +213,7 @@ export class MatchController {
         return `<li class="${classes}">
           <span class="name">${p.id === m.myId ? 'You' : p.name}${p.bot ? ' <small>bot</small>' : ''}</span>
           <span class="hp-bar ${hp > 10 ? 'good' : hp > 5 ? 'warn' : 'low'}"><span style="width:${(hp / START_HP) * 100}%"></span></span>
-          <span class="hp">${hp}</span>${hit}${badge}
+          <span class="hp">${hp}</span><span class="extra">${hit || badge}</span>
         </li>`;
       })
       .join('');
