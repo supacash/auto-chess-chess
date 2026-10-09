@@ -125,7 +125,8 @@ In Growing mode the board opens up during the run:
 ## Known issues
 - **5×5 draws:** round 1 in Growing mode draws ~38% of the time; small armies often trade down to bare kings or insufficient material.
 - **Repetition while ahead:** the AI has been seen accepting threefold repetition while several points up. Fairy-Stockfish's contempt setting is the first thing to try.
-- **Phone performance** of the engine hasn't been measured on real devices.
+- **Safari / iOS:** the engine needs cross-origin isolation; COEP is forced to require-corp with a one-time reload fallback (untested on a real iPhone).
+- **Fairy balance:** Fortress with fairy pieces is still weak (Ferz/Wazir likely overpriced at 2); fusion pieces and the shop player buying fairy offers aren't measured yet.
 
 ## Roadmap
 Done: game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as.
