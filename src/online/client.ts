@@ -1,17 +1,23 @@
 import { type FirebaseApp, initializeApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth, signInAnonymously } from 'firebase/auth';
 import {
+  collection,
   connectFirestoreEmulator,
+  deleteDoc,
   doc,
   type Firestore,
   getDoc,
+  getDocs,
   getFirestore,
+  limit,
   onSnapshot,
+  query,
   runTransaction,
   serverTimestamp,
   setDoc,
   Timestamp,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 import type { MatchSettings } from '../multi/match';
 import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
@@ -27,6 +33,9 @@ import {
   loneKing,
   newRoom,
   parseArmy,
+  peopleSeated,
+  QUICK_FRESH_MS,
+  quickRoomsToTry,
   type ReportedResult,
   resultKey,
   type Room,
@@ -94,13 +103,17 @@ export class RoomClient {
   }
 
   /** Creates a room with a fresh code (retrying if a code is taken) and seats the player as host. */
-  async createRoom(name: string, settings: MatchSettings, rng: Rng): Promise<string> {
+  async createRoom(name: string, settings: MatchSettings, rng: Rng, quick = false): Promise<string> {
     for (let attempt = 0; attempt < 8; attempt++) {
       const code = roomCode(rng);
       const ref = doc(this.db, 'rooms', code);
       const created = await runTransaction(this.db, async (tx) => {
         if ((await tx.get(ref)).exists()) return false;
-        tx.set(ref, toStored(newRoom(code, this.uid, name, settings)));
+        tx.set(ref, {
+          ...toStored(newRoom(code, this.uid, name, settings, quick)),
+          createdAt: serverTimestamp(),
+          waitingSince: serverTimestamp(),
+        });
         return true;
       });
       if (created) return code;
@@ -113,20 +126,66 @@ export class RoomClient {
     await runTransaction(this.db, async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists()) throw new Error(`No room with code ${code}`);
-      const change = joinRoom(fromStored(snap.data()), this.uid, name);
+      const room = fromStored(snap.data());
+      const change = joinRoom(room, this.uid, name);
       if (!change.ok) throw new Error(change.error);
-      tx.update(ref, { seats: change.room.seats });
+      if (change.room === room) return; // already seated
+      tx.update(ref, { seats: change.room.seats, waitingSince: serverTimestamp() });
     });
   }
 
+  /** Open quick play rooms in a mode, best first (see quickRoomsToTry). */
+  async findQuickRooms(blitz: boolean): Promise<Room[]> {
+    const fresh = Timestamp.fromMillis(this.serverNow() - QUICK_FRESH_MS);
+    const snap = await getDocs(
+      query(
+        collection(this.db, 'rooms'),
+        where('quick', '==', true),
+        where('status', '==', 'lobby'),
+        where('settings.blitz', '==', blitz),
+        where('waitingSince', '>=', fresh),
+        limit(20),
+      ),
+    );
+    return quickRoomsToTry(
+      snap.docs.map((d) => fromStored(d.data())),
+      this.uid,
+      this.serverNow(),
+      blitz,
+    );
+  }
+
+  /** Quick play: takes a seat in an open quick room in the mode, or makes one. Returns its code. */
+  async quickPlay(name: string, blitz: boolean, rng: Rng): Promise<string> {
+    // If the search fails (e.g. its index is still building), make a room others can still find later.
+    const rooms = await this.findQuickRooms(blitz).catch((err) => {
+      console.warn('Quick play search failed', err);
+      return [];
+    });
+    for (const room of rooms) {
+      try {
+        await this.joinRoom(room.code, name);
+        return room.code;
+      } catch {
+        // Filled up or started meanwhile: try the next one.
+      }
+    }
+    return this.createRoom(name, { blitz }, rng, true);
+  }
+
+  /** Leaves a room still in the lobby. A host leaving an otherwise empty room deletes it. */
   async leaveLobby(code: string): Promise<void> {
     const ref = doc(this.db, 'rooms', code);
-    await runTransaction(this.db, async (tx) => {
+    const empty = await runTransaction(this.db, async (tx) => {
       const snap = await tx.get(ref);
-      if (!snap.exists()) return;
+      if (!snap.exists()) return false;
       const room = fromStored(snap.data());
-      if (room.status === 'lobby') tx.update(ref, { seats: leaveLobby(room, this.uid).seats });
+      if (room.status !== 'lobby') return false;
+      const left = leaveLobby(room, this.uid);
+      tx.update(ref, { seats: left.seats });
+      return room.host === this.uid && peopleSeated(left) === 0;
     });
+    if (empty) await deleteDoc(ref).catch(console.warn);
   }
 
   /** The room as it is now (null if it doesn't exist). */
@@ -227,14 +286,23 @@ export class RoomClient {
 
 /** Room fields as stored: the same, except phaseStartedAt is a Firestore timestamp. */
 function toStored(room: Room): Record<string, unknown> {
-  return { ...room, phaseStartedAt: room.phaseStartedAt === null ? null : Timestamp.fromMillis(room.phaseStartedAt) };
+  const stamp = (ms: number | null) => (ms === null ? null : Timestamp.fromMillis(ms));
+  return {
+    ...room,
+    createdAt: stamp(room.createdAt),
+    waitingSince: stamp(room.waitingSince),
+    phaseStartedAt: stamp(room.phaseStartedAt),
+  };
 }
 
 function fromStored(data: Record<string, unknown>): Room {
-  const started = data.phaseStartedAt;
+  const millis = (t: unknown) => (t instanceof Timestamp ? t.toMillis() : null);
   return {
     ...(data as unknown as Room),
-    phaseStartedAt: started instanceof Timestamp ? started.toMillis() : null,
+    quick: data.quick === true,
+    createdAt: millis(data.createdAt),
+    waitingSince: millis(data.waitingSince),
+    phaseStartedAt: millis(data.phaseStartedAt),
     ready: (data.ready as Record<string, number>) ?? {},
     done: (data.done as Record<string, number>) ?? {},
     preview: parsePreviews(data.preview),

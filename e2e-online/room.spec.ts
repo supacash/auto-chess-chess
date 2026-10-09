@@ -143,3 +143,30 @@ test('a player who reloads mid-match rejoins it from the menu', async ({ browser
     await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
   }
 });
+
+test('two players on quick play end up in the same room, which starts by itself', async ({ browser }) => {
+  const first = await player(browser);
+  const second = await player(browser);
+  // Both look at about the same time (each may make a room; the newer one moves to the older).
+  await Promise.all(
+    [first, second].map(async (page) => {
+      await openMultiplayer(page);
+      await page.locator('#match-dialog').getByRole('button', { name: 'Quick play' }).click();
+    }),
+  );
+  for (const page of [first, second]) {
+    await expect(page.locator('#lobby-label')).toHaveText('Quick play', { timeout: 30_000 });
+    await expect(page.locator('#lobby-code')).toHaveText('Classic');
+    await expect(page.locator('#lobby-start')).toBeHidden();
+    await expect(page.locator('#lobby-seats small', { hasText: 'you' })).toHaveCount(1);
+  }
+  await expect(first.locator('#lobby-status')).toContainText('2 of 4', { timeout: 20_000 });
+  await expect(second.locator('#lobby-status')).toContainText('2 of 4');
+  await expect(first.locator('#lobby-status')).toContainText('Starting in');
+
+  // After the wait, the match starts for both with two bots.
+  for (const page of [first, second]) {
+    await expect(page.locator('#match-hud')).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator('#match-players small', { hasText: 'bot' })).toHaveCount(2);
+  }
+});

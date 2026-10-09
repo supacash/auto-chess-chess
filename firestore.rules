@@ -2,7 +2,8 @@ rules_version = '2';
 
 // Online rooms for 4-player matches (see src/online/). Players sign in anonymously.
 //
-// - rooms/{code}: the shared room. Anyone signed in can read it (to join by code). Only people
+// - rooms/{code}: the shared room. Anyone signed in can read it (to join by code, or find a quick
+//   play room). Only people
 //   seated in the room can change it, except that anyone may take a free seat while it's in the lobby.
 // - rooms/{code}/armies/{round}_{uid}: each player's locked army for a round. Only its owner can
 //   write it, only during that round's shop, and nobody else can read it until the shop has closed:
@@ -77,13 +78,14 @@ service cloud.firestore {
         || room.seats[3].uid == request.auth.uid;
     }
 
-    // Taking one free seat in a lobby: nothing else changes, and each seat either stays as it was or
-    // goes from empty to the caller.
+    // Taking one free seat in a lobby: nothing else changes (except the join time, set to now), and
+    // each seat either stays as it was or goes from empty to the caller.
     function joiningLobby() {
       let before = resource.data;
       let after = request.resource.data;
       return before.status == 'lobby'
-        && after.diff(before).affectedKeys().hasOnly(['seats'])
+        && after.diff(before).affectedKeys().hasOnly(['seats', 'waitingSince'])
+        && (!after.diff(before).affectedKeys().hasAny(['waitingSince']) || after.waitingSince == request.time)
         && after.seats.size() == 4
         && seatOk(before.seats[0], after.seats[0])
         && seatOk(before.seats[1], after.seats[1])

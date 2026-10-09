@@ -95,7 +95,7 @@ matchDialog.querySelector('form')?.addEventListener('submit', (e) => {
   if (action === 'bots') {
     hideMenu();
     match.startOffline({ blitz });
-  } else if (action === 'create' || action === 'join') {
+  } else if (action === 'create' || action === 'join' || action === 'quick') {
     e.preventDefault(); // keep the window open until the room is ready (or show what went wrong)
     void openRoom(action, blitz);
   }
@@ -125,20 +125,25 @@ function playerName(): string {
   }
 }
 
-/** Creates or joins an online room, then shows its lobby. The Firebase code loads only now. */
-async function openRoom(action: 'create' | 'join', blitz: boolean): Promise<void> {
+/** Creates or joins an online room (or finds a quick play one), then shows its lobby. The Firebase code loads only now. */
+async function openRoom(action: 'create' | 'join' | 'quick', blitz: boolean): Promise<void> {
   const error = $('#mp-error');
   const code = normalizeCode($<HTMLInputElement>('#mp-code').value);
   if (action === 'join' && !isRoomCode(code)) {
     error.textContent = 'Enter the 4-letter room code.';
     return;
   }
-  error.textContent = action === 'create' ? 'Creating a room…' : 'Joining…';
+  error.textContent = action === 'create' ? 'Creating a room…' : action === 'quick' ? 'Finding a match…' : 'Joining…';
   try {
     const { RoomClient } = await import('./online/client');
     const client = await RoomClient.connect();
     const name = playerName();
-    const roomCode = action === 'create' ? await client.createRoom(name, { blitz }, Math.random) : code;
+    const roomCode =
+      action === 'create'
+        ? await client.createRoom(name, { blitz }, Math.random)
+        : action === 'quick'
+          ? await client.quickPlay(name, blitz, Math.random)
+          : code;
     if (action === 'join') await client.joinRoom(code, name);
     matchDialog.close();
     hideMenu();

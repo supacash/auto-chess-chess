@@ -26,6 +26,13 @@ const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 export const SHOP_GRACE_MS = 3_000;
 /** How long the battle phase waits for everyone to finish watching before moving on anyway. */
 export const BATTLE_TIMEOUT_MS = 120_000;
+/** Quick play: a room starts this long after the last person joined (with bots in empty seats), or once full. */
+export const QUICK_WAIT_MS = 30_000;
+/**
+ * Quick play only joins rooms someone joined this recently. Older ones have started, or everyone in
+ * them closed the page before it could (their seats would be ghosts).
+ */
+export const QUICK_FRESH_MS = QUICK_WAIT_MS + 10_000;
 
 export type RoomStatus = 'lobby' | 'playing' | 'over';
 export type RoomPhase = 'shop' | 'battle' | 'over';
@@ -40,6 +47,12 @@ export interface Seat {
 export interface Room {
   code: string;
   host: string;
+  /** A quick play room: found by anyone looking for a match in its mode, and started automatically. */
+  quick: boolean;
+  /** When the room was created (server ms; null until the server has set it). */
+  createdAt: number | null;
+  /** When someone last took a seat (server ms; null until set). Quick rooms start QUICK_WAIT_MS after it. */
+  waitingSince: number | null;
   status: RoomStatus;
   settings: MatchSettings;
   seats: Seat[];
@@ -88,10 +101,13 @@ export function roomCode(rng: Rng): string {
   return Array.from({ length: ROOM_CODE_LENGTH }, () => CODE_LETTERS[randomInt(rng, CODE_LETTERS.length)]).join('');
 }
 
-export function newRoom(code: string, host: string, hostName: string, settings: MatchSettings): Room {
+export function newRoom(code: string, host: string, hostName: string, settings: MatchSettings, quick = false): Room {
   return {
     code,
     host,
+    quick,
+    createdAt: null,
+    waitingSince: null,
     status: 'lobby',
     settings,
     seats: Array.from({ length: MATCH_SIZE }, (_, i) =>
@@ -119,6 +135,63 @@ export function joinRoom(room: Room, uid: string, name: string): RoomChange {
   if (free < 0) return { ok: false, error: 'That room is full' };
   const seats = room.seats.map((s, i) => (i === free ? { uid, name } : s));
   return { ok: true, room: { ...room, seats } };
+}
+
+// ---- quick play ----
+
+export function peopleSeated(room: Room): number {
+  return room.seats.filter((s) => s.uid !== null).length;
+}
+
+/** True when a quick room is still open to join: in the lobby, a free seat, someone waiting, and fresh. */
+export function isOpenQuickRoom(room: Room, now: number, blitz: boolean): boolean {
+  return (
+    room.quick &&
+    room.status === 'lobby' &&
+    room.settings.blitz === blitz &&
+    peopleSeated(room) > 0 &&
+    peopleSeated(room) < MATCH_SIZE &&
+    room.waitingSince !== null &&
+    now - room.waitingSince < QUICK_FRESH_MS
+  );
+}
+
+/** The order to try joining quick rooms in: fullest first (it starts soonest), then the oldest. */
+export function quickRoomsToTry(rooms: Room[], uid: string, now: number, blitz: boolean): Room[] {
+  return rooms
+    .filter((r) => isOpenQuickRoom(r, now, blitz) && !r.seats.some((s) => s.uid === uid))
+    .sort((a, b) => peopleSeated(b) - peopleSeated(a) || olderFirst(a, b));
+}
+
+/**
+ * Two people who look at the same moment can each make a room. Someone still alone in theirs moves
+ * to an older open one, so they end up together.
+ */
+export function shouldMoveTo(mine: Room, other: Room, uid: string, now: number): boolean {
+  return (
+    mine.code !== other.code &&
+    mine.status === 'lobby' &&
+    peopleSeated(mine) === 1 &&
+    mine.seats.some((s) => s.uid === uid) &&
+    isOpenQuickRoom(other, now, mine.settings.blitz) &&
+    olderFirst(other, mine) < 0
+  );
+}
+
+function olderFirst(a: Room, b: Room): number {
+  return (a.createdAt ?? Infinity) - (b.createdAt ?? Infinity) || a.code.localeCompare(b.code);
+}
+
+/** When a quick room starts by itself (server ms), or null if it doesn't (not quick, or not known yet). */
+export function quickStartAt(room: Room): number | null {
+  if (!room.quick || room.status !== 'lobby' || room.waitingSince === null) return null;
+  return peopleSeated(room) >= MATCH_SIZE ? room.waitingSince : room.waitingSince + QUICK_WAIT_MS;
+}
+
+/** A quick room may be started by anyone in it once it's full or has waited long enough. */
+export function canQuickStart(room: Room, now: number): boolean {
+  const at = quickStartAt(room);
+  return at !== null && now >= at && peopleSeated(room) > 0;
 }
 
 /** Frees the player's seat while the room is still in the lobby. */

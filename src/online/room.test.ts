@@ -7,6 +7,7 @@ import {
   BATTLE_TIMEOUT_MS,
   botBattleComputer,
   canFinishRound,
+  canQuickStart,
   canStartBattle,
   finishRound,
   humansIn,
@@ -16,6 +17,10 @@ import {
   newRoom,
   normalizeCode,
   parseArmy,
+  QUICK_FRESH_MS,
+  QUICK_WAIT_MS,
+  quickRoomsToTry,
+  quickStartAt,
   resultKey,
   roomPairings,
   roundResults,
@@ -24,6 +29,7 @@ import {
   SHOP_GRACE_MS,
   shopDeadline,
   startBattle,
+  shouldMoveTo,
   startRoom,
 } from './room';
 
@@ -171,5 +177,48 @@ describe('armies', () => {
       }),
     ).toBeNull();
     expect(parseArmy({ pieces: [{ type: 'K', file: 4, rank: 7 }] })).toBeNull();
+  });
+});
+
+describe('quick play', () => {
+  const quick = (code: string, host: string, createdAt: number, waitingSince = createdAt, blitz = false): Room => ({
+    ...newRoom(code, host, host, { blitz }, true),
+    createdAt,
+    waitingSince,
+  });
+  const withPeople = (room: Room, ...uids: string[]) => uids.reduce((r, uid) => joined(r, uid), room);
+
+  it('tries the fullest fresh rooms in the mode first, then the oldest, never stale or full ones', () => {
+    const now = 100_000;
+    const rooms = [
+      quick('AAAA', 'a', now - 5_000),
+      withPeople(quick('BBBB', 'b', now - 1_000), 'b2'),
+      quick('CCCC', 'c', now - 9_000),
+      quick('DDDD', 'd', now - QUICK_FRESH_MS - 1), // stale
+      quick('EEEE', 'e', now - 2_000, now - 2_000, true), // Blitz
+      withPeople(quick('FFFF', 'f', now - 3_000), 'f2', 'f3', 'f4'), // full
+      { ...newRoom('GGGG', 'g', 'g', { blitz: false }), createdAt: now, waitingSince: now }, // private
+    ];
+    expect(quickRoomsToTry(rooms, 'me', now, false).map((r) => r.code)).toEqual(['BBBB', 'CCCC', 'AAAA']);
+    expect(quickRoomsToTry(rooms, 'a', now, false).map((r) => r.code)).toEqual(['BBBB', 'CCCC']);
+  });
+
+  it('starts once full, or QUICK_WAIT_MS after the last join', () => {
+    const room = withPeople(quick('AAAA', 'a', 0, 1_000), 'b');
+    expect(quickStartAt(room)).toBe(1_000 + QUICK_WAIT_MS);
+    expect(canQuickStart(room, 1_000 + QUICK_WAIT_MS - 1)).toBe(false);
+    expect(canQuickStart(room, 1_000 + QUICK_WAIT_MS)).toBe(true);
+    expect(canQuickStart(withPeople(room, 'c', 'd'), 1_000)).toBe(true);
+    expect(canQuickStart(lobby(), 10 ** 12)).toBe(false); // private rooms wait for the host
+    expect(canQuickStart(leaveLobby(quick('BBBB', 'x', 0), 'x'), 10 ** 6)).toBe(false); // nobody left
+  });
+
+  it('moves someone alone in a newer room to an older open one', () => {
+    const now = 10_000;
+    const older = quick('AAAA', 'a', now - 3_000);
+    const mine = quick('ZZZZ', 'me', now - 1_000);
+    expect(shouldMoveTo(mine, older, 'me', now)).toBe(true);
+    expect(shouldMoveTo(older, mine, 'a', now)).toBe(false); // the older room stays put
+    expect(shouldMoveTo(withPeople(mine, 'b'), older, 'me', now)).toBe(false); // not alone any more
   });
 });
