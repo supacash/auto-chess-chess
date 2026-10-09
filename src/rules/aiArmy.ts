@@ -139,8 +139,8 @@ export function aiBudget(
 export const BLACK_DISCOUNT = 0.1;
 
 /** The AI's budget once the player's side is known: smaller when the player moves second. */
-export function budgetForSide(budget: number, playerFirst: boolean): number {
-  return playerFirst ? budget : budget - Math.round(budget * BLACK_DISCOUNT);
+export function budgetForSide(budget: number, playerFirst: boolean, discount = BLACK_DISCOUNT): number {
+  return playerFirst ? budget : budget - Math.round(budget * discount);
 }
 
 /** The most an army can be worth on `spec`: a full board of queens around the king. */

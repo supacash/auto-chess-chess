@@ -14,6 +14,7 @@ import { parseArgs } from 'node:util';
 import { runBattle, SEARCH_DEPTH } from '../../src/game/runBattle';
 import {
   aiBudget,
+  BLACK_DISCOUNT,
   AI_STYLES,
   budgetForSide,
   draftAiArmy,
@@ -54,6 +55,8 @@ const { values: opts } = parseArgs({
     fairy: { type: 'string', default: 'none' },
     difficulty: { type: 'string', default: 'normal' },
     side: { type: 'string', default: 'white' },
+    'per-round': { type: 'string' },
+    'black-discount': { type: 'string' },
     json: { type: 'boolean', default: false },
   },
 });
@@ -97,7 +100,10 @@ const PLAYER_FAIRY = FAIRY === 'both';
 /** `--difficulty easy|normal|hard`: the AI's points per round, as in the New run window. */
 const DIFFICULTY = opts.difficulty!;
 if (!isDifficultyId(DIFFICULTY)) throw new Error('--difficulty must be easy, normal or hard');
-const PER_ROUND = difficulty(DIFFICULTY).perRound;
+/** `--per-round N` overrides the difficulty's AI points per round (for tuning). */
+const PER_ROUND = opts['per-round'] ? Number(opts['per-round']) : difficulty(DIFFICULTY).perRound;
+/** `--black-discount F` overrides how much smaller the AI is when the player is Black (0 = none). */
+const BLACK = opts['black-discount'] ? Number(opts['black-discount']) : BLACK_DISCOUNT;
 /** `--side white|black|random`: who moves first (the player as White moves first, the game's default). */
 const SIDE = opts.side!;
 if (!['white', 'black', 'random'].includes(SIDE)) throw new Error('--side must be white, black or random');
@@ -159,7 +165,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     const first = playerFirst(rng);
     const aiPoints = AI_BUDGET
       ? Math.max(1, AI_BUDGET[0] + AI_BUDGET[1] * round + randomInt(rng, 3) - 1)
-      : budgetForSide(aiBudget(round, rng, PER_ROUND, MODE.roundOneDiscount, MODE.aiBonus), first);
+      : budgetForSide(aiBudget(round, rng, PER_ROUND, MODE.roundOneDiscount, MODE.aiBonus), first, BLACK);
     if (PLAYER_POINTS === 'ai') playerPoints = aiPoints;
     let playerTypes: PieceType[];
     if (PLAYER === 'shop') {
