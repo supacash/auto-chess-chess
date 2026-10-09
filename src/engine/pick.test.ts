@@ -60,7 +60,7 @@ describe('evaluation display', () => {
     const whiteMated = parseInfo('info depth 8 multipv 1 score mate -3 pv h2h3')!.candidate;
     expect(mateIn(whiteEval([whiteMated], 'w')!)).toBe(-3);
     expect(mateIn(checkmateEval('w'))).toBe(0);
-    expect(formatEval(checkmateEval('b'))).toBe('#');
+    expect(formatEval(checkmateEval('b'))).toBe('Mate');
     expect(mateIn(250)).toBeNull();
   });
 

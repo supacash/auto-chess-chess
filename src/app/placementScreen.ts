@@ -160,6 +160,9 @@ export class PlacementScreen {
       btn.disabled = this.busy || errors.length > 0;
       btn.title = errors.join('\n');
     }
+    const hint = $('#fight-hint');
+    hint.hidden = this.busy || errors.length === 0;
+    hint.textContent = errors[0] ?? '';
   }
 
   private renderOpponent(): void {

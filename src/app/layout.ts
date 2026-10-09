@@ -9,7 +9,7 @@ export const SPEEDS = [1, 2, 4];
 export function renderLayout(root: HTMLElement): void {
   root.innerHTML = `
   <header>
-    <h1>Auto Chess Chess</h1>
+    <h1><img class="logo" src="${import.meta.env.BASE_URL}icon.svg" alt="" width="28" height="28" />Auto Chess Chess</h1>
     <button id="new-run" type="button" class="link">New run</button>
   </header>
   <div class="run-bar">
@@ -44,6 +44,7 @@ export function renderLayout(root: HTMLElement): void {
       <button id="play" type="button" disabled>Play it</button>
       <button id="fight" type="button" class="primary" disabled>Auto fight</button>
     </div>
+    <p class="fight-hint" id="fight-hint" hidden></p>
     <p class="hint" id="points"></p>
   </section>
 

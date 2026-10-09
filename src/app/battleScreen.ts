@@ -229,7 +229,7 @@ export class BattleScreen {
     this.playback.hidden = true;
     this.result.hidden = false;
     this.result.dataset.winner = outcome.over ? 'b' : winner;
-    this.status.textContent = '';
+    this.status.textContent = 'Final position';
 
     const moves = Math.ceil(result.plies / 2);
     const verb = winner === 'draw' ? 'Drawn' : winner === 'w' ? 'You won' : 'You lost';

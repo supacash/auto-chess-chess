@@ -2,7 +2,7 @@
 
 An auto-battler built on chess. Draft an army, place it in your home rows, and press **Fight**: a chess engine plays the round for both sides. Survive as many rounds as you can against stronger and stronger AI armies.
 
-Runs in the browser and is built for phones first. **[Play it here](https://supacash.github.io/auto-chess-chess/).**
+Runs in the browser and is built for phones first. **[Play it here](https://supacash.github.io/auto-chess-chess/)**, and use *Add to Home Screen* to install it as an app.
 
 ## How to play
 

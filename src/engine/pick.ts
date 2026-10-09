@@ -72,11 +72,11 @@ export function evalShare(score: number): number {
   return 0.5 + 0.5 * winChance;
 }
 
-/** Short label: "+1.3", "−0.4", "0.0", "M3" (white mates in 3), "−M2", or "#" when the mate has happened. */
+/** Short label: "+1.3", "−0.4", "0.0", "M3" (white mates in 3), "−M2", or "Mate" when the mate has happened. */
 export function formatEval(score: number): string {
   const mate = mateIn(score);
   if (mate !== null) {
-    if (mate === 0) return '#';
+    if (mate === 0) return 'Mate';
     return `${mate < 0 ? '−' : ''}M${Math.abs(mate)}`;
   }
   const pawns = score / 100;
