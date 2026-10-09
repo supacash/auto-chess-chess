@@ -151,7 +151,16 @@ describe('fairy pieces', () => {
     expect(moves('4k3/8/8/8/3F4/8/8/4K3 w - - 0 1', 'd4')).toEqual(['d4c3', 'd4c5', 'd4e3', 'd4e5']);
     expect(moves('4k3/8/8/8/3W4/8/8/4K3 w - - 0 1', 'd4')).toEqual(['d4c4', 'd4d3', 'd4d5', 'd4e4']);
     expect(moves('4k3/8/8/8/3M4/8/8/4K3 w - - 0 1', 'd4')).toHaveLength(8);
-    expect(moves('4k3/8/8/8/3L4/8/8/7K w - - 0 1', 'd4')).toEqual(['d4a3', 'd4a5', 'd4c1', 'd4c7', 'd4e1', 'd4e7', 'd4g3', 'd4g5']);
+    expect(moves('4k3/8/8/8/3L4/8/8/7K w - - 0 1', 'd4')).toEqual([
+      'd4a3',
+      'd4a5',
+      'd4c1',
+      'd4c7',
+      'd4e1',
+      'd4e7',
+      'd4g3',
+      'd4g5',
+    ]);
   });
 
   it('hops the Grasshopper over a piece and captures with the Cannon only over a screen', () => {

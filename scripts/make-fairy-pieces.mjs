@@ -41,7 +41,11 @@ const SHAPES = {
   W: { body: [BASE, DOME, KNOB], detail: [BASE_LINE, 'M400 360v190M305 455h190'] },
   // Man: a king that can be captured — a dome with a small crown.
   M: {
-    body: [BASE, 'M235 595c0-150 65-260 165-260s165 110 165 260z', 'M270 360l-20-210 90 95 60-145 60 145 90-95-20 210z'],
+    body: [
+      BASE,
+      'M235 595c0-150 65-260 165-260s165 110 165 260z',
+      'M270 360l-20-210 90 95 60-145 60 145 90-95-20 210z',
+    ],
     detail: [BASE_LINE, 'M282 360h236'],
   },
   // Camel: two humps.
@@ -105,7 +109,8 @@ function drawFusion(partner, color) {
 }
 
 for (const color of ['w', 'b']) {
-  for (const [type, shape] of Object.entries(SHAPES)) writeFileSync(join(dir, `${color}${type}.svg`), drawShape(shape, color));
+  for (const [type, shape] of Object.entries(SHAPES))
+    writeFileSync(join(dir, `${color}${type}.svg`), drawShape(shape, color));
   for (const [type, partner] of Object.entries(FUSION)) {
     writeFileSync(join(dir, `${color}${type}.svg`), drawFusion(partner, color));
   }

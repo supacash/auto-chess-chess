@@ -67,7 +67,7 @@ describe('parseSave', () => {
       (g) => (g.run.shop.gold = -1),
       (g) => (g.run.round = 1.5),
       (g) => (g.run.shop.pieces[1].square = { file: 2, rank: 5 }),
-      (g) => (g.run.shop.pieces[1].type = 'X'),
+      (g) => (g.run.shop.pieces[1].type = 'Y'),
       (g) => (g.run.shop.pieces = g.run.shop.pieces.filter((p: any) => p.type !== 'K')),
       (g) => (g.ai.styleId = 'nope'),
       (g) => (g.run.record.w = '3'),
