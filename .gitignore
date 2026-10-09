@@ -3,3 +3,5 @@ dist
 public/engine
 public/fairy
 public/coi-serviceworker.min.js
+test-results/
+playwright-report/

@@ -8,12 +8,14 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - `npm run typecheck` — `tsc --noEmit` for the game, plus `-p scripts` for the simulator (TypeScript 7)
 - `npm run lint` — Biome lint + format check (CI runs it); `npm run format` fixes formatting and safe lint issues
 - `npm run build` — typecheck + production build
+- `npm run e2e` — Playwright browser smoke tests (whole runs in Chromium against the production build; CI runs them before deploying)
+- `npm run check:determinism` — plays battles twice with the same seed and checks the moves match
 
 ## Layout
 - `src/rules/` — pure game logic, no DOM. Every rule gets a unit test next to it (`*.test.ts`).
 - `src/chess/` — board specs (`boardSpec.ts`, also generates the Fairy-Stockfish `variants.ini`), size-agnostic FEN helpers (`fen.ts`), and the rules `Game` wrapper around ffish (`rules.ts`). ffish loads async: `loadRules.ts` in the browser, `testRules.ts` in tests/the simulator.
 - `src/engine/` — Fairy-Stockfish UCI wrapper (`stockfish.ts`) and move picking/UCI parsing (`pick.ts`, pure + tested).
-- `src/game/` — orchestration that combines rules and engine (`runBattle.ts`, tested with a fake engine).
+- `src/game/` — orchestration that combines rules and engine (`runBattle.ts`, `manualBattle.ts`, tested with a fake engine), plus the shareable formats: `version.ts` (RULES_VERSION and its fingerprint test), `snapshot.ts` (ArmySnapshot) and `record.ts` (BattleRecord for replays).
 - `src/app/` — the app around the rules: `session.ts` (the run, opponent, best score, saving and run flow; no DOM, unit tested), the screens (`placementScreen.ts`, `battleScreen.ts`, `newRunDialog.ts`, `header.ts`) and the page shell (`layout.ts`).
 - `src/ui/` — reusable board widgets (Pointer Events, touch-first): the placement board, the battle view, and shared piece/square helpers in `boardDom.ts`.
 - `src/main.ts` — wires the session to the screens and runs the fight sequence (placement → battle → result).
@@ -26,4 +28,5 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - Keep rule functions pure and immutable (return new arrays). The UI re-renders from state.
 - No UI framework. Vanilla TS + CSS variables. Mobile layout must work at a 360px width.
 - Dependencies: Fairy-Stockfish WASM (`fairy-stockfish-nnue.wasm`, multithreaded, needs cross-origin isolation: COOP/COEP headers on the dev server, `coi-serviceworker` in production) and ffish (`ffish-es6`) for rules on any board size. Both GPLv3. Test files and `testRules.ts` are typechecked by `scripts/tsconfig.json` (they use Node APIs).
-- Randomness is always injected as an `Rng` (`src/rules/rng.ts`). Use `seededRng` in tests.
+- Randomness is always injected as an `Rng` (`src/rules/rng.ts`). Use `seededRng` in tests. Battles are deterministic from their start position and seed (engine options are pinned in `ENGINE_SETUP`); keep them that way.
+- Bump `RULES_VERSION` (`src/game/version.ts`) whenever anything that decides a battle changes; `version.test.ts` catches the data-driven cases.

@@ -16,10 +16,12 @@
     "sim": "tsx scripts/sim/sim.ts",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "check:determinism": "tsx scripts/check/determinism.ts"
+    "check:determinism": "tsx scripts/check/determinism.ts",
+    "e2e": "playwright test"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
+    "@playwright/test": "^1.64.0",
     "@types/node": "^22.20.5",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

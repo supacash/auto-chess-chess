@@ -28,6 +28,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
   - **Reveal opponent's placement:** an easier option that shows where the AI's pieces are during placement.
   - Starting a new run while one is in progress warns that it will be abandoned.
 - **Best score** is kept per mode and difficulty.
+- **Replays:** the last finished battle is kept (start position, seed, moves, evals); *Watch replay* on the result screen and *Watch your last battle* on placement play it back. Auto battles are deterministic from their start position and seed.
 - **Saving:** the run (army, gold, lives, record, settings and the current opponent) is saved after every change, so a reload resumes it. Saves carry a format version and are migrated when the format changes; runs saved before game modes existed load as Classic.
 - **No replays:** when a battle ends, the game moves straight to the next round and drafts its opponent, so reloading on the result screen can't replay a round. Leaving or reloading *during* a battle counts as a loss on the next load (with a notice). A battle that fails with an error doesn't count.
 
@@ -134,14 +135,13 @@ In Growing mode the board opens up during the run:
 - **Fairy balance:** fusion pieces and the shop player buying fairy offers aren't measured yet.
 
 ## Roadmap
-Done: game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as.
+Done: reproducible seeded battles, RULES_VERSION, army snapshots, replays, browser smoke tests in CI, game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as.
 
 Next candidates (not yet decided):
-2. **Browser smoke test** (Playwright in CI): a full run including reload mid-battle.
-3. **Seeded runs:** one seed per run for reproducible bugs, and daily challenges.
-4. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
-5. **Bigger boards** past 8×8, with a longer move limit.
-6. **Multiplayer:** asynchronous ghost armies first, then live 1v1.
+1. **Multiplayer:** asynchronous ghost armies first (ArmySnapshot is the format), then live 1v1.
+2. **Daily challenges:** one seed for everyone (battles are already seeded and reproducible).
+3. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
+4. **Bigger boards** past 8×8, with a longer move limit.
 
 ## Open questions
 - Is Normal the right difficulty for real players? Settle by playtesting.

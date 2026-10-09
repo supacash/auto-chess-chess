@@ -1,10 +1,10 @@
 {
-  // Typechecks the Node scripts (simulator) together with the game code they import.
+  // Typechecks the Node scripts (simulator, checks), the browser tests and the game code they import.
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "types": ["node", "vite/client"]
   },
-  "include": ["sim/**/*.ts", "../src/**/*.ts"],
+  "include": ["sim/**/*.ts", "check/**/*.ts", "../src/**/*.ts", "../e2e/**/*.ts", "../playwright.config.ts"],
   // The root config leaves tests out of the browser typecheck (they use Node APIs); check them here.
   "exclude": []
 }
