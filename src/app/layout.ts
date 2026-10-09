@@ -22,7 +22,7 @@ export function renderLayout(root: HTMLElement): void {
   <section id="placement">
     <p class="help" id="help">
       Place your king and any other pieces in your home rows (the lit squares), buy pieces from the shop, upgrade or fuse them, then press
-      <strong>Fight</strong>. The engine plays both sides. Lose a round and you lose a life.
+      <strong>Auto fight</strong> to let the engine play both sides, or <strong>Play it</strong> to move your own pieces. Lose a round and you lose a life.
     </p>
     <p class="notice" id="notice" role="status" hidden></p>
     <p class="opponent" id="opponent"></p>
@@ -40,15 +40,16 @@ export function renderLayout(root: HTMLElement): void {
     </div>
     <p id="message" role="status" aria-live="polite"></p>
     <div class="actions">
-      <button id="clear" type="button">Clear board</button>
-      <button id="fight" type="button" class="primary" disabled>Fight</button>
+      <button id="clear" type="button">Clear</button>
+      <button id="play" type="button" disabled>Play it</button>
+      <button id="fight" type="button" class="primary" disabled>Auto fight</button>
     </div>
     <p class="hint" id="points"></p>
   </section>
 
   <section id="battle" hidden>
     <p class="battle-status" id="battle-status" aria-live="polite"></p>
-    <div class="eval">
+    <div class="eval" id="eval">
       <div class="eval-bar" id="eval-bar" role="meter" aria-label="Engine evaluation" aria-valuemin="0" aria-valuemax="100">
         <div class="eval-fill" id="eval-fill"></div>
       </div>
@@ -58,6 +59,11 @@ export function renderLayout(root: HTMLElement): void {
     <div class="actions" id="playback">
       ${SPEEDS.map((s) => `<button type="button" class="speed" data-speed="${s}">${s}×</button>`).join('')}
       <button type="button" id="skip">Skip</button>
+    </div>
+    <div class="promo" id="promo" hidden></div>
+    <div class="actions" id="manual" hidden>
+      <button type="button" id="undo">Undo</button>
+      <button type="button" id="resign" class="sell">Resign</button>
     </div>
     <div class="result" id="result" hidden>
       <h2 id="result-title"></h2>

@@ -83,6 +83,11 @@ export class Game {
     return null;
   }
 
+  /** Takes back the last move. */
+  undo(): void {
+    this.board.pop();
+  }
+
   delete(): void {
     this.board.delete();
   }

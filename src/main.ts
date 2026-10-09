@@ -8,14 +8,20 @@ import { PlacementScreen } from './app/placementScreen';
 import { Session } from './app/session';
 import { loadRules } from './chess/loadRules';
 import { Engine } from './engine/stockfish';
+import { ManualBattle } from './game/manualBattle';
 import type { RunSettings } from './rules/difficulty';
+import type { BattleResult } from './rules/battle';
 import { hasStarted, isRunOver } from './rules/run';
 
 const rng = Math.random;
 
 renderLayout($('#app'));
 const session = new Session(rng);
-const placement = new PlacementScreen(session, () => void fight());
+const placement = new PlacementScreen(
+  session,
+  () => void fight(),
+  () => void playYourself(),
+);
 const battle = new BattleScreen(() => {
   if (isRunOver(session.run)) openNewRun();
   else showPlacement();
@@ -42,30 +48,38 @@ function startNewRun(settings: RunSettings): void {
   showPlacement();
 }
 
-/** Loads the engine on first use, plays the round, and shows the result. */
-async function fight(): Promise<void> {
-  if (busy || session.armyErrors().length) return;
+/** Loads the engine and rules on first use. */
+async function ensureEngine(): Promise<Engine> {
+  if (!engine) {
+    placement.setMessage('Loading engine…');
+    const [loaded] = await Promise.all([Engine.create(), loadRules()]);
+    engine = loaded;
+    placement.setMessage('');
+  }
+  return engine;
+}
+
+/**
+ * Runs one round: `play` shows and plays the battle and returns its result, which is then applied
+ * to the run and shown. Errors return to placement without counting the battle.
+ */
+async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promise<void> {
+  if (busy) return;
   if (!engine && !window.crossOriginIsolated && reloadForIsolation()) return;
   busy = true;
   placement.setBusy(true);
   try {
-    if (!engine) {
-      placement.setMessage('Loading engine…');
-      const [loaded] = await Promise.all([Engine.create(), loadRules()]);
-      engine = loaded;
-      placement.setMessage('');
-    }
-    const start = session.resolveStart();
+    const loaded = await ensureEngine();
     const spec = session.board;
     const color = session.run.color;
-    session.persist(true);
     placement.hide();
-    const result = await battle.play(engine, start.fen, start.firstMover, spec, rng);
+    const result = await play(loaded);
     const outcome = session.finishBattle(result);
     renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
   } catch (err) {
     console.error(err);
+    session.manual = null;
     session.persist(); // the battle never finished, so don't count it as abandoned
     showPlacement();
     placement.setMessage(`Battle failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -73,6 +87,49 @@ async function fight(): Promise<void> {
     busy = false;
     placement.setBusy(false);
   }
+}
+
+/** The engine plays both sides. */
+function fight(): void {
+  if (session.armyErrors().length) return;
+  void runRound((loaded) => {
+    const start = session.resolveStart();
+    session.persist(true);
+    return battle.play(loaded, start.fen, start.firstMover, session.board, rng);
+  });
+}
+
+/** The player moves their own pieces; the engine plays the opponent. Saved after every move. */
+function playYourself(): void {
+  if (session.armyErrors().length) return;
+  void runRound((loaded) => {
+    const start = session.resolveStart();
+    session.saveManual({ fen: start.fen, moves: [] });
+    return playManual(loaded, new ManualBattle(start.fen, session.board));
+  });
+}
+
+async function playManual(loaded: Engine, game: ManualBattle): Promise<BattleResult> {
+  try {
+    return await battle.playManual(loaded, game, rng, (state) => session.saveManual(state));
+  } finally {
+    game.delete();
+  }
+}
+
+/** Picks a saved manual game back up after a reload. */
+function resumeManual(): void {
+  const saved = session.manual;
+  if (!saved) return;
+  void runRound(async (loaded) => {
+    let game: ManualBattle;
+    try {
+      game = new ManualBattle(saved.fen, session.board, saved.moves);
+    } catch {
+      throw new Error("Your saved game couldn't be resumed");
+    }
+    return playManual(loaded, game);
+  });
 }
 
 const ISOLATION_RELOAD_KEY = 'acc.isolation-reload';
@@ -106,6 +163,7 @@ function boot(): void {
   showPlacement();
   placement.setMessage(notice);
   if (firstVisit) openNewRun();
+  else if (session.manual) resumeManual();
 }
 
 /**

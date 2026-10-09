@@ -5,6 +5,7 @@ import { isModeId, type ModeId } from '../rules/mode';
 import { OFFER_COUNT } from '../rules/economy';
 import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
 import type { Run } from '../rules/run';
+import type { ManualState } from './manualBattle';
 
 /** Saved squares may be anywhere on the biggest board; the game fits them to the current one (fitToBoard). */
 const MAX_FILES = Math.max(...BOARDS.map((b) => b.files));
@@ -25,6 +26,8 @@ export interface SavedGame {
   ai: { styleId: string; pieces: Piece[] };
   /** Set while a battle is playing. Finding it on load means the page was closed mid-battle. */
   battleInProgress?: boolean;
+  /** A game the player is playing themselves, resumed on load (it doesn't count as abandoned). */
+  manual?: ManualState;
 }
 
 // Storage can be missing or throw (private mode, blocked site data), so every access is guarded
@@ -159,7 +162,17 @@ export function parseSave(raw: unknown): SavedGame | null {
     },
     ai: { styleId: ai.styleId, pieces: aiPieces },
     ...(data.battleInProgress === true ? { battleInProgress: true } : {}),
+    ...parseManual(data.manual),
   };
+}
+
+const UCI_MOVE = /^[a-z]\d+[a-z]\d+[a-z]?$/;
+
+/** A saved manual game: start FEN plus UCI moves. Anything malformed is dropped (ManualBattle checks legality). */
+function parseManual(data: unknown): { manual?: ManualState } {
+  if (!isObject(data) || typeof data.fen !== 'string' || !Array.isArray(data.moves)) return {};
+  if (!data.moves.every((m) => typeof m === 'string' && UCI_MOVE.test(m))) return {};
+  return { manual: { fen: data.fen, moves: data.moves as string[] } };
 }
 
 /** Offers are optional (saves from before the shop had them have none; the session rolls new ones). */

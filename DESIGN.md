@@ -14,7 +14,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 ## Core loop
 1. **Shop.** Spend gold on the round's shop offers and upgrades, and fuse pieces. You see the opponent's style and piece list (and, with Reveal on, where its pieces are).
 2. **Place.** Arrange your army in your home rows. Extras wait on the bench.
-3. **Battle.** The engine plays both sides; you watch, with an eval bar and 1×/2×/4×/Skip playback.
+3. **Battle.** Each round, pick **Auto fight** (the engine plays both sides; you watch, with an eval bar and 1×/2×/4×/Skip playback) or **Play it** (you move your own pieces; the engine plays the opponent exactly as in auto battles).
 4. **Result.** Win, lose or draw. Gold is paid out; a loss costs a life.
 5. Repeat until you're out of lives.
 
@@ -91,6 +91,7 @@ In Growing mode the board opens up during the run:
 - Promotion works as normal (the engine picks the piece) and lasts only for that battle.
 
 ## Battle rules
+- **Playing it yourself:** tap a piece then a highlighted square, or drag it. No move limit: the game ends on the board (checkmate, stalemate, repetition, insufficient material on points, the 50-move rule) or by resigning (a loss; it takes two taps). **Undo** takes back your last move and the opponent's reply. The eval bar is hidden until the game ends. The game is saved after every move, so closing or reloading the page resumes it instead of counting a loss.
 - **Insufficient material** (nobody can mate) is decided on points like the move limit; level material is a draw.
 - **Repetition:** the engine is given the moves played so far, so it sees repeated positions as draws and the side that is ahead avoids them.
 - **First move:** White, i.e. the player unless they play Black (see Play as), unless a king starts in check (that side moves first). If both kings start in check, the AI re-places its army.

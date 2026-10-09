@@ -25,11 +25,12 @@ import type { Session } from './session';
 const pieceOrder = (a: PieceType, b: PieceType) =>
   Number(b === 'K') - Number(a === 'K') || PIECE_VALUE[b] - PIECE_VALUE[a];
 
-/** The placement screen: board, bench, shop, opponent preview and the Fight button. */
+/** The placement screen: board, bench, shop, opponent preview, and the Play it / Auto fight buttons. */
 export class PlacementScreen {
   private readonly section = $('#placement');
   private readonly message = $('#message');
   private readonly fightBtn = $<HTMLButtonElement>('#fight');
+  private readonly playBtn = $<HTMLButtonElement>('#play');
   private readonly board: PlacementBoard;
   private selected: string | null = null;
   /** The shop offer being looked at (its index), shown with its description and a Buy button. */
@@ -43,6 +44,7 @@ export class PlacementScreen {
   constructor(
     private readonly session: Session,
     onFight: () => void,
+    onPlay: () => void,
   ) {
     this.board = new PlacementBoard($('#board-root'), session.run.shop.pieces, {
       onChange: (pieces) => this.piecesChanged(pieces),
@@ -96,6 +98,7 @@ export class PlacementScreen {
       this.applyShop(this.session.rerollOffers());
     });
     this.fightBtn.addEventListener('click', onFight);
+    this.playBtn.addEventListener('click', onPlay);
   }
 
   /** Shows the screen for the session's current round. */
@@ -153,8 +156,10 @@ export class PlacementScreen {
 
   private updateFight(): void {
     const errors = this.session.armyErrors();
-    this.fightBtn.disabled = this.busy || errors.length > 0;
-    this.fightBtn.title = errors.join('\n');
+    for (const btn of [this.fightBtn, this.playBtn]) {
+      btn.disabled = this.busy || errors.length > 0;
+      btn.title = errors.join('\n');
+    }
   }
 
   private renderOpponent(): void {

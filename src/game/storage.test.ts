@@ -141,6 +141,13 @@ describe('parseSave', () => {
     expect(parseSave({ ...sample(), battleInProgress: 'yes' })).not.toHaveProperty('battleInProgress');
   });
 
+  it('keeps a manual game in progress and drops a malformed one', () => {
+    const manual = { fen: '4k3/8/8/8/8/8/8/4K3 w - - 0 1', moves: ['e1d1', 'e8d8'] };
+    expect(parseSave({ ...sample(), manual })?.manual).toEqual(manual);
+    expect(parseSave({ ...sample(), manual: { fen: 'x', moves: ['e1d1; rm'] } })).not.toHaveProperty('manual');
+    expect(parseSave({ ...sample(), manual: 'yes' })).not.toHaveProperty('manual');
+  });
+
   it('drops unknown extra fields', () => {
     const g: any = JSON.parse(JSON.stringify(sample()));
     g.run.extra = 'x';

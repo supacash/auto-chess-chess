@@ -15,13 +15,90 @@ export interface RenderOptions {
   check?: boolean;
 }
 
-/** Read-only board that shows a running battle, sliding each moved piece into place. */
+/** Lets the player move: `legal` maps each movable square to its legal UCI moves. */
+export interface BoardInput {
+  legal: Map<string, string[]>;
+  onPick: (from: string, to: string) => void;
+}
+
+/**
+ * Board that shows a battle, sliding each moved piece into place. With setInput it also takes the
+ * player's moves: tap a piece then a highlighted square, or drag the piece there.
+ */
 export class BattleView {
   private readonly boardEl: HTMLElement;
+  private input: BoardInput | null = null;
+  private selected: string | null = null;
+  /** The square a press started on, to complete a drag on release. */
+  private pressFrom: string | null = null;
 
   constructor(root: HTMLElement) {
     root.innerHTML = `<div class="board battle" aria-label="Battle board"></div>`;
     this.boardEl = root.querySelector('.board')!;
+    this.boardEl.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+    this.boardEl.addEventListener('pointerup', (e) => this.onPointerUp(e));
+  }
+
+  /** Starts (or with null, stops) taking the player's moves. */
+  setInput(input: BoardInput | null): void {
+    this.input = input;
+    this.selected = null;
+    this.pressFrom = null;
+    this.boardEl.classList.toggle('interactive', input !== null);
+    this.paintSelection();
+  }
+
+  private onPointerDown(e: PointerEvent): void {
+    if (!this.input || e.button !== 0) return;
+    const sq = this.squareAt(e.target as Element | null);
+    if (!sq) return;
+    if (this.selected && this.targets(this.selected).includes(sq)) {
+      this.pick(this.selected, sq);
+      return;
+    }
+    if (this.input.legal.has(sq)) {
+      e.preventDefault();
+      this.selected = sq === this.selected ? null : sq;
+      this.pressFrom = sq;
+    } else {
+      this.selected = null;
+    }
+    this.paintSelection();
+  }
+
+  private onPointerUp(e: PointerEvent): void {
+    const from = this.pressFrom;
+    this.pressFrom = null;
+    if (!this.input || !from) return;
+    const sq = this.squareAt(document.elementFromPoint(e.clientX, e.clientY));
+    if (sq && sq !== from && this.targets(from).includes(sq)) this.pick(from, sq);
+  }
+
+  private pick(from: string, to: string): void {
+    const input = this.input!;
+    this.selected = null;
+    this.paintSelection();
+    input.onPick(from, to);
+  }
+
+  /** Destination squares of the legal moves from `from`. */
+  private targets(from: string): string[] {
+    return (this.input?.legal.get(from) ?? []).map((uci) => /^[a-z]\d+([a-z]\d+)/.exec(uci)![1]);
+  }
+
+  private squareAt(el: Element | null): string | null {
+    const cell = el?.closest<HTMLElement>('.square');
+    if (!cell || !this.boardEl.contains(cell)) return null;
+    return squareName(Number(cell.dataset.file), Number(cell.dataset.rank));
+  }
+
+  private paintSelection(): void {
+    const targets = new Set(this.selected ? this.targets(this.selected) : []);
+    for (const cell of this.boardEl.querySelectorAll<HTMLElement>('.square')) {
+      const name = squareName(Number(cell.dataset.file), Number(cell.dataset.rank));
+      cell.classList.toggle('from', name === this.selected);
+      cell.classList.toggle('legal', targets.has(name));
+    }
   }
 
   /** Redraws the position from a FEN on a board of `spec`'s size. */
@@ -50,6 +127,7 @@ export class BattleView {
         this.boardEl.appendChild(cell);
       }
     }
+    this.paintSelection();
 
     if (last && fromRect) {
       const pieceEl = this.cell(last.to)?.querySelector<HTMLElement>('.piece');

@@ -6,6 +6,7 @@ import { difficulty, type RunSettings } from '../rules/difficulty';
 import { rerollOffers, rollOffers, type Shop, type ShopResult } from '../rules/economy';
 import { gameMode } from '../rules/mode';
 import type { Piece } from '../rules/pieces';
+import type { ManualState } from '../game/manualBattle';
 import { armyErrors, fitToBoard } from '../rules/placement';
 import { type StartPosition, startPosition } from '../rules/position';
 import type { Rng } from '../rules/rng';
@@ -30,6 +31,8 @@ export class Session {
   best = 0;
   aiPieces: Piece[] = [];
   aiStyle: AiStyle = AI_STYLES[0];
+  /** The game the player is playing themselves this round, if one is in progress. */
+  manual: ManualState | null = null;
 
   constructor(private readonly rng: Rng = Math.random) {}
 
@@ -54,6 +57,7 @@ export class Session {
       run: this.run,
       ai: { styleId: this.aiStyle.id, pieces: this.aiPieces },
       ...(battleInProgress ? { battleInProgress: true } : {}),
+      ...(this.manual ? { manual: this.manual } : {}),
     });
   }
 
@@ -73,6 +77,7 @@ export class Session {
     this.run = saved.run;
     this.aiStyle = style;
     this.aiPieces = saved.ai.pieces;
+    this.manual = saved.manual ?? null;
     if (!this.run.shop.offers) {
       this.run = {
         ...this.run,
@@ -108,6 +113,7 @@ export class Session {
   /** Starts over, keeping the current settings unless new ones are given. */
   startNewRun(settings: RunSettings = this.run.settings): void {
     clearGame();
+    this.manual = null;
     this.run = newRun(settings, this.rng);
     this.best = this.loadBest();
     this.draftOpponent();
@@ -141,6 +147,12 @@ export class Session {
   /** Pays for a fresh set of shop offers (doesn't apply it: see setShop). */
   rerollOffers(): ShopResult {
     return rerollOffers(this.run.shop, this.run.round, this.rng, this.run.settings.fairy);
+  }
+
+  /** Saves the manual game in progress (or clears it with null), so a reload resumes it. */
+  saveManual(state: ManualState | null): void {
+    this.manual = state;
+    this.persist();
   }
 
   setPieces(pieces: Piece[]): void {
@@ -179,6 +191,7 @@ export class Session {
    */
   finishBattle(result: BattleResult): BattleOutcome {
     const playedRound = this.run.round;
+    this.manual = null;
     this.run = applyResult(this.run, result.winner);
     const over = isRunOver(this.run);
     const score = runScore(this.run);

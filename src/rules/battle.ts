@@ -14,7 +14,9 @@ export type EndReason =
   | 'insufficient'
   | 'fifty-move'
   | 'move-limit'
-  | 'decisive';
+  | 'decisive'
+  /** The player gave up a game they were playing themselves. */
+  | 'resign';
 
 export interface BattleResult {
   winner: Winner;

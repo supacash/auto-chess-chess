@@ -112,4 +112,16 @@ describe('Session', () => {
     again.finishBattle(result('w'));
     expect(again.run.shop.offers).toHaveLength(OFFER_COUNT);
   });
+
+  it('saves a manual game so a reload resumes it instead of counting a loss', () => {
+    const s = ready();
+    const manual = { fen: '4k3/8/8/8/8/8/8/4K3 w - - 0 1', moves: ['e1d1'] };
+    s.saveManual(manual);
+    const again = new Session(seededRng(9));
+    expect(again.restore().notice).toBe('');
+    expect(again.manual).toEqual(manual);
+    expect(again.run.lives).toBe(START_LIVES);
+    again.finishBattle(result('w'));
+    expect(again.manual).toBeNull();
+  });
 });
