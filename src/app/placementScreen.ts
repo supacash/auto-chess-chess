@@ -11,7 +11,7 @@ import {
 } from '../rules/economy';
 import { MAX_ARMY, type Piece, PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
 import { PlacementBoard } from '../ui/board';
-import { inlineGlyph } from '../ui/boardDom';
+import { inlinePiece } from '../ui/boardDom';
 import { $ } from './dom';
 import { renderHeader } from './header';
 import type { Session } from './session';
@@ -122,7 +122,7 @@ export class PlacementScreen {
     const points = types.reduce((s, t) => s + PIECE_VALUE[t], 0);
     $('#opponent').innerHTML =
       `Opponent · <strong>${aiStyle.name}</strong>: ` +
-      `<span class="glyphs">${types.map(inlineGlyph).join('')}</span> · ${points} pts`;
+      `<span class="glyphs">${types.map((t) => inlinePiece(t, 'b')).join('')}</span> · ${points} pts`;
   }
 
   /** Gold, the buy button, and upgrade/sell buttons for the selected piece. */
@@ -148,7 +148,7 @@ export class PlacementScreen {
       .map((to) => {
         const cost = upgradeCost(piece.type, to);
         const disabled = gold < cost ? 'disabled' : '';
-        return `<button type="button" data-upgrade="${to}" ${disabled}>${inlineGlyph(to)} ${PIECE_NAME[to]} · ${cost}g</button>`;
+        return `<button type="button" data-upgrade="${to}" ${disabled}>${inlinePiece(to)} ${PIECE_NAME[to]} · ${cost}g</button>`;
       })
       .join('');
     const sell =

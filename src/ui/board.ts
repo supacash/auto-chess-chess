@@ -2,7 +2,7 @@ import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
 import { type Piece, type Square, PIECE_NAME } from '../rules/pieces';
 import { movePiece, pieceAt, placementError } from '../rules/placement';
 import { mirror } from '../rules/position';
-import { fillGlyph, label, squareEl } from './boardDom';
+import { fillPiece, label, squareEl } from './boardDom';
 
 /** Pointer travel (px) before a press becomes a drag instead of a tap. */
 const DRAG_THRESHOLD = 6;
@@ -127,7 +127,7 @@ export class PlacementBoard {
     if (p.id === this.selected) el.classList.add('selected');
     if (this.press?.dragging && p.id === this.press.pieceId) el.classList.add('drag-source');
     el.dataset.id = p.id;
-    fillGlyph(el, p.type);
+    fillPiece(el, p.type);
     el.title = PIECE_NAME[p.type];
     return el;
   }
@@ -161,7 +161,7 @@ export class PlacementBoard {
       const piece = this.pieces.find((p) => p.id === press.pieceId)!;
       press.ghost = document.createElement('div');
       press.ghost.className = 'piece ghost';
-      fillGlyph(press.ghost, piece.type);
+      fillPiece(press.ghost, piece.type);
       document.body.appendChild(press.ghost);
       this.render();
     }
@@ -232,7 +232,7 @@ export class PlacementBoard {
 function enemyEl(p: Piece): HTMLElement {
   const el = document.createElement('div');
   el.className = 'piece black enemy-piece';
-  fillGlyph(el, p.type);
+  fillPiece(el, p.type, 'b');
   el.title = `Opponent's ${PIECE_NAME[p.type]}`;
   return el;
 }

@@ -1,24 +1,27 @@
 import { fileLetter } from '../chess/boardSpec';
-import type { PieceType } from '../rules/pieces';
+import type { Color } from '../chess/fen';
+import { PIECE_NAME, type PieceType } from '../rules/pieces';
 
-// Each piece is a solid glyph (fill colour) with the outline glyph layered on top.
-// U+FE0E forces text (not emoji) rendering, notably for the pawn on mobile.
-const GLYPH: Record<PieceType, { solid: string; outline: string }> = {
-  K: { solid: '♚︎', outline: '♔︎' },
-  Q: { solid: '♛︎', outline: '♕︎' },
-  R: { solid: '♜︎', outline: '♖︎' },
-  B: { solid: '♝︎', outline: '♗︎' },
-  N: { solid: '♞︎', outline: '♘︎' },
-  P: { solid: '♟︎', outline: '♙︎' },
-};
+// Piece art: the Chessnut set by Alexis Luengas (Apache 2.0, see src/assets/pieces/README.md),
+// bundled by Vite with hashed file names. Keys look like "../assets/pieces/wK.svg".
+const ART = import.meta.glob<string>('../assets/pieces/*.svg', { eager: true, query: '?url', import: 'default' });
 
-export function fillGlyph(el: HTMLElement, type: PieceType): void {
-  el.replaceChildren(label('solid', GLYPH[type].solid), label('outline', GLYPH[type].outline));
+export function pieceUrl(type: PieceType, color: Color = 'w'): string {
+  return ART[`../assets/pieces/${color}${type}.svg`];
 }
 
-/** Single-character glyph for inline text (e.g. the opponent's piece list). */
-export function inlineGlyph(type: PieceType): string {
-  return GLYPH[type].solid;
+/** Puts the piece's image inside `el` (a board square's piece element, or the drag ghost). */
+export function fillPiece(el: HTMLElement, type: PieceType, color: Color = 'w'): void {
+  const img = document.createElement('img');
+  img.src = pieceUrl(type, color);
+  img.alt = PIECE_NAME[type];
+  img.draggable = false;
+  el.replaceChildren(img);
+}
+
+/** A small inline piece image as HTML, for text such as the opponent's piece list. */
+export function inlinePiece(type: PieceType, color: Color = 'w'): string {
+  return `<img class="inline-piece" src="${pieceUrl(type, color)}" alt="${PIECE_NAME[type]}" />`;
 }
 
 export function label(className: string, text: string): HTMLElement {

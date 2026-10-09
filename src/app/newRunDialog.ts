@@ -7,8 +7,10 @@ export class NewRunDialog {
   private readonly dialog = $<HTMLDialogElement>('#new-run-dialog');
 
   constructor(onStart: (settings: RunSettings) => void) {
-    this.dialog.addEventListener('close', () => {
-      if (this.dialog.returnValue !== 'start') return;
+    // Read the choice on submit rather than on the dialog's close event: submit fires right away,
+    // while Chrome can hold back close until the page next renders (e.g. in a background tab).
+    this.dialog.querySelector('form')?.addEventListener('submit', (e) => {
+      if ((e.submitter as HTMLButtonElement | null)?.value !== 'start') return;
       const mode = this.dialog.querySelector<HTMLInputElement>('input[name="nr-mode"]:checked')?.value;
       const level = $<HTMLSelectElement>('#nr-difficulty').value;
       onStart({
@@ -27,7 +29,6 @@ export class NewRunDialog {
     $<HTMLSelectElement>('#nr-difficulty').value = current.difficulty;
     $<HTMLInputElement>('#nr-reveal').checked = current.reveal;
     $('#nr-warning').hidden = !warnAbandon;
-    this.dialog.returnValue = '';
     this.dialog.showModal();
   }
 }
