@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <title>Auto Chess Chess</title>
     <!-- Cross-origin isolation for the multithreaded chess engine on hosts without COOP/COEP headers. -->
+    <!-- Always use COEP require-corp: the default "credentialless" for non-Chromium browsers isn't
+         supported by Safari, which then never becomes isolated. Everything here is same-origin. -->
+    <script>
+      window.coi = { coepCredentialless: () => false };
+    </script>
     <script src="coi-serviceworker.min.js"></script>
   </head>
   <body>
