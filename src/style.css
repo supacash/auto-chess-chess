@@ -689,7 +689,8 @@ header .link {
 
 /* ---- new run window ---- */
 
-dialog#new-run-dialog {
+dialog#new-run-dialog,
+dialog#match-dialog {
   width: min(420px, calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
   padding: 0;
@@ -700,11 +701,13 @@ dialog#new-run-dialog {
   box-shadow: 0 16px 48px rgb(0 0 0 / 0.55);
 }
 
-dialog#new-run-dialog[open] {
+dialog#new-run-dialog[open],
+dialog#match-dialog[open] {
   animation: pop-in 0.2s ease-out;
 }
 
-dialog#new-run-dialog::backdrop {
+dialog#new-run-dialog::backdrop,
+dialog#match-dialog::backdrop {
   background: rgb(0 0 0 / 0.6);
   backdrop-filter: blur(2px);
 }
@@ -920,4 +923,144 @@ button.muted {
 .promo .inline-piece {
   width: 2rem;
   height: 2rem;
+}
+
+/* ---- multiplayer match ---- */
+
+.header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.dialog-text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.dialog-text.muted {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* In a match the run's stats and help give way to the players' health list. */
+body.in-match .run-bar,
+body.in-match #help,
+body.in-match #last-replay,
+body.in-match #new-run,
+body.in-match #multiplayer {
+  display: none;
+}
+
+.match-hud {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.match-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.match-timer {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-bar {
+  height: 4px;
+  margin: 6px 0 8px;
+  overflow: hidden;
+  background: var(--bg);
+  border-radius: 999px;
+}
+
+#timer-fill {
+  width: 0;
+  height: 100%;
+  background: var(--gold);
+  transition: width 0.25s linear;
+}
+
+.match-players {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.match-players .player {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 80px 2ch auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.match-players .player.me .name {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.match-players .player.out {
+  opacity: 0.45;
+}
+
+.match-players .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.match-players small {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.hp-bar {
+  height: 8px;
+  overflow: hidden;
+  background: var(--bg);
+  border-radius: 999px;
+}
+
+.hp-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition:
+    width 0.4s ease-out,
+    background-color 0.4s;
+}
+
+.hp-bar.warn span {
+  background: var(--gold);
+}
+
+.hp-bar.low span {
+  background: var(--danger);
+}
+
+.match-players .hp {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.match-players .hit {
+  color: var(--danger);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.match-players .place {
+  color: var(--muted);
+  font-size: 0.8rem;
 }

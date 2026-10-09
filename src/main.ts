@@ -5,6 +5,7 @@ import { renderHeader } from './app/header';
 import { renderLayout } from './app/layout';
 import { NewRunDialog } from './app/newRunDialog';
 import { PlacementScreen } from './app/placementScreen';
+import { MatchController } from './app/matchController';
 import { Session } from './app/session';
 import { loadRules } from './chess/loadRules';
 import { Engine } from './engine/stockfish';
@@ -20,6 +21,7 @@ renderLayout($('#app'));
 const session = new Session(rng);
 const placement = new PlacementScreen(
   session,
+  () => renderHeader(session),
   () => void fight(),
   () => void playYourself(),
   () => void watchReplay(),
@@ -33,6 +35,23 @@ const battle = new BattleScreen(
 );
 const newRun = new NewRunDialog(startNewRun);
 $('#new-run').addEventListener('click', openNewRun);
+const match = new MatchController({
+  placement,
+  battle,
+  ensureEngine,
+  onExit: () => {
+    placement.use(session, { header: () => renderHeader(session) });
+    showPlacement();
+  },
+});
+const matchDialog = $<HTMLDialogElement>('#match-dialog');
+$('#multiplayer').addEventListener('click', () => {
+  if (!busy) matchDialog.showModal();
+});
+matchDialog.querySelector('form')?.addEventListener('submit', (e) => {
+  if ((e.submitter as HTMLButtonElement | null)?.value !== 'bots') return;
+  match.startOffline({ blitz: $<HTMLInputElement>('#mp-blitz').checked });
+});
 
 let engine: Engine | null = null;
 let busy = false;

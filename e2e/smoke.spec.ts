@@ -105,3 +105,29 @@ test('Play it: move, resume after a reload, undo and resign', async ({ page }) =
   await expect(page.locator('#result-title')).toHaveText('Defeat');
   await expect(page.locator('#result-detail')).toContainText('resigning');
 });
+
+test('a multiplayer match against bots plays a round with health and moves on', async ({ page }) => {
+  await startRun(page);
+  await page.locator('#multiplayer').click();
+  const dialog = page.locator('#match-dialog');
+  await dialog.getByRole('button', { name: 'Play vs 3 bots' }).click();
+
+  const hud = page.locator('#match-hud');
+  await expect(hud).toBeVisible();
+  await expect(page.locator('#match-players .player')).toHaveCount(4);
+  await expect(page.locator('#match-round')).toContainText('Round 1 · Shop');
+  await expect(page.locator('#opponent')).toHaveText('Your opponent is revealed when the round starts.');
+  await expect(page.locator('#play')).toBeHidden();
+  await expect(page.locator('#fight')).toHaveText('Ready');
+
+  await placeKing(page);
+  await page.locator('#fight').click();
+  await expect(page.locator('#battle')).toBeVisible();
+  await page.locator('#skip').click();
+  await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
+  await expect(page.locator('#result-title')).toHaveText(/Victory|Defeat|Draw/);
+  await expect(page.locator('#next')).toHaveText('Round 2');
+  await page.locator('#next').click();
+  await expect(page.locator('#match-round')).toContainText('Round 2 · Shop');
+  await expect(page.locator('#match-timer')).toHaveText(/\d+s/);
+});

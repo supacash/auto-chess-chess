@@ -18,12 +18,19 @@ import { MAX_ARMY, type Piece, PIECE_NAME, PIECE_VALUE, PIECES, type PieceType }
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { $ } from './dom';
-import { renderHeader } from './header';
-import type { Session } from './session';
+import type { PlacementSession } from './placementSession';
 
 /** King first, then most to least valuable. */
 const pieceOrder = (a: PieceType, b: PieceType) =>
   Number(b === 'K') - Number(a === 'K') || PIECE_VALUE[b] - PIECE_VALUE[a];
+
+/** How the screen is being used: a single-player run, or a multiplayer match (one Ready button). */
+export interface PlacementMode {
+  /** Redraws the header for this session (run stats, or the match's players). */
+  header: () => void;
+  /** In a match, the main button reads Ready and calls this instead of Auto fight. */
+  onReady?: () => void;
+}
 
 /** The placement screen: board, bench, shop, opponent preview, and the Play it / Auto fight buttons. */
 export class PlacementScreen {
@@ -40,13 +47,16 @@ export class PlacementScreen {
   private busy = false;
   /** Variant of the board last shown, to announce when it grows. */
   private shownBoard: string | null = null;
+  private mode: PlacementMode;
 
   constructor(
-    private readonly session: Session,
+    private session: PlacementSession,
+    header: () => void,
     onFight: () => void,
     onPlay: () => void,
     onReplay: () => void,
   ) {
+    this.mode = { header };
     this.board = new PlacementBoard($('#board-root'), session.run.shop.pieces, {
       onChange: (pieces) => this.piecesChanged(pieces),
       onMessage: (text) => this.setMessage(text),
@@ -98,13 +108,24 @@ export class PlacementScreen {
       this.selectedOffer = null;
       this.applyShop(this.session.rerollOffers());
     });
-    this.fightBtn.addEventListener('click', onFight);
+    this.fightBtn.addEventListener('click', () => (this.mode.onReady ? this.mode.onReady() : onFight()));
     this.playBtn.addEventListener('click', onPlay);
     $('#last-replay').addEventListener('click', onReplay);
   }
 
+  /** Switches what's being played (a run, or a match); takes effect on the next show(). */
+  use(session: PlacementSession, mode: PlacementMode): void {
+    this.session = session;
+    this.mode = mode;
+    this.resetForNewRun();
+  }
+
   /** Shows the screen for the session's current round. */
   show(): void {
+    const match = this.mode.onReady !== undefined;
+    this.playBtn.hidden = match;
+    $('#clear').hidden = false;
+    this.fightBtn.textContent = match ? 'Ready' : 'Auto fight';
     this.section.hidden = false;
     $('#last-replay').hidden = !this.session.lastReplay;
     const spec = this.session.board;
@@ -119,9 +140,10 @@ export class PlacementScreen {
     setPlayerColor(this.session.run.color);
     this.board.setSpec(spec);
     this.board.setPieces(this.session.run.shop.pieces);
-    this.board.setEnemy(this.session.run.settings.reveal ? this.session.aiPieces : null);
+    const opponent = this.session.opponent();
+    this.board.setEnemy(this.session.run.settings.reveal && opponent ? opponent.pieces : null);
     this.renderOpponent();
-    renderHeader(this.session);
+    this.mode.header();
     this.piecesChanged(this.session.run.shop.pieces);
   }
 
@@ -169,18 +191,23 @@ export class PlacementScreen {
   }
 
   private renderOpponent(): void {
-    const { aiPieces, aiStyle } = this.session;
-    const types = aiPieces.map((p) => p.type).sort(pieceOrder);
+    const opponent = this.session.opponent();
+    this.foeInfo = null;
+    if (!opponent) {
+      $('#opponent').textContent = 'Your opponent is revealed when the round starts.';
+      this.renderFoeInfo();
+      return;
+    }
+    const types = opponent.pieces.map((p) => p.type).sort(pieceOrder);
     const points = types.reduce((s, t) => s + PIECE_VALUE[t], 0);
     $('#opponent').innerHTML =
-      `Opponent · <strong>${aiStyle.name}</strong>: ` +
+      `Opponent · <strong>${opponent.name}</strong>: ` +
       `<span class="glyphs">${types
         .map(
           (t) =>
             `<button type="button" class="foe" data-foe="${t}" aria-label="What does the ${PIECE_NAME[t]} do?">${inlinePiece(t, 'b')}</button>`,
         )
         .join('')}</span> · ${points} pts`;
-    this.foeInfo = null;
     this.renderFoeInfo();
   }
 

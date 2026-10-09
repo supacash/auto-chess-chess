@@ -19,6 +19,7 @@ import { rerollOffers, rollOffers, type Shop, type ShopResult } from '../rules/e
 import { gameMode } from '../rules/mode';
 import type { Piece } from '../rules/pieces';
 import type { ManualState } from '../game/manualBattle';
+import type { PlacementSession } from './placementSession';
 import { armyErrors, fitToBoard } from '../rules/placement';
 import { type StartPosition, startPosition } from '../rules/position';
 import { type Rng, randomSeed } from '../rules/rng';
@@ -38,7 +39,7 @@ export interface BattleOutcome {
  * The run in progress and everything that changes it: the opponent, the best score and saving.
  * No DOM here, so the run flow can be tested without a browser.
  */
-export class Session {
+export class Session implements PlacementSession {
   run: Run = newRun();
   best = 0;
   aiPieces: Piece[] = [];
@@ -49,6 +50,11 @@ export class Session {
   lastReplay: BattleRecord | null = null;
 
   constructor(private readonly rng: Rng = Math.random) {}
+
+  /** The opponent shown during placement: the AI's style and army. */
+  opponent(): { name: string; pieces: Piece[] } {
+    return { name: this.aiStyle.name, pieces: this.aiPieces };
+  }
 
   /** The board a round is played on (in Growing mode it grows every few rounds). */
   boardOf(round = this.run.round): BoardSpec {

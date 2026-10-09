@@ -62,3 +62,21 @@ export function material(fen: string): Record<Color, number> {
   }
   return out;
 }
+
+/**
+ * The position as black sees it: ranks reversed and colours swapped (files stay put, matching how
+ * an army is mirrored onto the board). Used to show a battle to the player whose army is black.
+ */
+export function mirrorFen(fen: string, files: number): string {
+  const swap = (c: FenPiece | null): FenPiece | null => c && { type: c.type, color: c.color === 'w' ? 'b' : 'w' };
+  // parsePlacement lists the top rank first, which is the bottom rank once mirrored.
+  const grid = parsePlacement(fen, files).map((row) => row.map(swap));
+  const [, turn, ...rest] = fen.split(' ');
+  return [placementField(grid), turn === 'b' ? 'w' : 'b', ...rest].join(' ');
+}
+
+/** A square name ("e2") on the mirrored board ("e7" on 8 ranks). */
+export function mirrorSquare(name: string, ranks: number): string {
+  const m = /^([a-z])(\d+)$/.exec(name);
+  return m ? `${m[1]}${ranks + 1 - Number(m[2])}` : name;
+}

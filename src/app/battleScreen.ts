@@ -1,6 +1,7 @@
 import { type BoardSpec, plyLimit } from '../chess/boardSpec';
 import type { Color } from '../chess/fen';
 import { Game, type Move } from '../chess/rules';
+import { mirrorFen, mirrorSquare } from '../chess/fen';
 import { checkmateEval, evalShare, formatEval, whiteEval } from '../engine/pick';
 import type { ManualBattle, ManualState } from '../game/manualBattle';
 import { type BattleRecord, recordBoard } from '../game/record';
@@ -58,6 +59,9 @@ export class BattleScreen {
   private pending: ((action: PlayerAction) => void) | null = null;
   private resignTimer = 0;
 
+  /** Overrides what the result card's main button does while a custom card is showing (see showCard). */
+  private nextOverride: (() => void) | null = null;
+
   constructor(onNext: () => void, onReplay: () => void) {
     $('#replay').addEventListener('click', onReplay);
     this.undoBtn.addEventListener('click', () => this.pending?.({ kind: 'undo' }));
@@ -80,15 +84,34 @@ export class BattleScreen {
       else this.speed = Number(btn.dataset.speed);
       this.renderPlaybackButtons();
     });
-    $('#next').addEventListener('click', onNext);
+    $('#next').addEventListener('click', () => {
+      const override = this.nextOverride;
+      this.nextOverride = null;
+      if (override) override();
+      else onNext();
+    });
   }
 
   hide(): void {
     this.section.hidden = true;
   }
 
-  /** Shows and plays a battle from `fen` on `spec` until it ends; returns the result with every move and eval. */
-  async play(engine: MoveSource, fen: string, firstMover: Color, spec: BoardSpec, rng: Rng): Promise<Playback> {
+  /**
+   * Shows and plays a battle from `fen` on `spec` until it ends; returns the result with every move
+   * and eval. With `flip`, the player's army is black in the battle: the board is shown from their
+   * side (their pieces at the bottom, in white) and the eval bar from their point of view.
+   */
+  async play(
+    engine: MoveSource,
+    fen: string,
+    firstMover: Color,
+    spec: BoardSpec,
+    rng: Rng,
+    { flip = false, opponent = '' }: { flip?: boolean; opponent?: string } = {},
+  ): Promise<Playback> {
+    const show = (f: string) => (flip ? mirrorFen(f, spec.files) : f);
+    const square = (s: string) => (flip ? mirrorSquare(s, spec.ranks) : s);
+    const mine = flip ? 'b' : 'w';
     this.speed = 1;
     this.skipping = false;
     this.renderPlaybackButtons();
@@ -99,11 +122,12 @@ export class BattleScreen {
     $('#eval').hidden = false;
 
     const limit = plyLimit(spec);
-    this.view.render(fen, spec);
+    this.view.render(show(fen), spec);
     // The bar's light side is White's: flip it when the player is Black.
     $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
     this.showEval(0);
-    this.status.textContent = firstMover === 'w' ? 'You move first' : 'Opponent moves first';
+    const against = opponent ? ` against ${opponent}` : '';
+    this.status.textContent = firstMover === mine ? `You move first${against}` : `Opponent moves first${against}`;
     await sleep(INTRO_MS);
 
     const moves: string[] = [];
@@ -116,13 +140,13 @@ export class BattleScreen {
         moves.push(move.uci);
         evals.push(evalScore);
         const ms = this.skipping ? 0 : MOVE_MS / this.speed;
-        this.view.render(game.fen(), game.spec, {
-          last: move,
+        this.view.render(show(game.fen()), game.spec, {
+          last: { from: square(move.from), to: square(move.to) },
           animateMs: this.reduceMotion ? 0 : ms * 0.8,
           check: game.isCheck(),
         });
-        if (evalScore !== null) this.showEval(evalScore);
-        const mat = material(game.fen());
+        if (evalScore !== null) this.showEval(flip ? -evalScore : evalScore);
+        const mat = material(show(game.fen()));
         this.status.textContent = this.skipping
           ? 'Skipping…'
           : `Move ${Math.ceil(plies / 2)}/${limit / 2} · Material ${mat.w}–${mat.b}`;
@@ -132,7 +156,9 @@ export class BattleScreen {
       spec,
     );
 
-    if (result.reason === 'checkmate' && result.winner !== 'draw') this.showEval(checkmateEval(result.winner));
+    if (result.reason === 'checkmate' && result.winner !== 'draw') {
+      this.showEval(checkmateEval(result.winner === mine ? 'w' : 'b'));
+    }
     return { result, moves, evals };
   }
 
@@ -292,9 +318,39 @@ export class BattleScreen {
     });
   }
 
+  /** Replaces the status line (e.g. while other battles finish). */
+  setStatus(text: string): void {
+    this.status.textContent = text;
+  }
+
+  /**
+   * Shows a result card with custom text (used by multiplayer matches): `tone` colours the title
+   * like a win, loss or draw; the main button runs `onButton`. No replay button.
+   */
+  showCard(card: {
+    title: string;
+    detail: string;
+    tone: 'w' | 'b' | 'draw';
+    button: string;
+    onButton: () => void;
+  }): void {
+    this.playback.hidden = true;
+    this.manual.hidden = true;
+    this.result.hidden = false;
+    this.result.dataset.winner = card.tone;
+    this.status.textContent = 'Final position';
+    $('#result-title').textContent = card.title;
+    $('#result-detail').textContent = card.detail;
+    $('#replay').hidden = true;
+    $('#next').textContent = card.button;
+    this.nextOverride = card.onButton;
+  }
+
   /** Shows how the battle ended and what it did to the run. `spec` is the board it was played on. */
   showResult(result: BattleResult, outcome: BattleOutcome, spec: BoardSpec, lives: number, best: number): void {
     const { winner, reason, material } = result;
+    $('#replay').hidden = false;
+    this.nextOverride = null;
     this.playback.hidden = true;
     this.result.hidden = false;
     this.result.dataset.winner = outcome.over ? 'b' : winner;

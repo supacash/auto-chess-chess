@@ -134,11 +134,22 @@ In Growing mode the board opens up during the run:
 - **Safari / iOS:** the engine needs cross-origin isolation; COEP is forced to require-corp with a one-time reload fallback (untested on a real iPhone).
 - **Fairy balance:** fusion pieces and the shop player buying fairy offers aren't measured yet.
 
+## Multiplayer (in progress)
+Live, TFT-style matches for 4 players. Everything that decides a match is deterministic from the match seed (pairings, bot armies, battles), so each client can compute results without a game server.
+- **Health:** everyone starts at 20 HP. Losing a battle costs the round number plus 1 per 5 points of material the winner has left; a draw costs nothing. At 0 HP you're out; lower HP places worse among players knocked out in the same round. Last one standing wins (places 1st–4th).
+- **Rounds:** everyone shops and places at the same time for 45 seconds (15 in Blitz), ending early when all are Ready. Opponents stay hidden until the round's battles start. If your king is still on the bench when the timer ends, it's placed for you.
+- **Pairings:** random each round from the match seed. With an odd number left, the last player fights a copy of another player's army; only the odd player can take damage in that battle. Battles are computed with the white player's army as white; the black player's screen shows the board flipped.
+- **Battles:** auto only (no Play it in multiplayer). You watch your own; the others are computed and summarized.
+- **Board:** Classic 8×8 with standard pieces while multiplayer is being tested. Economy as in single player (income, offers, upgrades, fusion).
+- **Bots:** AI-drafted armies at the single-player Normal budget, the same on every client.
+- **Now:** offline matches against 3 bots (*Multiplayer* → *Play vs 3 bots*, optional Blitz).
+- **Next:** online rooms on Firebase (project `auto-chess-chess`): room codes, bots fill empty seats, armies hidden until battle by security rules; public quick match later.
+
 ## Roadmap
 Done: reproducible seeded battles, RULES_VERSION, army snapshots, replays, browser smoke tests in CI, game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as.
 
 Next candidates (not yet decided):
-1. **Multiplayer:** asynchronous ghost armies first (ArmySnapshot is the format), then live 1v1.
+1. **Multiplayer online:** room codes with bots in empty seats, then quick match (see Multiplayer).
 2. **Daily challenges:** one seed for everyone (battles are already seeded and reproducible).
 3. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
 4. **Bigger boards** past 8×8, with a longer move limit.

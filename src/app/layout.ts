@@ -10,8 +10,19 @@ export function renderLayout(root: HTMLElement): void {
   root.innerHTML = `
   <header>
     <h1><img class="logo" src="${import.meta.env.BASE_URL}icon.svg" alt="" width="28" height="28" />Auto Chess Chess</h1>
-    <button id="new-run" type="button" class="link">New run</button>
+    <div class="header-actions">
+      <button id="multiplayer" type="button" class="link">Multiplayer</button>
+      <button id="new-run" type="button" class="link">New run</button>
+    </div>
   </header>
+  <section id="match-hud" class="match-hud" hidden>
+    <div class="match-top">
+      <span id="match-round"></span>
+      <span id="match-timer" class="match-timer"></span>
+    </div>
+    <div class="timer-bar"><div id="timer-fill"></div></div>
+    <ol id="match-players" class="match-players"></ol>
+  </section>
   <div class="run-bar">
     <span id="round"></span>
     <span class="lives" id="lives"></span>
@@ -79,6 +90,24 @@ export function renderLayout(root: HTMLElement): void {
       </div>
     </div>
   </section>
+
+  <dialog id="match-dialog" aria-labelledby="match-title">
+    <form method="dialog" class="new-run-form">
+      <h2 id="match-title">Multiplayer</h2>
+      <p class="dialog-text">
+        Four players with 20 HP each. Everyone shops and places at the same time; when the timer runs out
+        (or everyone is ready) you're paired off and the engine plays the battles. Losing costs HP: the round
+        number plus 1 per 5 points the winner has left. Last one standing wins.
+      </p>
+      <p class="dialog-text muted">Classic 8×8, standard pieces, auto battles.</p>
+      <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 15-second shop instead of 45</label>
+      <div class="actions">
+        <button type="submit" value="cancel" formnovalidate>Cancel</button>
+        <button type="submit" value="bots" class="primary">Play vs 3 bots</button>
+      </div>
+      <p class="dialog-text muted">Online rooms with friends are coming next.</p>
+    </form>
+  </dialog>
 
   <dialog id="new-run-dialog" aria-labelledby="new-run-title">
     <form method="dialog" class="new-run-form">
