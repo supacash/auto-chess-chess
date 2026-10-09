@@ -6,3 +6,4 @@ public/coi-serviceworker.min.js
 test-results/
 playwright-report/
 *-debug.log
+dist-emulator/

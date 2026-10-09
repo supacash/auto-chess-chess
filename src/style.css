@@ -1274,3 +1274,12 @@ body.in-menu header {
   font-weight: 500;
   opacity: 0.8;
 }
+
+/* The engine, piece and code credits live on the main menu; play screens keep the space. */
+.credits {
+  display: none;
+}
+
+body.in-menu .credits {
+  display: block;
+}

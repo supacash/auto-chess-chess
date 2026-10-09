@@ -38,6 +38,9 @@ jobs:
           java-version: 21
       - run: npm run test:rules
       - run: npm run e2e:online
+      # dist/ is what gets deployed: it must talk to the real Firebase project, never the emulators.
+      - name: Check the build doesn't point at the emulators
+        run: "! grep -rl '127.0.0.1:9099' dist"
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

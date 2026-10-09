@@ -16,7 +16,8 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: `npm run build -- --mode emulator && npx vite preview --port ${PORT} --strictPort`,
+    // Built into its own folder: dist/ is what gets deployed, and must never point at the emulators.
+    command: `npm run build -- --mode emulator --outDir dist-emulator && npx vite preview --outDir dist-emulator --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}/`,
     reuseExistingServer: false,
     timeout: 180_000,
