@@ -1,5 +1,15 @@
-import { describe, expect, it } from 'vitest';
-import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, MAX_PAWNS, pickStyle, placeAiArmy } from './aiArmy';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { loadRulesForNode } from '../chess/testRules';
+import {
+  AI_STYLES,
+  type AiStyle,
+  aiBudget,
+  draftAiArmy,
+  MAX_PAWNS,
+  pickStyle,
+  placeAiArmy,
+  placeForBattle,
+} from './aiArmy';
 import { BOARDS, homeSquares, pawnSquares } from '../chess/boardSpec';
 import { PIECES, type PieceType, PIECE_VALUE } from './pieces';
 import { armyCap, armyErrors } from './placement';
@@ -207,6 +217,23 @@ describe('fairy pieces', () => {
         const types = draftAiArmy(budget, style, rng, BOARDS[BOARDS.length - 1], true);
         expect(types.reduce((s, t) => s + PIECE_VALUE[t], 0)).toBeGreaterThanOrEqual(budget - 1);
       }
+    }
+  });
+});
+
+describe('placeForBattle', () => {
+  beforeAll(loadRulesForNode);
+
+  it('always finds a start where not both kings are in check, even with heavy armies', () => {
+    const spec = BOARDS[8];
+    const heavy: PieceType[] = ['K', 'Q', 'Q', 'R', 'R', 'R', 'R', 'B', 'B', 'N'];
+    for (let seed = 0; seed < 100; seed++) {
+      const rng = seededRng(seed);
+      const player = placeAiArmy(heavy, pickStyle(rng), rng, spec);
+      const { ai, start } = placeForBattle(player, heavy, pickStyle(rng), rng, spec, seed % 2 === 0);
+      expect(start.ok).toBe(true);
+      expect(ai.filter((p) => p.type === 'K')).toHaveLength(1);
+      expect(ai.length).toBeLessThanOrEqual(heavy.length);
     }
   });
 });
