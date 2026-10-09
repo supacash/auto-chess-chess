@@ -64,8 +64,8 @@ export const PIECES: Record<PieceType, PieceDef> = {
     pawn: true,
     description: 'A reverse pawn: moves diagonally forward, captures straight ahead.',
   },
-  F: { name: 'Ferz', value: 2, group: 'utility', betza: 'F', description: 'Steps one square diagonally.' },
-  W: { name: 'Wazir', value: 2, group: 'utility', betza: 'W', description: 'Steps one square straight.' },
+  F: { name: 'Ferz', value: 1, group: 'utility', betza: 'F', description: 'Steps one square diagonally.' },
+  W: { name: 'Wazir', value: 1, group: 'utility', betza: 'W', description: 'Steps one square straight.' },
   M: { name: 'Man', value: 3, group: 'utility', betza: 'WF', description: 'Moves like a king, but can be captured.' },
   L: { name: 'Camel', value: 2, group: 'chaos', betza: 'C', description: 'Jumps three squares and one sideways.' },
   G: {

@@ -30,6 +30,18 @@ export function parseInfo(line: string): { multipv: number; candidate: Candidate
   return { multipv: Number(m[1]), candidate: { move: m[4], score } };
 }
 
+/** A search's position as its start FEN plus the moves played since. */
+export interface History {
+  fen: string;
+  moves: string[];
+}
+
+/** The UCI `position` command for a search: with history when there is one. */
+export function positionCommand(fen: string, history?: History): string {
+  if (!history || history.moves.length === 0) return `position fen ${history?.fen ?? fen}`;
+  return `position fen ${history.fen} moves ${history.moves.join(' ')}`;
+}
+
 // ---- evaluation display ----
 // Scores below are from white's (the player's) point of view: positive = player ahead.
 

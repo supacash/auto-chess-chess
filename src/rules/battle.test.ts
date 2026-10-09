@@ -32,6 +32,19 @@ describe('battleResult', () => {
     });
   });
 
+  it('decides insufficient material on points, and draws it when material is level', () => {
+    // King + knight vs king: nobody can mate.
+    expect(battleResult(load('4k3/8/8/8/8/8/8/1N2K3 w - - 0 1'), 12)).toMatchObject({
+      winner: 'w',
+      reason: 'insufficient',
+      material: { w: 3, b: 0 },
+    });
+    expect(battleResult(load('4k3/8/8/8/8/8/8/4K3 w - - 0 1'), 12)).toMatchObject({
+      winner: 'draw',
+      reason: 'insufficient',
+    });
+  });
+
   it('decides on material at the ply limit', () => {
     const fen = '4k3/pp6/8/8/8/8/8/R3K3 w - - 0 1';
     expect(battleResult(load(fen), PLY_LIMIT - 1)).toBeNull();

@@ -1,6 +1,6 @@
 import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
 import { Game, type Move } from '../chess/rules';
-import type { Candidate } from '../engine/pick';
+import type { Candidate, History } from '../engine/pick';
 import { pickMove, whiteEval } from '../engine/pick';
 import {
   type BattleLimits,
@@ -20,7 +20,12 @@ export const SEARCH_DEPTH = 8;
 export interface MoveSource {
   /** Starts a fresh game on the given Fairy-Stockfish variant. */
   newGame(variant: string): Promise<void>;
-  candidates(fen: string, depth: number): Promise<Candidate[]>;
+  /**
+   * Searches the position `fen`. `history` is how the battle got there (its start position and the
+   * moves since), so the engine can see repetitions: a repeated position scores as a draw, which the
+   * side that's ahead then avoids.
+   */
+  candidates(fen: string, depth: number, history?: History): Promise<Candidate[]>;
 }
 
 /**
@@ -43,17 +48,20 @@ export async function runBattle(
 
     let plies = 0;
     let streak = NO_STREAK;
+    const history: History = { fen, moves: [] };
+    const search = () => engine.candidates(game.fen(), SEARCH_DEPTH, { fen, moves: [...history.moves] });
     let result = battleResult(game, plies, limits);
-    let search = result ? null : engine.candidates(game.fen(), SEARCH_DEPTH);
+    let searching = result ? null : search();
 
-    while (!result && search) {
-      const candidates = await search;
+    while (!result && searching) {
+      const candidates = await searching;
       const evalScore = whiteEval(candidates, game.turn());
       const move = playMove(game, candidates, rng);
+      history.moves.push(move.uci);
       plies++;
       if (limits.decisive) streak = nextLeadStreak(streak, material(game.fen()), limits.decisive.lead);
       result = battleResult(game, plies, limits, streak);
-      search = result ? null : engine.candidates(game.fen(), SEARCH_DEPTH);
+      searching = result ? null : search();
       await onMove(move, game, plies, evalScore);
     }
     return result!;

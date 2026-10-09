@@ -156,10 +156,10 @@ describe('shop offers', () => {
   });
 
   it('buys an offer onto the bench for its value and removes it from the shop', () => {
-    const shop: Shop = { gold: PIECE_VALUE.X + 1, pieces: [makePiece('K')], offers: ['X', 'F', 'E'] };
+    const shop: Shop = { gold: PIECE_VALUE.X + 1, pieces: [makePiece('K')], offers: ['X', 'M', 'E'] };
     const next = ok(buyOffer(shop, 0));
     expect(next.gold).toBe(1);
-    expect(next.offers).toEqual(['F', 'E']);
+    expect(next.offers).toEqual(['M', 'E']);
     expect(next.pieces.at(-1)).toMatchObject({ type: 'X', square: null });
     expect(buyOffer(next, 0)).toEqual({ ok: false, error: 'Not enough gold' });
     expect(buyOffer(next, 5).ok).toBe(false);

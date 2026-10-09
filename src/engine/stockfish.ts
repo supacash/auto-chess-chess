@@ -1,5 +1,5 @@
 import { variantsIni } from '../chess/boardSpec';
-import { type Candidate, parseInfo } from './pick';
+import { type Candidate, type History, parseInfo, positionCommand } from './pick';
 
 /**
  * Fairy-Stockfish (WASM, multithreaded build) running in the page. It needs SharedArrayBuffer, so the
@@ -69,7 +69,7 @@ export class Engine {
   }
 
   /** Searches `fen` to `depth` and returns the top lines, best first. Empty if the engine can't search it. */
-  async candidates(fen: string, depth: number): Promise<Candidate[]> {
+  async candidates(fen: string, depth: number, history?: History): Promise<Candidate[]> {
     const lines = new Map<number, Candidate>();
     const onLine = (line: string) => {
       const info = parseInfo(line);
@@ -77,7 +77,7 @@ export class Engine {
     };
     this.listeners.add(onLine);
     const done = this.waitFor((l) => l.startsWith('bestmove'));
-    this.send(`position fen ${fen}`);
+    this.send(positionCommand(fen, history));
     this.send(`go depth ${depth}`);
     const reply = await done;
     this.listeners.delete(onLine);

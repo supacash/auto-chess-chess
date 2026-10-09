@@ -68,12 +68,19 @@ export function battleResult(
   const mat = material(state.fen());
   const end = (winner: Winner, reason: EndReason): BattleResult => ({ winner, reason, material: mat, plies });
 
+  const onPoints: Winner = mat.w > mat.b ? 'w' : mat.b > mat.w ? 'b' : 'draw';
+
   const terminal = state.terminal();
   if (terminal === 'checkmate') return end(state.turn() === 'w' ? 'b' : 'w', 'checkmate');
+  // Nobody can mate any more (e.g. king + knight vs king): decide on points, as at the move limit.
+  if (terminal === 'insufficient') return end(onPoints, 'insufficient');
   if (terminal) return end('draw', terminal);
   if (limits.decisive && streak.side && streak.plies >= limits.decisive.plies) return end(streak.side, 'decisive');
-  if (plies >= limits.plyLimit) {
-    return end(mat.w > mat.b ? 'w' : mat.b > mat.w ? 'b' : 'draw', 'move-limit');
-  }
+  if (plies >= limits.plyLimit) return end(onPoints, 'move-limit');
   return null;
+}
+
+/** True when a result was decided on material rather than on the board. */
+export function wonOnPoints(result: BattleResult): boolean {
+  return result.winner !== 'draw' && (result.reason === 'move-limit' || result.reason === 'insufficient');
 }

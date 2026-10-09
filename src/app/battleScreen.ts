@@ -2,7 +2,7 @@ import { type BoardSpec, plyLimit } from '../chess/boardSpec';
 import type { Color } from '../chess/fen';
 import { checkmateEval, evalShare, formatEval } from '../engine/pick';
 import { type MoveSource, runBattle } from '../game/runBattle';
-import { type BattleResult, type EndReason, material } from '../rules/battle';
+import { type BattleResult, type EndReason, material, wonOnPoints } from '../rules/battle';
 import { roundIncome } from '../rules/economy';
 import type { Rng } from '../rules/rng';
 import { BattleView } from '../ui/battleView';
@@ -108,7 +108,9 @@ export class BattleScreen {
     const summary =
       reason === 'move-limit'
         ? `${verb} on points, ${material.w}–${material.b}, at the ${plyLimit(spec) / 2}-move limit.`
-        : `${verb} ${REASON_TEXT[reason]}. Material ${material.w}–${material.b} after ${moves} moves.`;
+        : reason === 'insufficient' && winner !== 'draw'
+          ? `${verb} on points, ${material.w}–${material.b}: neither side could checkmate any more.`
+          : `${verb} ${REASON_TEXT[reason]}. Material ${material.w}–${material.b} after ${moves} moves.`;
     if (outcome.over) {
       const rounds = `${outcome.score} round${outcome.score === 1 ? '' : 's'}`;
       $('#result-title').textContent = 'Game over';
@@ -117,7 +119,7 @@ export class BattleScreen {
       $('#next').textContent = 'New run';
     } else {
       const title = winner === 'w' ? 'Victory' : winner === 'b' ? 'Defeat' : 'Draw';
-      $('#result-title').textContent = reason === 'move-limit' ? `${title} on points` : title;
+      $('#result-title').textContent = wonOnPoints(result) || reason === 'move-limit' ? `${title} on points` : title;
       const lifeNote = winner === 'b' ? ` −1 life (${lives} left).` : '';
       $('#result-detail').textContent = `${summary} +${roundIncome(winner)} gold.${lifeNote}`;
       $('#next').textContent = 'Next round';

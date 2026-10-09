@@ -179,8 +179,33 @@ Board sizes shipped as a mode: **Growing board** (5×5 → 8×8, King + 4 pawns,
 | Fairy, Camel 3→2, Grasshopper 2→1, Cannon 4→3 | 40% ±4 | 16% | 44% | 2.58 |
 
 - With the first estimates, fairy armies were clearly weaker per point. Fortress (Ferz, Wazir, Man, Cannon) fell from 31% to 59% player wins and Heavy Artillery (Cannon, compounds) from 24% to 56%.
-- After lowering the Camel, Grasshopper and Cannon, fairy armies match standard ones overall. Fortress is still somewhat weak with fairy pieces (50% ±9 player wins), which points at the Ferz and Wazir (value 2) next.
+- After lowering the Camel, Grasshopper and Cannon, fairy armies match standard ones overall. Fortress was still weak with fairy pieces (50% ±9 player wins); section 12 fixes that.
 - Not yet measured: the fusion pieces on their own, and the shop player buying fairy offers.
+
+### 12. Repetition, insufficient material, Ferz and Wazir (2026-10-09, seed 1)
+
+Two rule changes: the engine now gets the move history (`position fen … moves …`), so it sees repetitions as draws and the side that's ahead avoids them (Fairy-Stockfish has no contempt option); and insufficient material is decided on points.
+
+Growing mode, `npm run sim -- --rounds 10 --games 300 --player shop` (compare section 10):
+
+| | Before | After |
+|---|---|---|
+| Player W/D/L | 38 / 13 / 49 | 44 / 6 / 50 |
+| Round 1 W/D/L | 55 / 38 / 7 | 70 / 17 / 14 |
+| Run score | 3.36 ±0.30 | 3.93 ±0.35 |
+| Checkmate | 65% | 69% |
+
+Repetition endings fell from 5–8% of battles (section 11 runs) to 1–2%. Round 1 is now a little easier; overall the run score rose about half a point.
+
+Fortress only, Classic 8×8, `--rounds 8 --games 60 --player-points ai --board 8 --ai-style fortress`:
+
+| Fortress armies | Player win | Draw | Loss | Run score |
+|---|---|---|---|---|
+| Standard | 38% ±4 | 9% | 54% | 2.42 |
+| Fairy, Ferz/Wazir 2 | 58% ±4 | 8% | 34% | 4.32 |
+| Fairy, Ferz/Wazir 1 | 41% ±4 | 8% | 51% | 2.53 |
+
+Ferz and Wazir are worth about a pawn here; they're now 1 point.
 
 ## Problems found
 

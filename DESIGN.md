@@ -56,8 +56,8 @@ Values are tuned with the simulator (SIMULATION.md section 11): at equal points,
 | Piece | Value | Moves |
 |---|---|---|
 | Berolina pawn | 1 | Moves diagonally forward (two squares from rank 2), captures straight ahead; promotes like a pawn |
-| Ferz | 2 | One square diagonally |
-| Wazir | 2 | One square straight |
+| Ferz | 1 | One square diagonally |
+| Wazir | 1 | One square straight |
 | Man | 3 | Like a king, but can be captured |
 | Camel | 2 | Jumps (3,1) |
 | Grasshopper | 1 | Along queen lines, hopping over a piece to land just beyond it |
@@ -88,6 +88,8 @@ In Growing mode the board opens up during the run:
 - Promotion works as normal (the engine picks the piece) and lasts only for that battle.
 
 ## Battle rules
+- **Insufficient material** (nobody can mate) is decided on points like the move limit; level material is a draw.
+- **Repetition:** the engine is given the moves played so far, so it sees repeated positions as draws and the side that is ahead avoids them.
 - **First move:** White, i.e. the player unless they play Black (see Play as), unless a king starts in check (that side moves first). If both kings start in check, the AI re-places its army.
 - **Move limit:** 10 × board size + 10 plies.
 - **Win:** checkmate, or more material at the move limit, shown as a win/defeat **on points**.
@@ -123,16 +125,15 @@ In Growing mode the board opens up during the run:
 - Code layout and conventions: see [CLAUDE.md](CLAUDE.md).
 
 ## Known issues
-- **5×5 draws:** round 1 in Growing mode draws ~38% of the time; small armies often trade down to bare kings or insufficient material.
-- **Repetition while ahead:** the AI has been seen accepting threefold repetition while several points up. Fairy-Stockfish's contempt setting is the first thing to try.
+- **5×5 draws:** round 1 in Growing mode drew ~38% of the time; deciding insufficient material on points and showing the engine the move history brought that to 17% (SIMULATION.md section 12).
 - **Safari / iOS:** the engine needs cross-origin isolation; COEP is forced to require-corp with a one-time reload fallback (untested on a real iPhone).
-- **Fairy balance:** Fortress with fairy pieces is still weak (Ferz/Wazir likely overpriced at 2); fusion pieces and the shop player buying fairy offers aren't measured yet.
+- **Fairy balance:** fusion pieces and the shop player buying fairy offers aren't measured yet.
 
 ## Roadmap
 Done: game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as.
 
 Next candidates (not yet decided):
-1. **Fix the known issues** above (contempt; deciding insufficient-material endings on points).
+1. **Fusing three pawns** into a Knight, Bishop or Man (decided; next up).
 2. **Browser smoke test** (Playwright in CI): a full run including reload mid-battle.
 3. **Seeded runs:** one seed per run for reproducible bugs, and daily challenges.
 4. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.

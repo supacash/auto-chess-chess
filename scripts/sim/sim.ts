@@ -38,6 +38,7 @@ const { values: opts } = parseArgs({
     workers: { type: 'string' },
     player: { type: 'string', default: 'redraft' },
     'player-style': { type: 'string', default: 'random' },
+    'ai-style': { type: 'string', default: 'random' },
     lead: { type: 'string', default: '5' },
     'player-points': { type: 'string', default: 'economy' },
     'ai-budget': { type: 'string' },
@@ -56,6 +57,11 @@ const DEPTH = opts.depth ? Number(opts.depth) : undefined;
 const WORKERS = Math.min(RUNS, opts.workers ? Number(opts.workers) : Math.max(1, availableParallelism() - 2));
 const LEAD = Number(opts.lead);
 const PLAYER_STYLE = opts['player-style']!;
+/** `--ai-style <id>` makes every AI opponent use one style (to measure it on its own). */
+const AI_STYLE = opts['ai-style']!;
+if (AI_STYLE !== 'random' && !AI_STYLES.some((s) => s.id === AI_STYLE)) {
+  throw new Error(`--ai-style must be random or one of: ${AI_STYLES.map((s) => s.id).join(', ')}`);
+}
 /** economy = start army + gold + income so far; ai = same budget as this round's AI (isolates engine/style balance). */
 const PLAYER_POINTS = opts['player-points']!;
 /** `--ai-budget base,perRound` replaces aiBudget's 6×round (the ±1 noise is kept). */
@@ -133,7 +139,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
 
   for (let round = 1; round <= ROUNDS; round++) {
     const spec = boardFor(round);
-    const aiStyle = pickStyle(rng, AI_FAIRY);
+    const aiStyle = AI_STYLE === 'random' ? pickStyle(rng, AI_FAIRY) : AI_STYLES.find((s) => s.id === AI_STYLE)!;
     const aiPoints = AI_BUDGET
       ? Math.max(1, AI_BUDGET[0] + AI_BUDGET[1] * round + randomInt(rng, 3) - 1)
       : aiBudget(round, rng, 6, MODE.roundOneDiscount, MODE.aiBonus);

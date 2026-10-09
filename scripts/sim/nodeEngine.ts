@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { variantsIni } from '../../src/chess/boardSpec';
-import { type Candidate, parseInfo } from '../../src/engine/pick';
+import { type Candidate, type History, parseInfo, positionCommand } from '../../src/engine/pick';
 import type { MoveSource } from '../../src/game/runBattle';
 
 /** Runs Fairy-Stockfish WASM as a UCI process (same engine as the browser). */
@@ -71,15 +71,15 @@ export class NodeEngine implements MoveSource {
     await this.sync();
   }
 
-  async candidates(fen: string, depth: number): Promise<Candidate[]> {
+  async candidates(fen: string, depth: number, history?: History): Promise<Candidate[]> {
     try {
-      return await this.search(fen, depth);
+      return await this.search(fen, depth, history);
     } catch (e) {
       if (e instanceof EngineFailure) throw e;
       this.restarts++;
       await this.restart();
       try {
-        return await this.search(fen, depth);
+        return await this.search(fen, depth, history);
       } catch (e2) {
         if (e2 instanceof EngineFailure) throw e2;
         // Same position stalls again: a real engine hang. Leave a fresh engine for the next game.
@@ -127,7 +127,7 @@ export class NodeEngine implements MoveSource {
     await this.sync();
   }
 
-  private async search(fen: string, depth: number): Promise<Candidate[]> {
+  private async search(fen: string, depth: number, history?: History): Promise<Candidate[]> {
     const lines = new Map<number, Candidate>();
     const onLine = (line: string) => {
       const info = parseInfo(line);
@@ -135,7 +135,7 @@ export class NodeEngine implements MoveSource {
     };
     this.listeners.add(onLine);
     const done = this.waitFor((l) => l.startsWith('bestmove') || UNSUPPORTED.test(l), `search of ${fen}`);
-    this.send(`position fen ${fen}`);
+    this.send(positionCommand(fen, history));
     this.send(`go depth ${this.depthOverride ?? depth}`);
     let reply: string;
     try {

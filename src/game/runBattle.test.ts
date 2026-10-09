@@ -3,6 +3,7 @@ import { BOARDS } from '../chess/boardSpec';
 import { loadRulesForNode } from '../chess/testRules';
 import { PLY_LIMIT } from '../rules/battle';
 import { seededRng } from '../rules/rng';
+import { positionCommand } from '../engine/pick';
 import { type MoveSource, runBattle } from './runBattle';
 
 /** Engine stand-in that never answers, forcing the random-legal-move fallback. */
@@ -96,5 +97,23 @@ describe('runBattle', () => {
       decisive: { lead: 10, plies: 3 },
     });
     expect(result).toMatchObject({ winner: 'w', reason: 'decisive', plies: 3 });
+  });
+
+  it('gives the engine the moves played so far, so it can see repetitions', async () => {
+    const histories: string[] = [];
+    const engine: MoveSource = {
+      newGame: async () => {},
+      candidates: async (fen, _depth, history) => {
+        histories.push(positionCommand(fen, history));
+        return fen.includes(' w ') ? [{ move: 'e1d1', score: 0 }] : [{ move: 'e8d8', score: 0 }];
+      },
+    };
+    const start = '4k3/p7/8/8/8/8/P7/4K3 w - - 0 1';
+    await runBattle(start, engine, seededRng(1), async () => {}, { plyLimit: 3 });
+    expect(histories).toEqual([
+      `position fen ${start}`,
+      `position fen ${start} moves e1d1`,
+      `position fen ${start} moves e1d1 e8d8`,
+    ]);
   });
 });
