@@ -23,8 +23,8 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **Main menu** (the landing screen, and *Menu* in the header): *Resume game* (shown while a run or a Play it game is in progress, with its round and lives), *New game*, *Multiplayer*, and *Watch your last battle*. A battle interrupted by a reload is reported here.
 - **New run window** (opens from *New game*) sets the run's settings, which are fixed for the whole run:
   - **Board (game mode):** *Growing board* (default; 5×5 growing to 8×8, see Board sizes) or *Classic* (8×8 throughout).
-  - **Difficulty:** how fast the AI's budget grows: Easy 5×round, Normal 6×round (default), Hard 7×round.
-  - **Play as:** White (default; you move first), Black (the opponent moves first) or Random each round. Your pieces are always white to the engine; playing Black only swaps the colours on screen and who moves first.
+  - **Difficulty:** how fast the AI's budget grows: Easy 5.5×round, Normal 6×round (default), Hard 6.5×round (5 and 7 were too far apart: SIMULATION.md §13).
+  - **Play as:** White (default; you move first), Black (the opponent moves first, but its army is 10% smaller: moving second cost ~18 points of win rate) or Random each round. Your pieces are always white to the engine; playing Black only swaps the colours on screen and who moves first.
   - **Fairy pieces** (default on): fairy pieces in the shop and in AI armies, and fusion. Off = standard chess pieces only.
   - **Reveal opponent's placement:** an easier option that shows where the AI's pieces are during placement.
   - Starting a new run while one is in progress warns that it will be abandoned.
@@ -109,20 +109,20 @@ In Growing mode the board opens up during the run:
 
 ## AI opponent
 - **Engine:** Fairy-Stockfish (WASM) plays both sides with identical settings: depth 8, MultiPV 3, picking randomly among moves within ~50 centipawns of the best for variety. Skill is in drafting and placement, not a better engine.
-- **Budget per round:** difficulty × round, ±1 random, −1 in round 1, and +1 every round in Growing mode (matching its extra starting pawn so both modes have the same balance).
+- **Budget per round:** difficulty × round (rounded), ±1 random, −1 in round 1, and +1 every round in Growing mode (matching its extra starting pawn so both modes have the same balance). −10% when the player is Black. Never more than a full board of queens around the king (15 queens, 135 points, on 8×8).
 - **Styles** (a new style and army each round, shown during placement):
 
   | Style | Draft | Layout |
   |---|---|---|
   | Balanced | ~35% pawns, an even mix | King on d/e behind a pawn shield |
   | Fortress | ~60% pawns, minor pieces and rooks | King tucked in a corner behind a full pawn wall |
-  | Heavy Artillery | ~15% pawns, queens and rooks | Rooks on the back row, queen central |
-  | Cavalry Charge | ~25% pawns, knights and bishops | Pieces pushed forward; the hardest style to beat |
+  | Heavy Artillery | ~20% pawns, rooks and queens | Rooks on the back row, queen central |
+  | Cavalry Charge | ~25% pawns, knights and bishops | Pieces pushed forward |
   | Menagerie (fairy only) | ~30% pawns, mostly fairy pieces, many Berolina pawns | Pieces a little forward |
 
 - **With fairy pieces on**, every style also drafts its own fairy pieces (Fortress: Ferz, Wazir, Man, Cannon; Heavy Artillery: Cannon, Chancellor, Archbishop, Amazon; Cavalry: Camel, Centaur, Archbishop; Balanced: a little of each), some of its pawns are Berolina pawns, and its leftover points can go into fusions (as if it had bought the partner). Fairy pieces are placed like the standard piece they resemble (short-range ones like knights, cannons like rooks).
 
-- **Drafting:** non-pawn pieces by the style's weights, the rest on pawns (at most 8, and only as many as fit), then leftover points into upgrades. Armies never exceed the board's home squares.
+- **Drafting:** non-pawn pieces by the style's weights, the rest on pawns (at most 8, and only as many as fit), then more of the style's pieces while squares are free, then leftover points into upgrades (pawns last, so pawn-heavy styles keep their pawns). Armies never exceed the board's home squares.
 - **Placement:** each square is scored per piece for the style (tables written for 8×8 and scaled to smaller boards), with random noise and a random left/right flip. Pieces leave room for the pawns placed after them.
 - **Engine safety net:** a search over 10 seconds plays a random legal move instead and restarts the engine.
 
@@ -146,7 +146,7 @@ Live, TFT-style matches for 4 players. Everything that decides a match is determ
 - **Health:** everyone starts at 20 HP. Losing a battle costs the round number plus 1 per 5 points of material the winner has left; a draw costs nothing. At 0 HP you're out; lower HP places worse among players knocked out in the same round. Last one standing wins (places 1st–4th).
 - **Rounds:** everyone shops and places at the same time for 45 seconds (20 in Blitz), ending early when all are Ready. Your next opponent is known as soon as the shop opens (pairings come from the match seed), and you see the pieces they've placed (types only, updated as they shop); where they stand stays hidden until the battle starts (army positions are protected by the Firestore rules). If your king is still on the bench when the timer ends, it's placed for you.
 - **Pairings and sides:** random each round from the match seed, including who is White, but nobody meets last round's opponent again if any other pairing avoids it (with two players left it can't be avoided; meeting a copy's owner counts as meeting them); White moves first. Your side is announced before the battle ("You're Black against …"), and your pieces are drawn in your colour at the bottom of the board. With an odd number left, the last player fights a copy of another player's army; only the odd player can take damage or extend a streak in that battle.
-- **Income:** base 5, +1 for a win (+1 for a draw), plus a streak bonus for win or loss streaks: 2 in a row +1, 3 +2, 4 or more +3. Draws neither extend nor break a streak and pay no streak bonus. Streaks show in the health list (🔥 wins, ❄️ losses).
+- **Income:** base 5, +1 for a win (+1 for a draw), plus a streak bonus for win or loss streaks: 2 in a row +1, 3 +2, 4 or more +3. Draws neither extend nor break a streak and pay no streak bonus. Streaks show in the health list (🔥 wins, ❄️ losses). +1 gold after a round played as Black.
 - **Battles:** auto only (no Play it in multiplayer). You watch your own. Online, each phone computes only its own battle and reports the result to the room; bot-vs-bot battles are computed by the first seated person's phone on a second engine, mostly during the shop (their armies are known from the seed). The round is applied from the reported results once everyone has watched theirs (or after 2 minutes, unreported battles counting as draws), so every phone gets the same health list; a phone still playing when the room moves on stops and catches up. Offline, the other battles run on the second engine alongside yours. Engines load when a match starts.
 - **Board:** Classic 8×8 with standard pieces while multiplayer is being tested. Economy otherwise as in single player (offers, upgrades, fusion).
 - **Bots:** AI-drafted armies at the single-player Normal budget, the same on every client.
