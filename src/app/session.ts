@@ -1,5 +1,17 @@
 import type { BoardSpec } from '../chess/boardSpec';
-import { clearGame, loadBest, loadGame, SAVE_VERSION, saveBest, saveGame } from '../game/storage';
+import type { BattleRecord } from '../game/record';
+import { snapshotArmy } from '../game/snapshot';
+import {
+  clearGame,
+  loadBest,
+  loadGame,
+  loadReplay,
+  SAVE_VERSION,
+  saveBest,
+  saveGame,
+  saveReplay,
+} from '../game/storage';
+import { RULES_VERSION } from '../game/version';
 import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, pickStyle, placeAiArmy } from '../rules/aiArmy';
 import type { BattleResult } from '../rules/battle';
 import { difficulty, type RunSettings } from '../rules/difficulty';
@@ -9,7 +21,7 @@ import type { Piece } from '../rules/pieces';
 import type { ManualState } from '../game/manualBattle';
 import { armyErrors, fitToBoard } from '../rules/placement';
 import { type StartPosition, startPosition } from '../rules/position';
-import type { Rng } from '../rules/rng';
+import { type Rng, randomSeed } from '../rules/rng';
 import { applyResult, isRunOver, newRun, nextRound, type Run, runScore } from '../rules/run';
 
 /** What finishing a battle did to the run, for the result screen. */
@@ -33,6 +45,8 @@ export class Session {
   aiStyle: AiStyle = AI_STYLES[0];
   /** The game the player is playing themselves this round, if one is in progress. */
   manual: ManualState | null = null;
+  /** The last finished battle, for Watch replay (kept across reloads). */
+  lastReplay: BattleRecord | null = null;
 
   constructor(private readonly rng: Rng = Math.random) {}
 
@@ -66,6 +80,7 @@ export class Session {
    * as a loss; `notice` explains that.
    */
   restore(): { notice: string; firstVisit: boolean } {
+    this.lastReplay = loadReplay();
     const saved = loadGame();
     const style = saved && AI_STYLES.find((s) => s.id === saved.ai.styleId);
     if (!saved || !style) {
@@ -153,6 +168,36 @@ export class Session {
   saveManual(state: ManualState | null): void {
     this.manual = state;
     this.persist();
+  }
+
+  /** A fresh seed for a battle's move picking. */
+  newSeed(): number {
+    return randomSeed(this.rng);
+  }
+
+  /**
+   * The parts of a battle record known when it starts (call before finishBattle, which moves the
+   * run on to the next round): the round, board and the player's army as placed.
+   */
+  startRecord(fen: string, seed: number, manual: boolean): Omit<BattleRecord, 'moves' | 'evals' | 'result'> {
+    const { settings, round, shop } = this.run;
+    const spec = this.board;
+    return {
+      format: 1,
+      rules: RULES_VERSION,
+      board: spec.variant,
+      round,
+      fen,
+      seed,
+      manual,
+      player: snapshotArmy(shop.pieces, spec, { mode: settings.mode, round, fairy: settings.fairy }),
+    };
+  }
+
+  /** Keeps a finished battle for Watch replay. */
+  saveReplay(record: BattleRecord): void {
+    this.lastReplay = record;
+    saveReplay(record);
   }
 
   setPieces(pieces: Piece[]): void {

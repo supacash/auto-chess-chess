@@ -6,6 +6,7 @@ import { OFFER_COUNT } from '../rules/economy';
 import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
 import type { Run } from '../rules/run';
 import type { ManualState } from './manualBattle';
+import { type BattleRecord, parseRecord } from './record';
 
 /** Saved squares may be anywhere on the biggest board; the game fits them to the current one (fitToBoard). */
 const MAX_FILES = Math.max(...BOARDS.map((b) => b.files));
@@ -14,6 +15,8 @@ const MAX_HOME_ROWS = Math.max(...BOARDS.map((b) => b.homeRows));
 // The key names keep their original "v1" suffix so existing saves are found; the save's format
 // version lives inside it (SavedGame.version) and is upgraded by MIGRATIONS.
 const RUN_KEY = 'acc.run.v1';
+/** The last finished battle, for Watch replay. */
+const REPLAY_KEY = 'acc.replay.v1';
 const BEST_KEY = 'acc.best.v1';
 
 /** Current save format. Bump it and add a MIGRATIONS step whenever SavedGame changes shape. */
@@ -45,6 +48,23 @@ export function loadGame(): SavedGame | null {
 export function saveGame(game: SavedGame): void {
   try {
     localStorage.setItem(RUN_KEY, JSON.stringify(game));
+  } catch {
+    // ignore
+  }
+}
+
+export function loadReplay(): BattleRecord | null {
+  try {
+    const raw = localStorage.getItem(REPLAY_KEY);
+    return raw ? parseRecord(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveReplay(record: BattleRecord): void {
+  try {
+    localStorage.setItem(REPLAY_KEY, JSON.stringify(record));
   } catch {
     // ignore
   }
@@ -172,7 +192,8 @@ const UCI_MOVE = /^[a-z]\d+[a-z]\d+[a-z]?$/;
 function parseManual(data: unknown): { manual?: ManualState } {
   if (!isObject(data) || typeof data.fen !== 'string' || !Array.isArray(data.moves)) return {};
   if (!data.moves.every((m) => typeof m === 'string' && UCI_MOVE.test(m))) return {};
-  return { manual: { fen: data.fen, moves: data.moves as string[] } };
+  const seed = typeof data.seed === 'number' && Number.isInteger(data.seed) && data.seed >= 0 ? data.seed : 0;
+  return { manual: { fen: data.fen, moves: data.moves as string[], seed } };
 }
 
 /** Offers are optional (saves from before the shop had them have none; the session rolls new ones). */

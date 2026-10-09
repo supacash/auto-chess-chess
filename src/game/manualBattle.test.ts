@@ -2,7 +2,6 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { BOARD_8 } from '../chess/boardSpec';
 import { loadRulesForNode } from '../chess/testRules';
 import { positionCommand } from '../engine/pick';
-import { seededRng } from '../rules/rng';
 import { ManualBattle } from './manualBattle';
 import type { MoveSource } from './runBattle';
 
@@ -34,17 +33,17 @@ describe('ManualBattle', () => {
     };
     const b = new ManualBattle(START, BOARD_8);
     b.playerMove('e1d1');
-    const move = await b.opponentMove(engine, seededRng(1));
+    const move = await b.opponentMove(engine);
     expect(move.uci).toBe('e8d8');
     expect(commands).toEqual([`position fen ${START} moves e1d1`]);
-    expect(b.state).toEqual({ fen: START, moves: ['e1d1', 'e8d8'] });
+    expect(b.state).toEqual({ fen: START, moves: ['e1d1', 'e8d8'], seed: 0 });
     b.delete();
   });
 
   it('falls back to a random legal move when the engine has none', async () => {
     const silent: MoveSource = { newGame: async () => {}, candidates: async () => [] };
     const b = new ManualBattle(START, BOARD_8, ['e1d1']);
-    await b.opponentMove(silent, seededRng(2));
+    await b.opponentMove(silent);
     expect(b.moves).toHaveLength(2);
     expect(b.playerToMove).toBe(true);
     b.delete();
@@ -86,5 +85,17 @@ describe('ManualBattle', () => {
     expect(b.resign()).toMatchObject({ winner: 'b', reason: 'resign' });
     expect(b.legalMoves().size).toBe(0);
     b.delete();
+  });
+
+  it('picks the same fallback replies for the same seed', async () => {
+    const silent: MoveSource = { newGame: async () => {}, candidates: async () => [] };
+    const replies = async (seed: number) => {
+      const b = new ManualBattle(START, BOARD_8, ['e1d1'], seed);
+      await b.opponentMove(silent);
+      const moves = [...b.moves];
+      b.delete();
+      return moves;
+    };
+    expect(await replies(7)).toEqual(await replies(7));
   });
 });

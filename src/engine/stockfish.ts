@@ -1,5 +1,5 @@
 import { variantsIni } from '../chess/boardSpec';
-import { type Candidate, type History, parseInfo, positionCommand } from './pick';
+import { type Candidate, ENGINE_SETUP, type History, parseInfo, positionCommand } from './pick';
 
 /**
  * Fairy-Stockfish (WASM, multithreaded build) running in the page. It needs SharedArrayBuffer, so the
@@ -7,8 +7,6 @@ import { type Candidate, type History, parseInfo, positionCommand } from './pick
  * Pages that can't send COOP/COEP headers. Files are copied to public/fairy/ at build time.
  */
 const ENGINE_DIR = `${import.meta.env.BASE_URL}fairy/`;
-/** Lines of analysis per search; pickMove chooses among the close ones. */
-const MULTI_PV = 3;
 /** A search or handshake that takes longer than this is treated as a hung engine. */
 const TIMEOUT_MS = 10_000;
 
@@ -102,7 +100,7 @@ export class Engine {
     if ((await ready) === null) throw new Error('The chess engine did not start');
     instance.FS.writeFile('/variants.ini', variantsIni());
     this.send('setoption name VariantPath value /variants.ini');
-    this.send(`setoption name MultiPV value ${MULTI_PV}`);
+    for (const cmd of ENGINE_SETUP) this.send(cmd);
     if (this.variant) this.send(`setoption name UCI_Variant value ${this.variant}`);
     if (!(await this.sync())) throw new Error('The chess engine did not start');
   }

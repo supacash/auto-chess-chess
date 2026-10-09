@@ -6,6 +6,19 @@ export interface Candidate {
   score: number;
 }
 
+/** Lines of analysis per search; pickMove chooses among the close ones. */
+export const MULTI_PV = 3;
+
+/**
+ * Engine options sent at startup, in the browser and the simulator alike. One thread and a fixed
+ * hash keep searches deterministic, so a battle replays exactly from its start position and seed.
+ */
+export const ENGINE_SETUP = [
+  'setoption name Threads value 1',
+  'setoption name Hash value 16',
+  `setoption name MultiPV value ${MULTI_PV}`,
+];
+
 /** Moves scoring within this many centipawns of the best are picked at random, for variety. */
 export const PICK_MARGIN = 50;
 

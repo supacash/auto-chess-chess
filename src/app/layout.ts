@@ -46,6 +46,7 @@ export function renderLayout(root: HTMLElement): void {
     </div>
     <p class="fight-hint" id="fight-hint" hidden></p>
     <p class="hint" id="points"></p>
+    <button type="button" id="last-replay" class="link-button" hidden>Watch your last battle</button>
   </section>
 
   <section id="battle" hidden>
@@ -66,10 +67,16 @@ export function renderLayout(root: HTMLElement): void {
       <button type="button" id="undo">Undo</button>
       <button type="button" id="resign" class="sell">Resign</button>
     </div>
+    <div class="actions" id="replay-actions">
+      <button type="button" id="replay-done" class="primary" hidden>Done</button>
+    </div>
     <div class="result" id="result" hidden>
       <h2 id="result-title"></h2>
       <p id="result-detail"></p>
-      <button type="button" id="next" class="primary">Next round</button>
+      <div class="actions result-actions">
+        <button type="button" id="replay">Watch replay</button>
+        <button type="button" id="next" class="primary">Next round</button>
+      </div>
     </div>
   </section>
 

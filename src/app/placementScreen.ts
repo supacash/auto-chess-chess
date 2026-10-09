@@ -45,6 +45,7 @@ export class PlacementScreen {
     private readonly session: Session,
     onFight: () => void,
     onPlay: () => void,
+    onReplay: () => void,
   ) {
     this.board = new PlacementBoard($('#board-root'), session.run.shop.pieces, {
       onChange: (pieces) => this.piecesChanged(pieces),
@@ -99,11 +100,13 @@ export class PlacementScreen {
     });
     this.fightBtn.addEventListener('click', onFight);
     this.playBtn.addEventListener('click', onPlay);
+    $('#last-replay').addEventListener('click', onReplay);
   }
 
   /** Shows the screen for the session's current round. */
   show(): void {
     this.section.hidden = false;
+    $('#last-replay').hidden = !this.session.lastReplay;
     const spec = this.session.board;
     const grew = this.shownBoard !== null && this.shownBoard !== spec.variant;
     this.shownBoard = spec.variant;

@@ -36,3 +36,8 @@ export function weightedPick<T>(items: readonly T[], weight: (item: T) => number
   }
   return items[items.length - 1];
 }
+
+/** A random 32-bit seed (for seededRng), e.g. one per battle so it can be replayed. */
+export function randomSeed(rng: Rng): number {
+  return Math.floor(rng() * 2 ** 32) >>> 0;
+}

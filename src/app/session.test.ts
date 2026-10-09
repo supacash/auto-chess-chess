@@ -115,7 +115,7 @@ describe('Session', () => {
 
   it('saves a manual game so a reload resumes it instead of counting a loss', () => {
     const s = ready();
-    const manual = { fen: '4k3/8/8/8/8/8/8/4K3 w - - 0 1', moves: ['e1d1'] };
+    const manual = { fen: '4k3/8/8/8/8/8/8/4K3 w - - 0 1', moves: ['e1d1'], seed: 5 };
     s.saveManual(manual);
     const again = new Session(seededRng(9));
     expect(again.restore().notice).toBe('');

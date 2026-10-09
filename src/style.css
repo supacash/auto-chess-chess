@@ -415,8 +415,21 @@ button.speed.active {
   line-height: 1.45;
 }
 
-.result button {
-  width: 100%;
+.result-actions {
+  margin-top: 0;
+}
+
+.link-button {
+  display: block;
+  min-height: 0;
+  margin: 6px auto 0;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: none;
+  border: none;
+  text-decoration: underline;
 }
 
 [hidden] {

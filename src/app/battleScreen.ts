@@ -1,8 +1,9 @@
 import { type BoardSpec, plyLimit } from '../chess/boardSpec';
 import type { Color } from '../chess/fen';
-import type { Move } from '../chess/rules';
+import { Game, type Move } from '../chess/rules';
 import { checkmateEval, evalShare, formatEval, whiteEval } from '../engine/pick';
 import type { ManualBattle, ManualState } from '../game/manualBattle';
+import { type BattleRecord, recordBoard } from '../game/record';
 import { type MoveSource, runBattle, SEARCH_DEPTH } from '../game/runBattle';
 import { type BattleResult, type EndReason, material, wonOnPoints } from '../rules/battle';
 import { roundIncome } from '../rules/economy';
@@ -29,6 +30,13 @@ const REASON_TEXT: Record<EndReason, string> = {
   resign: 'by resigning',
 };
 
+/** A finished auto battle: its result plus every move and the engine's eval (for white) after it. */
+export interface Playback {
+  result: BattleResult;
+  moves: string[];
+  evals: (number | null)[];
+}
+
 type PlayerAction = { kind: 'move'; uci: string } | { kind: 'undo' } | { kind: 'resign' };
 
 /** The battle screen: animated board, eval bar, playback speed, and the result. */
@@ -43,13 +51,15 @@ export class BattleScreen {
   private readonly promo = $('#promo');
   private readonly undoBtn = $<HTMLButtonElement>('#undo');
   private readonly resignBtn = $<HTMLButtonElement>('#resign');
+  private readonly replayDone = $<HTMLButtonElement>('#replay-done');
   private speed = 1;
   private skipping = false;
   /** Resolves the player's pending turn in a manual game. */
   private pending: ((action: PlayerAction) => void) | null = null;
   private resignTimer = 0;
 
-  constructor(onNext: () => void) {
+  constructor(onNext: () => void, onReplay: () => void) {
+    $('#replay').addEventListener('click', onReplay);
     this.undoBtn.addEventListener('click', () => this.pending?.({ kind: 'undo' }));
     // Resigning takes a second tap, so a stray tap can't throw the game away.
     this.resignBtn.addEventListener('click', () => {
@@ -77,8 +87,8 @@ export class BattleScreen {
     this.section.hidden = true;
   }
 
-  /** Shows and plays a battle from `fen` on `spec` until it ends. */
-  async play(engine: MoveSource, fen: string, firstMover: Color, spec: BoardSpec, rng: Rng): Promise<BattleResult> {
+  /** Shows and plays a battle from `fen` on `spec` until it ends; returns the result with every move and eval. */
+  async play(engine: MoveSource, fen: string, firstMover: Color, spec: BoardSpec, rng: Rng): Promise<Playback> {
     this.speed = 1;
     this.skipping = false;
     this.renderPlaybackButtons();
@@ -96,11 +106,15 @@ export class BattleScreen {
     this.status.textContent = firstMover === 'w' ? 'You move first' : 'Opponent moves first';
     await sleep(INTRO_MS);
 
+    const moves: string[] = [];
+    const evals: (number | null)[] = [];
     const result = await runBattle(
       fen,
       engine,
       rng,
       async (move, game, plies, evalScore) => {
+        moves.push(move.uci);
+        evals.push(evalScore);
         const ms = this.skipping ? 0 : MOVE_MS / this.speed;
         this.view.render(game.fen(), game.spec, {
           last: move,
@@ -119,7 +133,63 @@ export class BattleScreen {
     );
 
     if (result.reason === 'checkmate' && result.winner !== 'draw') this.showEval(checkmateEval(result.winner));
-    return result;
+    return { result, moves, evals };
+  }
+
+  /**
+   * Replays a finished battle move by move with the playback controls, then calls `onDone` from
+   * the Done button. Manual games show no eval bar (none was recorded).
+   */
+  async replay(record: BattleRecord, onDone: () => void): Promise<void> {
+    const spec = recordBoard(record);
+    if (!spec) return;
+    this.speed = 1;
+    this.skipping = false;
+    this.renderPlaybackButtons();
+    const resultWasShown = !this.section.hidden && !this.result.hidden;
+    this.section.hidden = false;
+    this.result.hidden = true;
+    this.manual.hidden = true;
+    this.replayDone.hidden = true;
+    this.playback.hidden = false;
+    $('#eval').hidden = record.manual;
+    $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
+    this.showEval(0);
+
+    const game = new Game(spec, record.fen);
+    try {
+      this.view.render(game.fen(), spec);
+      this.status.textContent = 'Replay';
+      await sleep(INTRO_MS);
+      for (let i = 0; i < record.moves.length; i++) {
+        const move = game.play(record.moves[i]);
+        if (!move) break; // made under rules this build doesn't have
+        const ms = this.skipping ? 0 : MOVE_MS / this.speed;
+        this.view.render(game.fen(), spec, {
+          last: move,
+          animateMs: this.reduceMotion ? 0 : ms * 0.8,
+          check: game.isCheck(),
+        });
+        const score = record.evals[i];
+        if (score !== null && score !== undefined) this.showEval(score);
+        this.status.textContent = this.skipping ? 'Skipping…' : `Replay · move ${Math.ceil((i + 1) / 2)}`;
+        if (ms) await sleep(ms);
+      }
+    } finally {
+      game.delete();
+    }
+    const { result } = record;
+    if (result.reason === 'checkmate' && result.winner !== 'draw') this.showEval(checkmateEval(result.winner));
+    this.status.textContent = 'Replay finished';
+    this.playback.hidden = true;
+    this.replayDone.hidden = false;
+    this.replayDone.onclick = () => {
+      this.replayDone.hidden = true;
+      if (resultWasShown) {
+        this.result.hidden = false;
+        this.status.textContent = 'Final position';
+      } else onDone();
+    };
   }
 
   /**
@@ -130,7 +200,6 @@ export class BattleScreen {
   async playManual(
     engine: MoveSource,
     game: ManualBattle,
-    rng: Rng,
     onSave: (state: ManualState) => void,
   ): Promise<BattleResult> {
     this.section.hidden = false;
@@ -171,7 +240,7 @@ export class BattleScreen {
         this.status.textContent = 'Opponent is thinking…';
         this.undoBtn.disabled = true;
         this.resignBtn.disabled = true;
-        draw(await game.opponentMove(engine, rng));
+        draw(await game.opponentMove(engine));
       }
       onSave(game.state);
       result = game.result();

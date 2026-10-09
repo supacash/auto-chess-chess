@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { variantsIni } from '../../src/chess/boardSpec';
-import { type Candidate, type History, parseInfo, positionCommand } from '../../src/engine/pick';
+import { type Candidate, ENGINE_SETUP, type History, parseInfo, positionCommand } from '../../src/engine/pick';
 import type { MoveSource } from '../../src/game/runBattle';
 
 /** Runs Fairy-Stockfish WASM as a UCI process (same engine as the browser). */
@@ -14,7 +14,6 @@ const ENGINE_PATH = fileURLToPath(new URL('./fairyProcess.cjs', import.meta.url)
 const VARIANTS_PATH = join(mkdtempSync(join(tmpdir(), 'acc-sim-')), 'variants.ini');
 writeFileSync(VARIANTS_PATH, variantsIni());
 /** Same as src/engine/stockfish.ts. */
-const MULTI_PV = 3;
 /** A search or handshake that takes longer than this is treated as a hung engine. */
 const TIMEOUT_MS = 10_000;
 /**
@@ -122,7 +121,7 @@ export class NodeEngine implements MoveSource {
     this.send('uci');
     await ready;
     this.send('setoption name VariantPath value /variants.ini');
-    this.send(`setoption name MultiPV value ${MULTI_PV}`);
+    for (const cmd of ENGINE_SETUP) this.send(cmd);
     if (this.variant) this.send(`setoption name UCI_Variant value ${this.variant}`);
     await this.sync();
   }

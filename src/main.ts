@@ -11,6 +11,7 @@ import { Engine } from './engine/stockfish';
 import { ManualBattle } from './game/manualBattle';
 import type { RunSettings } from './rules/difficulty';
 import type { BattleResult } from './rules/battle';
+import { seededRng } from './rules/rng';
 import { hasStarted, isRunOver } from './rules/run';
 
 const rng = Math.random;
@@ -21,11 +22,15 @@ const placement = new PlacementScreen(
   session,
   () => void fight(),
   () => void playYourself(),
+  () => void watchReplay(),
 );
-const battle = new BattleScreen(() => {
-  if (isRunOver(session.run)) openNewRun();
-  else showPlacement();
-});
+const battle = new BattleScreen(
+  () => {
+    if (isRunOver(session.run)) openNewRun();
+    else showPlacement();
+  },
+  () => void watchReplay(),
+);
 const newRun = new NewRunDialog(startNewRun);
 $('#new-run').addEventListener('click', openNewRun);
 
@@ -92,10 +97,20 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
 /** The engine plays both sides. */
 function fight(): void {
   if (session.armyErrors().length) return;
-  void runRound((loaded) => {
+  void runRound(async (loaded) => {
     const start = session.resolveStart();
+    const seed = session.newSeed();
+    const record = session.startRecord(start.fen, seed, false);
     session.persist(true);
-    return battle.play(loaded, start.fen, start.firstMover, session.board, rng);
+    const { result, moves, evals } = await battle.play(
+      loaded,
+      start.fen,
+      start.firstMover,
+      session.board,
+      seededRng(seed),
+    );
+    session.saveReplay({ ...record, moves, evals, result });
+    return result;
   });
 }
 
@@ -104,17 +119,35 @@ function playYourself(): void {
   if (session.armyErrors().length) return;
   void runRound((loaded) => {
     const start = session.resolveStart();
-    session.saveManual({ fen: start.fen, moves: [] });
-    return playManual(loaded, new ManualBattle(start.fen, session.board));
+    const seed = session.newSeed();
+    session.saveManual({ fen: start.fen, moves: [], seed });
+    return playManual(loaded, new ManualBattle(start.fen, session.board, [], seed));
   });
 }
 
 async function playManual(loaded: Engine, game: ManualBattle): Promise<BattleResult> {
+  const record = session.startRecord(game.start, game.seed, true);
   try {
-    return await battle.playManual(loaded, game, rng, (state) => session.saveManual(state));
+    const result = await battle.playManual(loaded, game, (state) => session.saveManual(state));
+    session.saveReplay({ ...record, moves: [...game.moves], evals: [], result });
+    return result;
   } finally {
     game.delete();
   }
+}
+
+/** Replays the last finished battle (from the result screen, or from placement). */
+async function watchReplay(): Promise<void> {
+  const record = session.lastReplay;
+  if (busy || !record) return;
+  try {
+    await loadRules(); // the replay steps through moves with the rules library (normally loaded with the engine)
+  } catch (err) {
+    placement.setMessage(`Couldn't load the replay: ${err instanceof Error ? err.message : String(err)}`);
+    return;
+  }
+  placement.hide();
+  await battle.replay(record, showPlacement);
 }
 
 /** Picks a saved manual game back up after a reload. */
@@ -124,7 +157,7 @@ function resumeManual(): void {
   void runRound(async (loaded) => {
     let game: ManualBattle;
     try {
-      game = new ManualBattle(saved.fen, session.board, saved.moves);
+      game = new ManualBattle(saved.fen, session.board, saved.moves, saved.seed);
     } catch {
       throw new Error("Your saved game couldn't be resumed");
     }
