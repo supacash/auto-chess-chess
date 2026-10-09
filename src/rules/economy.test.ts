@@ -100,27 +100,10 @@ describe('roundIncome', () => {
   });
 });
 
-describe('engine piece limit', () => {
-  const shopOf = (types: string, gold = 100): Shop => ({
-    gold,
-    pieces: types.split('').map((t) => makePiece(t as PieceType)),
-  });
-
-  it('refuses a pawn that would push pawns + extra pieces past 8', () => {
-    expect(buyPawn(shopOf('KPPPPPPPP')).ok).toBe(false);
-    expect(buyPawn(shopOf('KPPPPPPPBBB')).ok).toBe(false);
-    expect(buyPawn(shopOf('KPPPPPPPBB')).ok).toBe(true);
-  });
-
-  it('refuses an upgrade into an extra piece when the limit is full', () => {
-    const shop = shopOf('KPPPPPPPPRRN');
-    const knight = shop.pieces.find((p) => p.type === 'N')!;
-    expect(upgradePiece(shop, knight.id, 'R').ok).toBe(false);
-  });
-
-  it('allows upgrades that keep the count the same', () => {
-    // Pawn → third bishop: one pawn fewer, one extra bishop more.
-    const shop = shopOf('KPPPPPPPPBB');
+describe('no piece-count limit', () => {
+  it('lets an army have more than 8 pawns plus extra pieces (Fairy-Stockfish accepts them)', () => {
+    const shop: Shop = { gold: 100, pieces: 'KPPPPPPPPBBB'.split('').map((t) => makePiece(t as PieceType)) };
+    expect(buyPawn(shop).ok).toBe(true);
     expect(upgradePiece(shop, shop.pieces[1].id, 'B').ok).toBe(true);
   });
 });

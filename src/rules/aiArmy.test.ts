@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, MAX_PAWNS, pickStyle, placeAiArmy } from './aiArmy';
-import { fitsEngine } from './composition';
+import { BOARDS, homeSquares, pawnSquares } from '../chess/boardSpec';
 import { MAX_ARMY, type PieceType, PIECE_VALUE } from './pieces';
 import { armyErrors } from './placement';
 import { seededRng } from './rng';
@@ -43,7 +43,6 @@ describe('draftAiArmy', () => {
           expect(points(types)).toBeLessThanOrEqual(budget);
           expect(types.length).toBeLessThanOrEqual(MAX_ARMY);
           expect(count(types, 'P')).toBeLessThanOrEqual(MAX_PAWNS);
-          expect(fitsEngine(types)).toBe(true);
         }
       }
     }
@@ -66,6 +65,37 @@ describe('draftAiArmy', () => {
     expect(avg('fortress', 'P')).toBeGreaterThan(avg('heavy', 'P'));
     expect(avg('heavy', 'Q') + avg('heavy', 'R')).toBeGreaterThan(avg('cavalry', 'Q') + avg('cavalry', 'R'));
     expect(avg('cavalry', 'N') + avg('cavalry', 'B')).toBeGreaterThan(avg('heavy', 'N') + avg('heavy', 'B'));
+  });
+});
+
+describe('small boards', () => {
+  it('drafts armies that fit every board and still spend the budget', () => {
+    for (const spec of BOARDS) {
+      for (const s of AI_STYLES) {
+        for (let seed = 0; seed < 10; seed++) {
+          const budget = 6 * spec.files; // generous for the board
+          const types = draftAiArmy(budget, s, seededRng(seed), spec);
+          expect(types.length).toBeLessThanOrEqual(homeSquares(spec));
+          expect(count(types, 'P')).toBeLessThanOrEqual(pawnSquares(spec));
+          expect(points(types)).toBeLessThanOrEqual(budget);
+          expect(points(types)).toBeGreaterThanOrEqual(budget - 3);
+        }
+      }
+    }
+  });
+
+  it('places every drafted piece legally on every board', () => {
+    for (const spec of BOARDS) {
+      for (const s of AI_STYLES) {
+        for (let seed = 0; seed < 20; seed++) {
+          const rng = seededRng(seed);
+          const types = draftAiArmy(5 * spec.files, s, rng, spec);
+          const pieces = placeAiArmy(types, s, rng, spec);
+          expect(armyErrors(pieces, spec)).toEqual([]);
+          expect(pieces).toHaveLength(types.length);
+        }
+      }
+    }
   });
 });
 

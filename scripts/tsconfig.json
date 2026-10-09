@@ -4,5 +4,7 @@
   "compilerOptions": {
     "types": ["node", "vite/client"]
   },
-  "include": ["sim/**/*.ts", "../src/**/*.ts"]
+  "include": ["sim/**/*.ts", "../src/**/*.ts"],
+  // The root config leaves tests out of the browser typecheck (they use Node APIs); check them here.
+  "exclude": []
 }

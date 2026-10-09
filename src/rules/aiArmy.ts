@@ -1,12 +1,14 @@
-import { fitsEngine, MAX_PAWN_SLOTS, pawnSlots } from './composition';
+import { BOARD_8, type BoardSpec, homeSquares, pawnSquares } from '../chess/boardSpec';
 import { UPGRADES, upgradeCost } from './economy';
 import { makePiece, MAX_ARMY, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
-import { canPlace, HOME_RANKS, pieceAt } from './placement';
+import { BACK_RANK, canPlace, frontRank, pieceAt } from './placement';
 import { type Rng, randomInt } from './rng';
 
-// All squares here are AI-local: rank 0 is the AI's back row, rank 2 its front row.
+// All squares here are AI-local: rank 0 is the AI's back row, rank homeRows − 1 its front row.
+// Style preferences are written for 8 files and 3 home rows and scaled to smaller boards.
 
-export const MAX_PAWNS = MAX_PAWN_SLOTS;
+/** At most this many pawns, whatever the board (a standard chess side's worth). */
+export const MAX_PAWNS = 8;
 
 /** How an AI opponent drafts and lays out its army. */
 export interface AiStyle {
@@ -101,16 +103,18 @@ export function pickStyle(rng: Rng): AiStyle {
 }
 
 /**
- * Picks piece types (always including the king) whose values sum to at most `budget`:
- * non-pawn pieces by the style's weights, the rest as pawns, and any budget left once
- * the pawn cap is hit goes into upgrades. The army always fits the engine's piece limit (composition.ts).
+ * Picks piece types (always including the king) whose values sum to at most `budget` and that
+ * fit `spec`'s home rows: non-pawn pieces by the style's weights, the rest as pawns, and any budget
+ * left once the board or the pawn cap is full goes into upgrades.
  */
-export function draftAiArmy(budget: number, style: AiStyle, rng: Rng): PieceType[] {
+export function draftAiArmy(budget: number, style: AiStyle, rng: Rng, spec: BoardSpec = BOARD_8): PieceType[] {
   const types: PieceType[] = ['K'];
+  const capacity = Math.min(MAX_ARMY, homeSquares(spec));
+  const pawnCap = Math.min(MAX_PAWNS, pawnSquares(spec));
   let pieceBudget = budget - Math.round(budget * style.pawnShare);
   const options = (['Q', 'R', 'B', 'N'] as const).filter((t) => (style.weights[t] ?? 0) > 0);
-  while (types.length < MAX_ARMY) {
-    const affordable = options.filter((t) => PIECE_VALUE[t] <= pieceBudget && fitsEngine([...types, t]));
+  while (types.length < capacity) {
+    const affordable = options.filter((t) => PIECE_VALUE[t] <= pieceBudget);
     if (affordable.length === 0) break;
     const pick = weightedPick(affordable, (t) => style.weights[t]!, rng);
     types.push(pick);
@@ -118,7 +122,7 @@ export function draftAiArmy(budget: number, style: AiStyle, rng: Rng): PieceType
   }
 
   let left = budget - points(types);
-  const pawns = Math.max(0, Math.min(left, MAX_PAWNS - pawnSlots(types), MAX_ARMY - types.length));
+  const pawns = Math.max(0, Math.min(left, pawnCap, capacity - types.length));
   for (let i = 0; i < pawns; i++) types.push('P');
   left -= pawns;
   // Upgrades cost 2 or 4, so an odd leftover can't be spent; trade a pawn back to make it even.
@@ -133,9 +137,7 @@ export function draftAiArmy(budget: number, style: AiStyle, rng: Rng): PieceType
     const found = order
       .map(([from, i]) => ({
         i,
-        to: UPGRADES[from].filter(
-          (to) => upgradeCost(from, to) <= left && fitsEngine(types.map((t, j) => (j === i ? to : t))),
-        ),
+        to: UPGRADES[from].filter((to) => upgradeCost(from, to) <= left),
       }))
       .find((o) => o.to.length > 0);
     if (!found) break;
@@ -151,27 +153,34 @@ export function draftAiArmy(budget: number, style: AiStyle, rng: Rng): PieceType
  * The king goes first onto a preferred file (randomly flipped left/right), then pieces
  * from most to least valuable take their best free square. Pieces with no legal square are dropped.
  */
-export function placeAiArmy(types: PieceType[], style: AiStyle, rng: Rng): Piece[] {
+export function placeAiArmy(types: PieceType[], style: AiStyle, rng: Rng, spec: BoardSpec = BOARD_8): Piece[] {
   const flip = rng() < 0.5;
   const placed: Piece[] = [];
-  const free = (sq: Square, type: PieceType) => canPlace(type, sq) && !pieceAt(placed, sq);
+  const free = (sq: Square, type: PieceType) => canPlace(type, sq, spec) && !pieceAt(placed, sq);
 
   if (types.includes('K')) {
     const preferred = style.kingFiles
-      .map((f) => ({ file: flip ? 7 - f : f, rank: style.kingRank }))
+      .map((f) => fromFile8(flip ? 7 - f : f, spec))
+      .map((file) => ({ file, rank: style.kingRank }))
       .find((sq) => free(sq, 'K'));
-    const king = preferred ?? allSquares().find((sq) => free(sq, 'K'))!;
+    const king = preferred ?? allSquares(spec).find((sq) => free(sq, 'K'))!;
     placed.push(makePiece('K', king));
   }
   const kingSq = placed[0]?.square ?? null;
 
   const rest = types.filter((t) => t !== 'K').sort((a, b) => PIECE_VALUE[b] - PIECE_VALUE[a]);
+  // Pawns go last and can't use the back row, so other pieces leave enough other squares for them.
+  let pawnsLeft = rest.filter((t) => t === 'P').length;
+  const pawnRoom = () => allSquares(spec).filter((sq) => sq.rank !== BACK_RANK && !pieceAt(placed, sq)).length;
   for (const type of rest) {
+    if (type === 'P') pawnsLeft--;
+    const crowded = type !== 'P' && pawnRoom() <= pawnsLeft;
     let best: Square | null = null;
     let bestScore = -Infinity;
-    for (const sq of allSquares()) {
+    for (const sq of allSquares(spec)) {
       if (!free(sq, type)) continue;
-      const score = squareScore(type, sq, style, kingSq, placed) + rng() * PLACEMENT_NOISE;
+      if (crowded && sq.rank !== BACK_RANK) continue;
+      const score = squareScore(type, sq, style, kingSq, placed, spec) + rng() * PLACEMENT_NOISE;
       if (score > bestScore) {
         best = sq;
         bestScore = score;
@@ -182,19 +191,30 @@ export function placeAiArmy(types: PieceType[], style: AiStyle, rng: Rng): Piece
   return placed;
 }
 
-/** How much `style` likes `type` on `sq`. Tables are left/right symmetric. */
+/** Maps a file on an 8-wide board to the nearest file on `spec`. */
+function fromFile8(file8: number, spec: BoardSpec): number {
+  return Math.round((file8 * (spec.files - 1)) / 7);
+}
+
+/**
+ * How much `style` likes `type` on `sq`. Tables are left/right symmetric and written for 8 files
+ * and 3 home rows: other boards are read through the nearest 8-file column, with the front row
+ * always treated as row 2.
+ */
 export function squareScore(
   type: PieceType,
   sq: Square,
   style: AiStyle,
   king: Square | null,
   placed: Piece[] = [],
+  spec: BoardSpec = BOARD_8,
 ): number {
-  const { file, rank } = sq;
+  const file = Math.round((sq.file * 7) / (spec.files - 1));
+  const rank = sq.rank === frontRank(spec) ? 2 : sq.rank;
   switch (type) {
     case 'P': {
-      const shields = king && Math.abs(file - king.file) <= 1 && rank === king.rank + 1;
-      const doubled = placed.some((p) => p.type === 'P' && p.square?.file === file);
+      const shields = king && Math.abs(sq.file - king.file) <= 1 && sq.rank === king.rank + 1;
+      const doubled = placed.some((p) => p.type === 'P' && p.square?.file === sq.file);
       return (
         (rank === 1 ? 2 : 1) +
         CENTER[file] * 0.5 +
@@ -216,9 +236,9 @@ export function squareScore(
   }
 }
 
-function allSquares(): Square[] {
+function allSquares(spec: BoardSpec): Square[] {
   const out: Square[] = [];
-  for (let rank = 0; rank < HOME_RANKS; rank++) for (let file = 0; file < 8; file++) out.push({ file, rank });
+  for (let rank = 0; rank < spec.homeRows; rank++) for (let file = 0; file < spec.files; file++) out.push({ file, rank });
   return out;
 }
 

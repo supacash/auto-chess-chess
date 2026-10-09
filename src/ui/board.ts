@@ -1,5 +1,6 @@
+import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
 import { type Piece, type Square, PIECE_NAME } from '../rules/pieces';
-import { HOME_RANKS, movePiece, pieceAt, placementError } from '../rules/placement';
+import { movePiece, pieceAt, placementError } from '../rules/placement';
 import { mirror } from '../rules/position';
 import { fillGlyph, label, squareEl } from './boardDom';
 
@@ -31,6 +32,7 @@ export class PlacementBoard {
   private selected: string | null = null;
   private reportedSelection: string | null = null;
   private press: Press | null = null;
+  private spec: BoardSpec = BOARD_8;
   private readonly boardEl: HTMLElement;
   private readonly benchEl: HTMLElement;
 
@@ -61,6 +63,12 @@ export class PlacementBoard {
     this.render();
   }
 
+  /** Switches the board size (e.g. when the board grows between rounds). */
+  setSpec(spec: BoardSpec): void {
+    this.spec = spec;
+    this.render();
+  }
+
   /** Shows the opponent's placed army in its rows, or hides it again with null. */
   setEnemy(pieces: Piece[] | null): void {
     this.enemy = pieces;
@@ -80,15 +88,22 @@ export class PlacementBoard {
 
     this.boardEl.replaceChildren();
     this.boardEl.classList.toggle('revealed', this.enemy !== null);
-    for (let rank = 7; rank >= 0; rank--) {
-      for (let file = 0; file < 8; file++) {
+    const { files, ranks, homeRows } = this.spec;
+    this.boardEl.style.setProperty('--files', String(files));
+    this.boardEl.style.setProperty('--ranks', String(ranks));
+    for (let rank = ranks - 1; rank >= 0; rank--) {
+      for (let file = 0; file < files; file++) {
         const cell = squareEl(file, rank);
-        if (rank < HOME_RANKS) cell.classList.add('home');
-        else if (rank >= 8 - HOME_RANKS) cell.classList.add('enemy');
+        if (rank < homeRows) cell.classList.add('home');
+        else if (rank >= ranks - homeRows) cell.classList.add('enemy');
         if (legal.has(`${file},${rank}`)) cell.classList.add('legal');
         const piece = pieceAt(this.pieces, { file, rank });
         if (piece) cell.appendChild(this.pieceEl(piece));
-        const foe = this.enemy?.find((p) => p.square && mirror(p.square).file === file && mirror(p.square).rank === rank);
+        const foe = this.enemy?.find((p) => {
+          if (!p.square) return false;
+          const sq = mirror(p.square, this.spec);
+          return sq.file === file && sq.rank === rank;
+        });
         if (foe) cell.appendChild(enemyEl(foe));
         this.boardEl.appendChild(cell);
       }
@@ -119,9 +134,9 @@ export class PlacementBoard {
 
   private legalTargets(pieceId: string): Set<string> {
     const out = new Set<string>();
-    for (let rank = 0; rank < HOME_RANKS; rank++) {
-      for (let file = 0; file < 8; file++) {
-        if (movePiece(this.pieces, pieceId, { file, rank })) out.add(`${file},${rank}`);
+    for (let rank = 0; rank < this.spec.homeRows; rank++) {
+      for (let file = 0; file < this.spec.files; file++) {
+        if (movePiece(this.pieces, pieceId, { file, rank }, this.spec)) out.add(`${file},${rank}`);
       }
     }
     return out;
@@ -189,7 +204,7 @@ export class PlacementBoard {
   /** Applies a move; reports why on failure unless `quiet`. */
   private tryMove(pieceId: string, target: DropTarget, quiet = false): boolean {
     const sq = target.kind === 'square' ? target.sq : null;
-    const next = movePiece(this.pieces, pieceId, sq);
+    const next = movePiece(this.pieces, pieceId, sq, this.spec);
     if (!next) {
       if (!quiet && sq) this.opts.onMessage(this.moveError(pieceId, sq));
       return false;
@@ -202,11 +217,11 @@ export class PlacementBoard {
 
   private moveError(pieceId: string, sq: Square): string {
     const mover = this.pieces.find((p) => p.id === pieceId)!;
-    const own = placementError(mover.type, sq);
+    const own = placementError(mover.type, sq, this.spec);
     if (own) return own;
     const occupant = pieceAt(this.pieces, sq);
     if (occupant && mover.square) {
-      return `Can't swap: ${PIECE_NAME[occupant.type]} — ${placementError(occupant.type, mover.square)}`;
+      return `Can't swap: ${PIECE_NAME[occupant.type]} — ${placementError(occupant.type, mover.square, this.spec)}`;
     }
     return "Can't move there";
   }

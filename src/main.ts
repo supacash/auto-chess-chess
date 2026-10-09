@@ -1,12 +1,12 @@
 import './style.css';
-import { BOARD_8 } from './chess/boardSpec';
+import { boardForRound, type BoardSpec, homeSquares, plyLimit } from './chess/boardSpec';
 import { loadRules } from './chess/loadRules';
 import { checkmateEval, evalShare, formatEval } from './engine/pick';
 import { Engine } from './engine/stockfish';
 import { runBattle } from './game/runBattle';
 import { clearGame, loadBest, loadGame, saveBest, saveGame } from './game/storage';
 import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, pickStyle, placeAiArmy } from './rules/aiArmy';
-import { type BattleResult, type EndReason, material, PLY_LIMIT } from './rules/battle';
+import { type BattleResult, type EndReason, material } from './rules/battle';
 import { DIFFICULTIES, difficulty, isDifficultyId, type RunSettings } from './rules/difficulty';
 import {
   buyPawn,
@@ -20,7 +20,7 @@ import {
   upgradePiece,
 } from './rules/economy';
 import { MAX_ARMY, type Piece, type PieceType, PIECE_NAME, PIECE_VALUE } from './rules/pieces';
-import { armyErrors } from './rules/placement';
+import { armyErrors, fitToBoard } from './rules/placement';
 import { type StartPosition, startPosition } from './rules/position';
 import { applyResult, hasStarted, isRunOver, newRun, nextRound, type Run, runScore, START_LIVES } from './rules/run';
 import { BattleView } from './ui/battleView';
@@ -60,7 +60,7 @@ app.innerHTML = `
 
   <section id="placement">
     <p class="help" id="help">
-      Place your king and any other pieces in your three rows, spend gold on pawns and upgrades, then press
+      Place your king and any other pieces in your home rows (the lit squares), spend gold on pawns and upgrades, then press
       <strong>Fight</strong>. The engine plays both sides. Lose a round and you lose a life.
     </p>
     <div class="settings">
@@ -71,6 +71,7 @@ app.innerHTML = `
       </label>
       <label><input type="checkbox" id="reveal" /> Reveal opponent's placement</label>
     </div>
+    <p class="notice" id="notice" role="status" hidden></p>
     <p class="opponent" id="opponent"></p>
     <div id="board-root"></div>
     <div class="shop">
@@ -137,6 +138,8 @@ const state = {
   speed: 1,
   skipping: false,
   busy: false,
+  /** Variant of the board last shown in placement, to announce when it grows. */
+  shownBoard: null as string | null,
 };
 
 // ---- persistence ----
@@ -192,10 +195,16 @@ function restoreOrStart(): string {
 
 // ---- rendering ----
 
+/** The board this round is played on (it grows every few rounds). */
+function currentBoard(): BoardSpec {
+  return boardForRound(state.run.round);
+}
+
 function draftOpponent(): void {
+  const spec = currentBoard();
   state.aiStyle = pickStyle(rng);
   const budget = aiBudget(state.run.round, rng, difficulty(state.run.settings.difficulty).perRound);
-  state.aiPieces = placeAiArmy(draftAiArmy(budget, state.aiStyle, rng), state.aiStyle, rng);
+  state.aiPieces = placeAiArmy(draftAiArmy(budget, state.aiStyle, rng, spec), state.aiStyle, rng, spec);
 }
 
 /** Syncs the settings controls and the revealed opponent with the run. */
@@ -245,7 +254,8 @@ function renderOpponent(): void {
 /** `round` lets the result screen keep showing the round just played. */
 function renderHeader(round = state.run.round): void {
   const { lives, record } = state.run;
-  $('#round').textContent = `Round ${round}`;
+  const spec = boardForRound(round);
+  $('#round').textContent = `Round ${round} · ${spec.files}×${spec.ranks}`;
   const livesEl = $('#lives');
   livesEl.innerHTML = Array.from(
     { length: START_LIVES },
@@ -264,9 +274,10 @@ function updatePlacement(pieces: Piece[]): void {
   state.run = { ...state.run, shop: { ...state.run.shop, pieces } };
   const placed = pieces.filter((p) => p.square);
   const points = placed.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0);
+  const spec = currentBoard();
   $('#points').textContent =
-    `${placed.length}/${pieces.length} placed · ${points} pts on board · army ${pieces.length}/${MAX_ARMY}`;
-  const errors = armyErrors(pieces);
+    `${placed.length}/${homeSquares(spec)} squares filled · ${points} pts on board · army ${pieces.length}/${MAX_ARMY}`;
+  const errors = armyErrors(pieces, spec);
   fightBtn.disabled = state.busy || errors.length > 0;
   fightBtn.title = errors.join('\n');
   updateShop();
@@ -313,7 +324,16 @@ function applyShop(result: ShopResult): void {
 function showPlacement(): void {
   battleEl.hidden = true;
   placementEl.hidden = false;
+  const spec = currentBoard();
+  const grew = state.shownBoard !== null && state.shownBoard !== spec.variant;
+  state.shownBoard = spec.variant;
   messageEl.textContent = '';
+  const notice = $('#notice');
+  notice.hidden = !grew;
+  notice.textContent = grew ? `The board grew to ${spec.files}×${spec.ranks}: more room for your army!` : '';
+  // Boards only grow, so placed pieces stay valid; this repairs saves from older versions.
+  state.run = { ...state.run, shop: { ...state.run.shop, pieces: fitToBoard(state.run.shop.pieces, spec) } };
+  board.setSpec(spec);
   board.setPieces(state.run.shop.pieces);
   renderSettings();
   renderOpponent();
@@ -393,7 +413,7 @@ function updatePlaybackButtons(): void {
 // ---- battle ----
 
 async function fight(): Promise<void> {
-  if (state.busy || armyErrors(state.run.shop.pieces).length) return;
+  if (state.busy || armyErrors(state.run.shop.pieces, currentBoard()).length) return;
   state.busy = true;
   fightBtn.disabled = true;
   board.clearSelection();
@@ -415,19 +435,21 @@ async function fight(): Promise<void> {
     placementEl.hidden = false;
   } finally {
     state.busy = false;
-    fightBtn.disabled = armyErrors(state.run.shop.pieces).length > 0;
+    fightBtn.disabled = armyErrors(state.run.shop.pieces, currentBoard()).length > 0;
   }
 }
 
 /** Builds the start position, re-placing the AI army if both kings would start in check. */
 function resolveStart(): Extract<StartPosition, { ok: true }> {
   for (;;) {
-    const start = startPosition(state.run.shop.pieces, state.aiPieces, rng);
+    const spec = currentBoard();
+    const start = startPosition(state.run.shop.pieces, state.aiPieces, rng, spec);
     if (start.ok) return start;
     state.aiPieces = placeAiArmy(
       state.aiPieces.map((p) => p.type),
       state.aiStyle,
       rng,
+      spec,
     );
   }
 }
@@ -441,7 +463,9 @@ async function playBattle(fen: string, firstMover: 'w' | 'b'): Promise<void> {
   resultEl.hidden = true;
   $('#playback').hidden = false;
 
-  battleView.render(fen, BOARD_8);
+  const spec = currentBoard();
+  const limit = plyLimit(spec);
+  battleView.render(fen, spec);
   showEval(0);
   battleStatusEl.textContent = firstMover === 'w' ? 'You move first' : 'Opponent moves first';
   await sleep(700);
@@ -453,9 +477,9 @@ async function playBattle(fen: string, firstMover: 'w' | 'b'): Promise<void> {
     const mat = material(game.fen());
     battleStatusEl.textContent = state.skipping
       ? 'Skipping…'
-      : `Move ${Math.ceil(plies / 2)}/${PLY_LIMIT / 2} · Material ${mat.w}–${mat.b}`;
+      : `Move ${Math.ceil(plies / 2)}/${limit / 2} · Material ${mat.w}–${mat.b}`;
     if (ms) await sleep(ms);
-  });
+  }, { plyLimit: limit }, spec);
 
   if (result.reason === 'checkmate' && result.winner !== 'draw') showEval(checkmateEval(result.winner));
   showResult(result);
@@ -507,7 +531,7 @@ function showResult(result: BattleResult): void {
   // A move-limit result is a normal way to win, so name it plainly instead of looking like a stuck game.
   const outcome =
     reason === 'move-limit'
-      ? `${verb} on points, ${material.w}–${material.b}, at the ${PLY_LIMIT / 2}-move limit.`
+      ? `${verb} on points, ${material.w}–${material.b}, at the ${plyLimit(boardForRound(playedRound)) / 2}-move limit.`
       : `${verb} ${REASON_TEXT[reason]}. Material ${material.w}–${material.b} after ${moves} moves.`;
   if (over) {
     $('#result-title').textContent = 'Game over';

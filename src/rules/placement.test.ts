@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { COMPOSITION_ERROR } from './composition';
+import { BOARDS } from '../chess/boardSpec';
 import { makePiece, type Square } from './pieces';
-import { armyErrors, canPlace, movePiece, pieceAt } from './placement';
+import { armyErrors, canPlace, fitToBoard, movePiece, pieceAt } from './placement';
 
 const sq = (file: number, rank: number): Square => ({ file, rank });
 
@@ -84,11 +84,30 @@ describe('armyErrors', () => {
     expect(errs.some((e) => e.startsWith('e3'))).toBe(true);
   });
 
-  it('flags placed armies the engine refuses, but not benched extras', () => {
+  it('allows any mix of pieces (Fairy-Stockfish has no piece-count limit)', () => {
     const pawns = Array.from({ length: 8 }, (_, f) => makePiece('P', sq(f, 1)));
     const bishops = [makePiece('B', sq(0, 0)), makePiece('B', sq(1, 0)), makePiece('B', sq(2, 0))];
-    const king = makePiece('K', sq(4, 0));
-    expect(armyErrors([king, ...pawns, ...bishops])).toContain(COMPOSITION_ERROR);
-    expect(armyErrors([king, ...pawns, ...bishops.slice(0, 2), makePiece('B')])).toEqual([]);
+    expect(armyErrors([makePiece('K', sq(4, 0)), ...pawns, ...bishops])).toEqual([]);
+  });
+});
+
+describe('small boards', () => {
+  const b5 = BOARDS[0]; // 5×5, 2 home rows
+
+  it('uses the board width and its home rows', () => {
+    expect(canPlace('N', sq(4, 1), b5)).toBe(true);
+    expect(canPlace('N', sq(5, 0), b5)).toBe(false);
+    expect(canPlace('N', sq(0, 2), b5)).toBe(false);
+    // Rank 1 is the front row on a 2-row board: no king there, pawns only there.
+    expect(canPlace('K', sq(2, 1), b5)).toBe(false);
+    expect(canPlace('P', sq(2, 1), b5)).toBe(true);
+    expect(canPlace('P', sq(2, 0), b5)).toBe(false);
+  });
+
+  it('benches pieces that do not fit the board', () => {
+    const pieces = [makePiece('K', sq(4, 0)), makePiece('R', sq(7, 0)), makePiece('P', sq(1, 2)), makePiece('N', sq(4, 0))];
+    const fitted = fitToBoard(pieces, b5);
+    expect(fitted.map((p) => p.square)).toEqual([sq(4, 0), null, null, null]);
+    expect(armyErrors(fitted, b5)).toEqual([]);
   });
 });

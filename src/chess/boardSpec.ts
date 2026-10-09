@@ -51,3 +51,26 @@ export function variantsIni(boards: BoardSpec[] = BOARDS): string {
     .join('\n\n')
     .concat('\n');
 }
+
+/** Rounds played on each board before it grows: 5×5 rounds 1–2, 6×6 3–4, 7×7 5–6, then 8×8. */
+export const ROUNDS_PER_BOARD = 2;
+
+/** The board a round is played on. */
+export function boardForRound(round: number): BoardSpec {
+  return BOARDS[Math.min(BOARDS.length - 1, Math.floor((Math.max(1, round) - 1) / ROUNDS_PER_BOARD))];
+}
+
+/** Half-moves before a battle ends on points: 10 × board size + 10 (60 on 5×5 … 90 on 8×8). */
+export function plyLimit(spec: BoardSpec): number {
+  return 10 * Math.max(spec.files, spec.ranks) + 10;
+}
+
+/** How many squares a side can place pieces on. */
+export function homeSquares(spec: BoardSpec): number {
+  return spec.files * spec.homeRows;
+}
+
+/** Most pawns that fit (pawns can't stand on the back row). */
+export function pawnSquares(spec: BoardSpec): number {
+  return spec.files * (spec.homeRows - 1);
+}

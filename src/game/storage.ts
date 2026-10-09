@@ -1,7 +1,11 @@
 import { AI_STYLES } from '../rules/aiArmy';
 import { DEFAULT_SETTINGS, type DifficultyId, isDifficultyId, type RunSettings } from '../rules/difficulty';
 import type { Piece } from '../rules/pieces';
-import { HOME_RANKS } from '../rules/placement';
+import { BOARDS } from '../chess/boardSpec';
+
+/** Saved squares may be anywhere on the biggest board; the game fits them to the current one (fitToBoard). */
+const MAX_FILES = Math.max(...BOARDS.map((b) => b.files));
+const MAX_HOME_ROWS = Math.max(...BOARDS.map((b) => b.homeRows));
 import type { Run } from '../rules/run';
 
 const RUN_KEY = 'acc.run.v1';
@@ -110,7 +114,7 @@ function parsePieces(data: unknown): Piece[] | null {
     let square: Piece['square'] = null;
     if (p.square !== null) {
       const sq = p.square;
-      if (!isObject(sq) || !isCount(sq.file, 0) || !isCount(sq.rank, 0) || sq.file > 7 || sq.rank >= HOME_RANKS) return null;
+      if (!isObject(sq) || !isCount(sq.file, 0) || !isCount(sq.rank, 0) || sq.file >= MAX_FILES || sq.rank >= MAX_HOME_ROWS) return null;
       square = { file: sq.file, rank: sq.rank };
     }
     out.push({ id: p.id, type: p.type as Piece['type'], square });
