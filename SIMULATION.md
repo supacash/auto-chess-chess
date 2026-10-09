@@ -72,12 +72,13 @@ Every run is still alive after round 10, with an average score of 6.3. 298 of 10
 | **shop** | **6×round** | 58.3 / 60.0 | **38 / 11 / 52** | **3.19** | **27%** |
 | redraft | 5×round | 68.0 / 50.0 | 93 / 4 / 3 | 9.13 | 97% |
 | shop | 5×round | 67.5 / 49.9 | 92 / 5 / 4 | 9.13 | 99% |
+| shop | 6×round − 1 | 62.8 / 59.0 | 63 / 8 / 29 | 6.11 | 59% |
 | shop | 6×round − 2 | 66.5 / 57.9 | 85 / 4 / 11 | 8.42 | 85% |
 
 - **The shop player is only a little weaker.** It loses 6 points of win rate and 0.45 of run score. Its army value is the same within 1–2 points, because the greedy plan spends nearly all its gold. The loss comes from composition: it can't sell, so early knights and bishops stay, and by round 10 its armies are capped at 16 pieces with 4–5 rooks and few pawns. The gap grows in later rounds (rounds 5–10: 30–42% wins against 40–51%).
 - Shop player by style: Cavalry Charge wins 53%, the others 28–36%. Redraft by style was Cavalry 70%, Heavy 50%, Fortress 34%, Balanced 23%.
-- **Material decides almost everything, so the budget knob is very steep.** At 5×round the AI falls 1 point further behind each round, and from round 3 the player wins 95%+ either way. Even 6×round − 2 (2 points behind, same slope) gives 85% wins. Wins also snowball through the +2 win bonus.
-- **Recommendation: keep 6×round; don't lower the slope to 5×round.** 5×round turns a run into a near-certain 10-round survival for any player who spends their gold, which is the bar both stand-ins clear. A human will place worse than the heuristics in some ways and better in others (e.g. no fixed style, reacting to the AI's army), so playtests should decide any easing. If they show 6×round is too hard, lower the intercept by 1 (`6×round − 1`), not the slope, and re-run with `--player shop`.
+- **Material decides almost everything, so the budget knob is very steep.** At 5×round the AI falls 1 point further behind each round, and from round 3 the player wins 95%+ either way. One point less per round (6×round − 1) moves the shop player from 38% to 63% wins and run score 3.19 → 6.11. Two points less (6×round − 2) gives 85% wins. Wins also snowball through the +2 win bonus.
+- **Recommendation: keep 6×round; don't lower the slope to 5×round.** 5×round turns a run into a near-certain 10-round survival for any player who spends their gold, which is the bar both stand-ins clear. A human will place worse than the heuristics in some ways and better in others (e.g. no fixed style, reacting to the AI's army), so playtests should decide any easing. If they show 6×round is too hard, `6×round − 1` is the next step: about two-thirds wins and 59% of runs surviving 10 rounds for the shop player. That is generous for a competent player but leaves room for human mistakes. Lower the intercept, not the slope.
 
 ## Problems found
 
