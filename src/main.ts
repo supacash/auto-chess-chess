@@ -45,6 +45,7 @@ function startNewRun(settings: RunSettings): void {
 /** Loads the engine on first use, plays the round, and shows the result. */
 async function fight(): Promise<void> {
   if (busy || session.armyErrors().length) return;
+  if (!engine && !window.crossOriginIsolated && reloadForIsolation()) return;
   busy = true;
   placement.setBusy(true);
   try {
@@ -74,7 +75,33 @@ async function fight(): Promise<void> {
   }
 }
 
+const ISOLATION_RELOAD_KEY = 'acc.isolation-reload';
+
+/**
+ * Without cross-origin isolation the engine can't run. A page that lost it (e.g. Safari restarted
+ * the service worker, or a hard reload bypassed it) usually gets it back on a normal reload. The run
+ * is already saved, so reload once per tab; if that didn't help, the engine reports the error.
+ */
+function reloadForIsolation(): boolean {
+  try {
+    if (sessionStorage.getItem(ISOLATION_RELOAD_KEY)) return false;
+    sessionStorage.setItem(ISOLATION_RELOAD_KEY, '1');
+  } catch {
+    return false;
+  }
+  placement.setMessage('Reloading to start the engine…');
+  location.reload();
+  return true;
+}
+
 function boot(): void {
+  if (window.crossOriginIsolated) {
+    try {
+      sessionStorage.removeItem(ISOLATION_RELOAD_KEY);
+    } catch {
+      // ignore
+    }
+  }
   const { notice, firstVisit } = session.restore();
   showPlacement();
   placement.setMessage(notice);
