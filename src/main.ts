@@ -582,7 +582,19 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const notice = restoreOrStart();
-showPlacement();
-messageEl.textContent = notice;
-if (state.firstVisit) openNewRunDialog();
+function boot(): void {
+  const notice = restoreOrStart();
+  showPlacement();
+  messageEl.textContent = notice;
+  if (state.firstVisit) openNewRunDialog();
+}
+
+/**
+ * On hosts without COOP/COEP headers, coi-serviceworker (index.html) reloads the page once on the
+ * first visit to make it cross-origin isolated. Starting before that reload would save a default
+ * run and skip the New run window, so wait for it; boot anyway if it never comes (e.g. service
+ * workers blocked), and the engine reports the problem when a battle starts.
+ */
+const isolationReloadPending = !window.crossOriginIsolated && window.isSecureContext && 'serviceWorker' in navigator;
+if (isolationReloadPending) setTimeout(boot, 4000);
+else boot();
