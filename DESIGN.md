@@ -52,8 +52,8 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **Start:** 3 gold plus King + 4 pawns (Growing) or King + 3 pawns (Classic).
 - **Income:** 5 gold per round, +2 for a win, +1 for a draw.
 - **Selling** refunds value minus 1 (minimum 0).
-- **Army cap:** 16 pieces including the king. There's no limit on the mix of pieces.
-- **Board space:** you can own more than fits; extras wait on the bench until the board grows.
+- **Army size:** only pieces on the board count: at most two per file, a chess side's worth (16 on 8×8; on the smaller boards that's every home square: 10 / 12 / 14), so it grows with the board in Growing mode. AI armies follow the same limit. No limit on the mix of pieces.
+- **Bench:** up to 8 pieces wait off the board, to mix and match. Bought pieces arrive there, so buying needs a free bench slot. A bench piece can go onto a full board by swapping with a placed one.
 - Pieces lost in battle come back for the next round.
 - **Shop offers:** 4 random pieces each round, each priced at its value, bought onto the bench. Offers cost at most 2 + 2×round (Rooks from round 2, Queens from round 4). Reroll: 1 gold. Fusion pieces are never offered. With fairy pieces off, offers are standard pieces only.
 - **Piece info:** tapping any piece (yours, a shop offer, or the opponent's in its list or on the revealed board) shows its value and how it moves.

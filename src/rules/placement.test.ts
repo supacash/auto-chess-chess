@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { BOARDS } from '../chess/boardSpec';
+import { BOARD_8, BOARDS } from '../chess/boardSpec';
 import { makePiece, type Square } from './pieces';
-import { armyErrors, canPlace, fitToBoard, movePiece, pieceAt } from './placement';
+import { armyCap, armyErrors, BENCH_SIZE, canPlace, capacityError, fitToBoard, movePiece, pieceAt } from './placement';
 
 const sq = (file: number, rank: number): Square => ({ file, rank });
 
@@ -114,5 +114,46 @@ describe('small boards', () => {
     const fitted = fitToBoard(pieces, b5);
     expect(fitted.map((p) => p.square)).toEqual([sq(4, 0), null, null, null]);
     expect(armyErrors(fitted, b5)).toEqual([]);
+  });
+});
+
+describe('board limit and bench', () => {
+  it('allows two pieces per file on the board, within the home squares', () => {
+    expect(BOARDS.map(armyCap)).toEqual([10, 12, 14, 16]);
+  });
+
+  it('blocks placing past the limit but allows swaps', () => {
+    // 8×8 has 24 home squares but a limit of 16. (On the smaller boards the limit is every home square.)
+    const placed = [makePiece('K', sq(4, 0))];
+    for (const f of [0, 1, 2, 3, 5, 6, 7]) placed.push(makePiece('N', sq(f, 0)));
+    for (let f = 0; f < 8; f++) placed.push(makePiece('P', sq(f, 1)));
+    expect(placed).toHaveLength(16);
+    const extra = makePiece('B');
+    const pieces = [...placed, extra];
+    expect(capacityError(pieces, extra.id, sq(0, 2), BOARD_8)).toContain('army is full');
+    expect(movePiece(pieces, extra.id, sq(0, 2), BOARD_8)).toBeNull();
+    // Swapping a benched piece for a placed one keeps the count.
+    const swapped = movePiece(pieces, extra.id, sq(1, 0), BOARD_8)!;
+    expect(swapped.find((p) => p.id === extra.id)!.square).toEqual(sq(1, 0));
+    expect(armyErrors(swapped, BOARD_8)).toEqual([]);
+  });
+
+  it('keeps at most BENCH_SIZE pieces on the bench', () => {
+    const king = makePiece('K', sq(4, 0));
+    const bench = Array.from({ length: BENCH_SIZE }, () => makePiece('P'));
+    const pieces = [king, makePiece('R', sq(0, 0)), ...bench];
+    const rook = pieces[1];
+    expect(capacityError(pieces, rook.id, null)).toContain('bench is full');
+    expect(movePiece(pieces, rook.id, null)).toBeNull();
+  });
+
+  it('flags an over-full board', () => {
+    // 17 pieces on 8×8 (limit 16): a full back row, a full pawn row and one more.
+    const pieces = [makePiece('K', sq(4, 0))];
+    for (const f of [0, 1, 2, 3, 5, 6, 7]) pieces.push(makePiece('N', sq(f, 0)));
+    for (let f = 0; f < 8; f++) pieces.push(makePiece('P', sq(f, 1)));
+    expect(armyErrors(pieces, BOARD_8)).toEqual([]);
+    pieces.push(makePiece('R', sq(0, 2)));
+    expect(armyErrors(pieces, BOARD_8)).toEqual(['Too many pieces on the board (at most 16)']);
   });
 });

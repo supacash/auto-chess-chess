@@ -3,6 +3,25 @@ import { isPawnLike, type Piece, type PieceType, type Square, sameSquare, square
 
 export const BACK_RANK = 0;
 
+/** Most pieces that can wait on the bench at once (bought pieces arrive there). */
+export const BENCH_SIZE = 8;
+
+/**
+ * Most pieces on the board: a chess side's worth, two per file (16 on 8×8, 10 on 5×5), and never
+ * more than the home squares. Only pieces on the board count; the bench is separate.
+ */
+export function armyCap(spec: BoardSpec = BOARD_8): number {
+  return Math.min(2 * spec.files, spec.files * spec.homeRows);
+}
+
+export function placedCount(pieces: Piece[]): number {
+  return pieces.filter((p) => p.square).length;
+}
+
+export function benchCount(pieces: Piece[]): number {
+  return pieces.filter((p) => !p.square).length;
+}
+
 /** The front home row (counted from the side's own back rank). */
 export function frontRank(spec: BoardSpec): number {
   return spec.homeRows - 1;
@@ -27,10 +46,32 @@ export function pieceAt(pieces: Piece[], sq: Square): Piece | undefined {
 }
 
 /**
+ * Why moving `pieceId` to `target` (a square, or null for the bench) would break the board limit or
+ * overfill the bench, or null if it wouldn't. Swaps never change either count.
+ */
+export function capacityError(
+  pieces: Piece[],
+  pieceId: string,
+  target: Square | null,
+  spec: BoardSpec = BOARD_8,
+): string | null {
+  const mover = pieces.find((p) => p.id === pieceId);
+  if (!mover) return null;
+  if (target === null) {
+    return mover.square && benchCount(pieces) >= BENCH_SIZE ? `The bench is full (${BENCH_SIZE} pieces)` : null;
+  }
+  if (!mover.square && !pieceAt(pieces, target) && placedCount(pieces) >= armyCap(spec)) {
+    return `Your army is full: ${armyCap(spec)} pieces on this board. Swap a piece instead.`;
+  }
+  return null;
+}
+
+/**
  * Moves `pieceId` to `target` (a board square, or null for the bench).
  * If the target is occupied the two pieces swap, provided the displaced piece
  * may legally stand on the mover's origin (a bench origin always accepts it).
- * Returns the new piece list, or null if the move is illegal.
+ * Returns the new piece list, or null if the move is illegal (including one that would put more
+ * than armyCap pieces on the board or more than BENCH_SIZE on the bench).
  */
 export function movePiece(
   pieces: Piece[],
@@ -40,6 +81,7 @@ export function movePiece(
 ): Piece[] | null {
   const mover = pieces.find((p) => p.id === pieceId);
   if (!mover) return null;
+  if (capacityError(pieces, pieceId, target, spec)) return null;
   if (target === null) {
     return pieces.map((p) => (p.id === pieceId ? { ...p, square: null } : p));
   }
@@ -78,6 +120,9 @@ export function armyErrors(pieces: Piece[], spec: BoardSpec = BOARD_8): string[]
   const kings = pieces.filter((p) => p.type === 'K');
   if (kings.length !== 1) errors.push('Army must have exactly one king');
   else if (!kings[0].square) errors.push('Place your king on the board');
+
+  const cap = armyCap(spec);
+  if (placedCount(pieces) > cap) errors.push(`Too many pieces on the board (at most ${cap})`);
 
   const seen = new Set<string>();
   for (const p of pieces) {

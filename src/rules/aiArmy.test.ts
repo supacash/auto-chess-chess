@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, MAX_PAWNS, pickStyle, placeAiArmy } from './aiArmy';
 import { BOARDS, homeSquares, pawnSquares } from '../chess/boardSpec';
-import { MAX_ARMY, PIECES, type PieceType, PIECE_VALUE } from './pieces';
-import { armyErrors } from './placement';
+import { PIECES, type PieceType, PIECE_VALUE } from './pieces';
+import { armyCap, armyErrors } from './placement';
 import { seededRng } from './rng';
 
 const style = (id: string): AiStyle => AI_STYLES.find((s) => s.id === id)!;
@@ -43,7 +43,7 @@ describe('draftAiArmy', () => {
           const types = draftAiArmy(budget, s, seededRng(seed));
           expect(count(types, 'K')).toBe(1);
           expect(points(types)).toBeLessThanOrEqual(budget);
-          expect(types.length).toBeLessThanOrEqual(MAX_ARMY);
+          expect(types.length).toBeLessThanOrEqual(armyCap());
           expect(count(types, 'P')).toBeLessThanOrEqual(MAX_PAWNS);
         }
       }

@@ -1,8 +1,8 @@
 import type { Winner } from './battle';
+import { BENCH_SIZE, benchCount } from './placement';
 import {
   isPawnLike,
   makePiece,
-  MAX_ARMY,
   type Piece,
   type PieceType,
   PIECE_NAME,
@@ -121,7 +121,9 @@ export function rollOffers(round: number, rng: Rng, fairy = true): PieceType[] {
 export function buyOffer(shop: Shop, index: number): ShopResult {
   const type = shop.offers?.[index];
   if (!type) return { ok: false, error: 'That offer is gone' };
-  if (shop.pieces.length >= MAX_ARMY) return { ok: false, error: `Army is full (${MAX_ARMY} pieces)` };
+  if (benchCount(shop.pieces) >= BENCH_SIZE) {
+    return { ok: false, error: `The bench is full (${BENCH_SIZE} pieces): place or sell a piece first` };
+  }
   const price = PIECE_VALUE[type];
   if (shop.gold < price) return { ok: false, error: 'Not enough gold' };
   return {

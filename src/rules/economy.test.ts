@@ -21,7 +21,8 @@ import {
   upgradeCost,
   upgradePiece,
 } from './economy';
-import { makePiece, MAX_ARMY, PIECES, type PieceType, PIECE_VALUE } from './pieces';
+import { makePiece, PIECES, type PieceType, PIECE_VALUE } from './pieces';
+import { BENCH_SIZE } from './placement';
 import { seededRng } from './rng';
 
 const ok = (r: ShopResult): Shop => {
@@ -102,7 +103,19 @@ describe('roundIncome', () => {
 
 describe('no piece-count limit', () => {
   it('lets an army have more than 8 pawns plus extra pieces (Fairy-Stockfish accepts them)', () => {
-    const shop: Shop = { gold: 100, pieces: 'KPPPPPPPPBBB'.split('').map((t) => makePiece(t as PieceType)) };
+    // King, 9 pawns and 3 bishops on the board (13 of 16), bench empty.
+    const at = (t: PieceType, file: number, rank: number) => makePiece(t, { file, rank });
+    const shop: Shop = {
+      gold: 100,
+      pieces: [
+        at('K', 4, 0),
+        ...[0, 1, 2, 3, 4, 5, 6, 7].map((f) => at('P', f, 1)),
+        at('P', 0, 2),
+        at('B', 1, 0),
+        at('B', 2, 0),
+        at('B', 3, 0),
+      ],
+    };
     expect(buyOffer({ ...shop, offers: ['P'] }, 0).ok).toBe(true);
     expect(upgradePiece(shop, shop.pieces[1].id, 'B').ok).toBe(true);
   });
@@ -151,8 +164,8 @@ describe('shop offers', () => {
     expect(buyOffer(next, 5).ok).toBe(false);
   });
 
-  it('refuses offers when the army is full', () => {
-    const shop: Shop = { gold: 99, pieces: Array.from({ length: MAX_ARMY }, () => makePiece('P')), offers: ['F'] };
+  it('refuses offers when the bench is full, however many pieces are on the board', () => {
+    const shop: Shop = { gold: 99, pieces: Array.from({ length: BENCH_SIZE }, () => makePiece('P')), offers: ['F'] };
     expect(buyOffer(shop, 0).ok).toBe(false);
   });
 

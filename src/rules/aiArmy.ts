@@ -1,7 +1,7 @@
-import { BOARD_8, type BoardSpec, homeSquares, pawnSquares } from '../chess/boardSpec';
+import { BOARD_8, type BoardSpec, pawnSquares } from '../chess/boardSpec';
 import { UPGRADES, upgradeCost } from './economy';
-import { isPawnLike, makePiece, MAX_ARMY, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
-import { BACK_RANK, canPlace, frontRank, pieceAt } from './placement';
+import { isPawnLike, makePiece, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
+import { armyCap, BACK_RANK, canPlace, frontRank, pieceAt } from './placement';
 import { type Rng, randomInt, weightedPick } from './rng';
 
 // All squares here are AI-local: rank 0 is the AI's back row, rank homeRows − 1 its front row.
@@ -161,7 +161,7 @@ export function draftAiArmy(
   fairy = false,
 ): PieceType[] {
   const types: PieceType[] = ['K'];
-  const capacity = Math.min(MAX_ARMY, homeSquares(spec));
+  const capacity = armyCap(spec);
   const pawnCap = Math.min(MAX_PAWNS, pawnSquares(spec));
   let pieceBudget = budget - Math.round(budget * style.pawnShare);
   const weights: Partial<Record<PieceType, number>> = fairy

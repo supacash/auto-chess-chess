@@ -9,7 +9,8 @@
  * current board's home rows. Every purchase goes through buyOffer/upgradePiece, so the army cap
  * applies exactly as in the real shop. The caller stocks `shop.offers` each round.
  */
-import { type BoardSpec, homeSquares, pawnSquares } from '../../src/chess/boardSpec';
+import { type BoardSpec, pawnSquares } from '../../src/chess/boardSpec';
+import { armyCap } from '../../src/rules/placement';
 import type { AiStyle } from '../../src/rules/aiArmy';
 import { buyOffer, type Shop, UPGRADES, upgradeCost, upgradePiece } from '../../src/rules/economy';
 import { isPawnLike, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
@@ -24,7 +25,7 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
   for (;;) {
     const offers = shop.offers ?? [];
     const pawns = shop.pieces.filter((p) => isPawnLike(p.type)).length;
-    const pawnFits = shop.pieces.length < homeSquares(spec) && pawns < pawnSquares(spec);
+    const pawnFits = shop.pieces.length < armyCap(spec) && pawns < pawnSquares(spec);
     const wantPawn = pawnFits && pawns * PIECE_VALUE.P < style.pawnShare * (armyValue(shop) + shop.gold);
     const pawnOffer = offers.findIndex((t) => isPawnLike(t) && PIECE_VALUE[t] <= shop.gold);
     if (wantPawn && pawnOffer >= 0) {
@@ -56,7 +57,7 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
     }
 
     // Otherwise the affordable offer it likes best (by style weight, pawns counted as 1).
-    const fits = shop.pieces.length < homeSquares(spec);
+    const fits = shop.pieces.length < armyCap(spec);
     const buyable = offers
       .map((t, i) => ({ t, i }))
       .filter(({ t }) => PIECE_VALUE[t] <= shop.gold && fits && (!isPawnLike(t) || pawnFits));

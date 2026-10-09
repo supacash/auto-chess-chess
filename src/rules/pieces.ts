@@ -1,6 +1,3 @@
-/** Maximum army size, king included. */
-export const MAX_ARMY = 16;
-
 /**
  * Every piece the game knows. The id is also the piece's FEN letter (white upper case, black lower
  * case), so it's what the engine, ffish and saves use.

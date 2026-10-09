@@ -1,4 +1,3 @@
-import { homeSquares } from '../chess/boardSpec';
 import {
   buyOffer,
   fusePawns,
@@ -14,7 +13,8 @@ import {
   upgradeCost,
   upgradePiece,
 } from '../rules/economy';
-import { MAX_ARMY, type Piece, PIECE_NAME, PIECE_VALUE, PIECES, type PieceType } from '../rules/pieces';
+import { type Piece, PIECE_NAME, PIECE_VALUE, PIECES, type PieceType } from '../rules/pieces';
+import { armyCap, BENCH_SIZE, benchCount } from '../rules/placement';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { $, escapeHtml } from './dom';
@@ -182,7 +182,7 @@ export class PlacementScreen {
     const placed = pieces.filter((p) => p.square);
     const points = placed.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0);
     $('#points').textContent =
-      `${placed.length}/${homeSquares(this.session.board)} squares filled · ${points} pts on board · army ${pieces.length}/${MAX_ARMY}`;
+      `On the board ${placed.length}/${armyCap(this.session.board)} · bench ${benchCount(pieces)}/${BENCH_SIZE} · ${points} pts`;
     this.updateFight();
     this.renderShop();
   }
@@ -276,9 +276,9 @@ export class PlacementScreen {
     detail.hidden = !type;
     if (!type) return;
     const price = PIECE_VALUE[type];
-    const full = pieces.length >= MAX_ARMY;
+    const full = benchCount(pieces) >= BENCH_SIZE;
     const disabled = gold < price || full ? 'disabled' : '';
-    detail.innerHTML = `<p><strong>${PIECE_NAME[type]}</strong> · ${price} pts. ${PIECES[type].description}</p><button type="button" class="primary" data-buy ${disabled}>${full ? 'Army full' : `Buy · ${price}g`}</button>`;
+    detail.innerHTML = `<p><strong>${PIECE_NAME[type]}</strong> · ${price} pts. ${PIECES[type].description}</p><button type="button" class="primary" data-buy ${disabled}>${full ? 'Bench full' : `Buy · ${price}g`}</button>`;
   }
 
   /** Gold, the buy button, offers, and upgrade/fuse/sell buttons for the selected piece. */

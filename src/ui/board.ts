@@ -1,6 +1,6 @@
 import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
 import { type Piece, type PieceType, type Square, PIECE_NAME } from '../rules/pieces';
-import { movePiece, pieceAt, placementError } from '../rules/placement';
+import { movePiece, pieceAt, placementError, capacityError } from '../rules/placement';
 import { mirror } from '../rules/position';
 import { fillPiece, label, squareEl } from './boardDom';
 
@@ -221,7 +221,7 @@ export class PlacementBoard {
     const sq = target.kind === 'square' ? target.sq : null;
     const next = movePiece(this.pieces, pieceId, sq, this.spec);
     if (!next) {
-      if (!quiet && sq) this.opts.onMessage(this.moveError(pieceId, sq));
+      if (!quiet) this.opts.onMessage(this.moveError(pieceId, sq));
       return false;
     }
     this.pieces = next;
@@ -230,7 +230,10 @@ export class PlacementBoard {
     return true;
   }
 
-  private moveError(pieceId: string, sq: Square): string {
+  private moveError(pieceId: string, sq: Square | null): string {
+    const full = capacityError(this.pieces, pieceId, sq, this.spec);
+    if (full) return full;
+    if (!sq) return "Can't move there";
     const mover = this.pieces.find((p) => p.id === pieceId)!;
     const own = placementError(mover.type, sq, this.spec);
     if (own) return own;
