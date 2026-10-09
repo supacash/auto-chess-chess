@@ -10,7 +10,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 
 ## Core Loop
 1. **Shop phase.** Spend gold on pawns and upgrades. You can see the opponent's piece list but not where its pieces are.
-2. **Placement phase.** Arrange your pieces in your three home rows.
+2. **Placement phase.** Arrange your pieces in your home rows. The board grows during the run (see Board Sizes).
 3. **Battle phase.** The engine plays both sides with fast animation.
 4. **Result.** Win, lose or draw. Gold is paid out and a life is lost on a loss.
 5. Repeat until you run out of lives.
@@ -40,20 +40,36 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **Income per round:** 5 gold, +2 for a win, +1 for a draw.
 - **Selling:** refunds the piece's value minus 1 (minimum 0).
 - **Army cap:** 16 pieces including the king.
-- **Piece limit:** pawns plus "extra" pieces can be at most 8. Extra pieces are knights, bishops or rooks beyond 2 each, and queens beyond 1 (so 7 pawns + 3 bishops is fine, 7 pawns + 4 bishops is not). Stockfish refuses positions over this limit, since a real game can't reach them. The shop blocks pawn buys and upgrades that would break it, the Fight button is disabled while the placed pieces break it, and the AI drafts within it.
+- **No piece-count limit.** The old Stockfish build refused armies with more than 8 pawns plus "extra" pieces; Fairy-Stockfish accepts any mix, so that rule is gone.
+- **Board space:** you can own more pieces than fit on the current board; extras wait on the bench until it grows.
 - Pieces lost in battle come back for the next round. Battles never destroy your army.
 
+## Board Sizes
+The board grows during a run, like an auto-battler's board opening up:
+
+| Rounds | Board | Home rows each | Home squares | Gap between armies | Move limit |
+|---|---|---|---|---|---|
+| 1–2 | 5×5 | 2 | 10 | 1 row | 60 plies (30 each) |
+| 3–4 | 6×6 | 2 | 12 | 2 rows | 70 plies |
+| 5–6 | 7×7 | 2 | 14 | 3 rows | 80 plies |
+| 7+ | 8×8 | 3 | 24 | 2 rows | 90 plies |
+
+- The move limit is 10 × board size + 10 plies.
+- Placed pieces keep their squares when the board grows (it only gets bigger); a notice announces the new size.
+- Points per round don't change with the board. Armies are limited by home squares: extra player pieces wait on the bench, and the AI spends points it can't place on upgrades.
+- Simulation: 64% of battles end in checkmate on the schedule (48% on fixed 8×8) with the same overall balance (SIMULATION.md §9).
+
 ## Placement Rules
-- You own ranks 1–3 (shown at the bottom). The AI owns ranks 6–8.
-- The king can't be placed on the front row (rank 3).
-- Pawns can't be placed on the back row (rank 1). This also keeps positions legal for the engine.
-- A pawn on rank 2 may move two squares on its first move. A pawn on rank 3 may not.
+- You own the bottom home rows; the AI owns the same number at the top.
+- The king can't be placed on the front home row.
+- Pawns can't be placed on the back row.
+- A pawn on your second rank may move two squares on its first move.
 - No castling.
 - Promotion works as normal (the engine picks the piece, usually a queen) but lasts only for that battle.
 
 ## Battle Rules
 - **First move:** random each round. If one king starts in check, that side moves first. If both kings start in check, the AI re-places its army.
-- **Move limit:** 90 plies (45 moves each). Simulation showed 60 left 68% of battles undecided at the limit; at 90, half end in checkmate with unchanged win rates (see SIMULATION.md §7).
+- **Move limit:** 10 × board size + 10 plies: 60 on 5×5 up to 90 on 8×8 (see Board Sizes). On a fixed 8×8 board, 60 plies left 68% of battles undecided; 90 brought checkmates to half (SIMULATION.md §7).
 - **Win:** checkmate, or more material left when the move limit is reached. The second is shown as a win (or defeat) **on points**, so it reads as a normal result.
 - **Draw:** equal material at the limit, stalemate, threefold repetition or insufficient material.
 

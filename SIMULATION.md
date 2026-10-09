@@ -136,6 +136,23 @@ Wall time is with 14 engines while other sims were running at times, so treat it
 - The round 1 win bonus (+2 gold) carries through the run, so the discount also offsets the extra difficulty the 90-ply limit added (shop player run score at 60 plies was 3.19). **Decision:** ship it and let playtests decide whether Normal needs further easing (Easy is 5×round).
 - Stockfish still hung in about 1 in 1000 battles, all with 3+ bishops. The browser's 10 s timeout falls back to a random move.
 
+### 9. Escalating board sizes on Fairy-Stockfish (2026-10-09, seed 1, 300 runs × 10 rounds, shop player)
+
+`npm run sim -- --rounds 10 --games 300 --player shop [--board 8]`. The engine is now Fairy-Stockfish; `--board 8` keeps every round on 8×8 for comparison. The shop stand-in only buys pawns that fit the current board and upgrades otherwise.
+
+| | 5×5→8×8 schedule | All 8×8 |
+|---|---|---|
+| Player W/D/L | 41 / 13 / 46 | 42 / 11 / 47 |
+| Run score | 3.66 ±0.34 | 3.79 ±0.33 |
+| Runs alive after round 10 | 26% | 26% |
+| Checkmate / move limit | 64% / 25% | 48% / 45% |
+| Avg plies | 54.5 | 72.5 |
+
+- **Same balance, more decisive battles.** Points per round stay even on every board, and the run score matches fixed 8×8 within the margin. Small boards end in mate far more often, and battles are shorter.
+- **The engine swap kept the balance:** fixed 8×8 on Fairy-Stockfish (run score 3.79) matches Stockfish's 3.97 (§8) within the margin.
+- **Round 1 on 5×5 is drawish:** 50 / 40 / 10 W/D/L, mostly bare kings or insufficient material with 5–6 point armies.
+- An earlier run with a stand-in that kept buying pawns that didn't fit scored only 2.09: on small boards, gold has to go into upgrades. The in-game bench shows extras, but players may need a hint.
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.

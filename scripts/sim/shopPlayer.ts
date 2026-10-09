@@ -5,9 +5,11 @@
  * Per step: buy a pawn while pawns are below the style's pawn share of the army's total value
  * (army + gold); otherwise make an affordable upgrade, picked by the style's weights for the
  * target piece; otherwise buy a pawn if there's room. Gold that fits nothing carries over.
- * Every purchase goes through buyPawn/upgradePiece, so the army cap and the piece-composition
- * limit (composition.ts) apply exactly as in the real shop.
+ * Like a sensible player, it only buys pawns that fit the current board's home rows (a full board
+ * means upgrading instead). Every purchase goes through buyPawn/upgradePiece, so the army cap
+ * applies exactly as in the real shop.
  */
+import { type BoardSpec, homeSquares, pawnSquares } from '../../src/chess/boardSpec';
 import type { AiStyle } from '../../src/rules/aiArmy';
 import { buyPawn, type Shop, UPGRADES, upgradeCost, upgradePiece } from '../../src/rules/economy';
 import { type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
@@ -17,11 +19,12 @@ export function armyValue(shop: Shop): number {
   return shop.pieces.reduce((s, p) => s + PIECE_VALUE[p.type], 0);
 }
 
-export function spendGold(start: Shop, style: AiStyle, rng: Rng): Shop {
+export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec): Shop {
   let shop = start;
   for (;;) {
-    const pawnValue = shop.pieces.filter((p) => p.type === 'P').length * PIECE_VALUE.P;
-    const wantPawn = pawnValue < style.pawnShare * (armyValue(shop) + shop.gold);
+    const pawns = shop.pieces.filter((p) => p.type === 'P').length;
+    const pawnFits = shop.pieces.length < homeSquares(spec) && pawns < pawnSquares(spec);
+    const wantPawn = pawnFits && pawns * PIECE_VALUE.P < style.pawnShare * (armyValue(shop) + shop.gold);
     if (wantPawn) {
       const r = buyPawn(shop);
       if (r.ok) {
@@ -50,7 +53,7 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng): Shop {
       }
     }
 
-    if (!wantPawn) {
+    if (!wantPawn && pawnFits) {
       const r = buyPawn(shop);
       if (r.ok) {
         shop = r.shop;
