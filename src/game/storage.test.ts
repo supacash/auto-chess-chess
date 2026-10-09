@@ -1,13 +1,51 @@
 import { describe, expect, it } from 'vitest';
 import { makePiece } from '../rules/pieces';
 import { newRun } from '../rules/run';
-import { parseSave, type SavedGame } from './storage';
+import { migrateSave, parseSave, SAVE_VERSION, type SavedGame } from './storage';
 
 function sample(): SavedGame {
   const run = newRun();
   run.shop.pieces[0].square = { file: 4, rank: 0 };
-  return { version: 1, run, ai: { styleId: 'fortress', pieces: [makePiece('K', { file: 6, rank: 0 })] } };
+  return { version: SAVE_VERSION, run, ai: { styleId: 'fortress', pieces: [makePiece('K', { file: 6, rank: 0 })] } };
 }
+
+describe('migrateSave', () => {
+  const v1 = (settings?: object) => {
+    const g: any = JSON.parse(JSON.stringify(sample()));
+    g.version = 1;
+    if (settings) g.run.settings = settings;
+    else delete g.run.settings;
+    return g;
+  };
+
+  it('upgrades a v1 save from before settings to Classic, Normal, no reveal', () => {
+    expect((migrateSave(v1()) as any).run.settings).toEqual({ mode: 'classic', difficulty: 'normal', reveal: false });
+  });
+
+  it('keeps settings a v1 save already had, filling in only the mode', () => {
+    expect((migrateSave(v1({ difficulty: 'hard', reveal: true })) as any).run.settings).toEqual({
+      mode: 'classic',
+      difficulty: 'hard',
+      reveal: true,
+    });
+    // Saves written by the first board-size build were still v1 but had a mode.
+    expect((migrateSave(v1({ mode: 'growing', difficulty: 'easy', reveal: false })) as any).run.settings.mode).toBe(
+      'growing',
+    );
+  });
+
+  it('upgrades every v1 save to the current version and leaves current saves alone', () => {
+    expect(migrateSave(v1())?.version).toBe(SAVE_VERSION);
+    const current = sample();
+    expect(migrateSave(JSON.parse(JSON.stringify(current)))).toEqual(JSON.parse(JSON.stringify(current)));
+  });
+
+  it('round-trips a v1 save through parseSave', () => {
+    const parsed = parseSave(v1({ difficulty: 'hard', reveal: false }));
+    expect(parsed?.version).toBe(SAVE_VERSION);
+    expect(parsed?.run.settings).toEqual({ mode: 'classic', difficulty: 'hard', reveal: false });
+  });
+});
 
 describe('parseSave', () => {
   it('round-trips a valid save through JSON', () => {
@@ -18,7 +56,9 @@ describe('parseSave', () => {
   it('rejects other versions and junk', () => {
     expect(parseSave(null)).toBeNull();
     expect(parseSave('hello')).toBeNull();
-    expect(parseSave({ ...sample(), version: 2 })).toBeNull();
+    expect(parseSave({ ...sample(), version: SAVE_VERSION + 1 })).toBeNull(); // from a newer build
+    expect(parseSave({ ...sample(), version: 0 })).toBeNull();
+    expect(parseSave({ ...sample(), version: '2' })).toBeNull();
   });
 
   it('rejects bad numbers, squares, piece types and styles', () => {
@@ -39,10 +79,11 @@ describe('parseSave', () => {
     }
   });
 
-  it('keeps run settings, and gives saves from before settings existed the defaults (on Classic 8×8)', () => {
+  it('keeps run settings, and upgrades v1 saves from before settings existed to Classic 8×8', () => {
     const g: any = JSON.parse(JSON.stringify(sample()));
     g.run.settings = { mode: 'growing', difficulty: 'easy', reveal: true };
     expect(parseSave(g)?.run.settings).toEqual({ mode: 'growing', difficulty: 'easy', reveal: true });
+    g.version = 1;
     delete g.run.settings;
     expect(parseSave(g)?.run.settings).toEqual({ mode: 'classic', difficulty: 'normal', reveal: false });
     // Saves from before modes existed were played on 8×8, so they stay Classic.

@@ -1,20 +1,25 @@
+import { BOARDS } from '../chess/boardSpec';
 import { AI_STYLES } from '../rules/aiArmy';
 import { DEFAULT_SETTINGS, type DifficultyId, isDifficultyId, type RunSettings } from '../rules/difficulty';
 import { isModeId, type ModeId } from '../rules/mode';
 import type { Piece } from '../rules/pieces';
-import { BOARDS } from '../chess/boardSpec';
+import type { Run } from '../rules/run';
 
 /** Saved squares may be anywhere on the biggest board; the game fits them to the current one (fitToBoard). */
 const MAX_FILES = Math.max(...BOARDS.map((b) => b.files));
 const MAX_HOME_ROWS = Math.max(...BOARDS.map((b) => b.homeRows));
-import type { Run } from '../rules/run';
 
+// The key names keep their original "v1" suffix so existing saves are found; the save's format
+// version lives inside it (SavedGame.version) and is upgraded by MIGRATIONS.
 const RUN_KEY = 'acc.run.v1';
 const BEST_KEY = 'acc.best.v1';
 
+/** Current save format. Bump it and add a MIGRATIONS step whenever SavedGame changes shape. */
+export const SAVE_VERSION = 2;
+
 /** A run in progress, including the opponent already drafted for the current round. */
 export interface SavedGame {
-  version: 1;
+  version: typeof SAVE_VERSION;
   run: Run;
   ai: { styleId: string; pieces: Piece[] };
   /** Set while a battle is playing. Finding it on load means the page was closed mid-battle. */
@@ -75,9 +80,42 @@ export function saveBest(score: number, difficulty: DifficultyId = 'normal', mod
   }
 }
 
-/** Validates untrusted saved data; returns null if anything looks wrong. */
-export function parseSave(data: unknown): SavedGame | null {
-  if (!isObject(data) || data.version !== 1 || !isObject(data.run) || !isObject(data.ai)) return null;
+type RawSave = Record<string, unknown>;
+
+/**
+ * Upgrades a save from format N (the key) to N + 1, filling in only what format N lacked.
+ * Steps run in order, so a very old save passes through every one of them.
+ */
+const MIGRATIONS: Record<number, (save: RawSave) => RawSave> = {
+  // v1 → v2: v1 gained run settings over time (difficulty + reveal, then mode). A v1 save missing
+  // them predates those features: it was played at Normal on Classic 8×8.
+  1: (save) => {
+    const run = isObject(save.run) ? save.run : {};
+    const settings = isObject(run.settings) ? run.settings : {};
+    return {
+      ...save,
+      version: 2,
+      run: { ...run, settings: { mode: 'classic', difficulty: 'normal', reveal: false, ...settings } },
+    };
+  },
+};
+
+/** Brings saved data up to SAVE_VERSION; null if it isn't a save, or comes from a newer build. */
+export function migrateSave(data: unknown): RawSave | null {
+  if (!isObject(data) || !isCount(data.version, 1)) return null;
+  let save: RawSave = data;
+  while ((save.version as number) < SAVE_VERSION) {
+    const step = MIGRATIONS[save.version as number];
+    if (!step) return null;
+    save = step(save);
+  }
+  return save.version === SAVE_VERSION ? save : null;
+}
+
+/** Validates untrusted saved data (any version); returns null if anything looks wrong. */
+export function parseSave(raw: unknown): SavedGame | null {
+  const data = migrateSave(raw);
+  if (!data || !isObject(data.run) || !isObject(data.ai)) return null;
   const { run, ai } = data;
   if (!isCount(run.round, 1) || !isCount(run.lives, 1)) return null;
   if (!isObject(run.record) || !['w', 'l', 'd'].every((k) => isCount((run.record as Record<string, unknown>)[k], 0))) {
@@ -91,16 +129,16 @@ export function parseSave(data: unknown): SavedGame | null {
   if (pieces.filter((p) => p.type === 'K').length !== 1) return null;
 
   const record = run.record as Run['record'];
-  // Saves from before settings existed (or with bad values) fall back to the defaults.
+  // Missing settings were filled in by MIGRATIONS; values that are present but invalid fall back
+  // to safe defaults rather than losing the run.
   const s = isObject(run.settings) ? run.settings : {};
   const settings: RunSettings = {
-    // Runs saved before modes existed were all played on 8×8.
     mode: isModeId(s.mode) ? s.mode : 'classic',
     difficulty: isDifficultyId(s.difficulty) ? s.difficulty : DEFAULT_SETTINGS.difficulty,
     reveal: typeof s.reveal === 'boolean' ? s.reveal : DEFAULT_SETTINGS.reveal,
   };
   return {
-    version: 1,
+    version: SAVE_VERSION,
     run: {
       round: run.round,
       lives: run.lives,

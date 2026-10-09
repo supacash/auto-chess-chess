@@ -4,7 +4,7 @@ import { loadRules } from './chess/loadRules';
 import { checkmateEval, evalShare, formatEval } from './engine/pick';
 import { Engine } from './engine/stockfish';
 import { runBattle } from './game/runBattle';
-import { clearGame, loadBest, loadGame, saveBest, saveGame } from './game/storage';
+import { clearGame, loadBest, loadGame, SAVE_VERSION, saveBest, saveGame } from './game/storage';
 import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, pickStyle, placeAiArmy } from './rules/aiArmy';
 import { type BattleResult, type EndReason, material } from './rules/battle';
 import { DEFAULT_SETTINGS, DIFFICULTIES, difficulty, isDifficultyId, type RunSettings } from './rules/difficulty';
@@ -168,7 +168,7 @@ const state = {
 /** `battleInProgress` marks a battle as started, so leaving mid-battle counts as a loss on the next load. */
 function persist(battleInProgress = false): void {
   saveGame({
-    version: 1,
+    version: SAVE_VERSION,
     run: state.run,
     ai: { styleId: state.aiStyle.id, pieces: state.aiPieces },
     ...(battleInProgress ? { battleInProgress: true } : {}),
