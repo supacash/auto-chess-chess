@@ -40,7 +40,7 @@ const REASON_TEXT: Record<EndReason, string> = {
   repetition: 'by threefold repetition',
   insufficient: 'by insufficient material',
   'fifty-move': 'by the 50-move rule',
-  'move-limit': 'on material at the move limit',
+  'move-limit': 'on points',
   decisive: 'by a decisive material lead',
 };
 
@@ -498,9 +498,13 @@ function showResult(result: BattleResult): void {
   resultEl.dataset.winner = over ? 'b' : winner;
   battleStatusEl.textContent = '';
 
+  const moves = Math.ceil(result.plies / 2);
+  const verb = winner === 'draw' ? 'Drawn' : winner === 'w' ? 'You won' : 'You lost';
+  // A move-limit result is a normal way to win, so name it plainly instead of looking like a stuck game.
   const outcome =
-    `${winner === 'draw' ? 'Drawn' : winner === 'w' ? 'You won' : 'You lost'} ${REASON_TEXT[reason]}. ` +
-    `Material ${material.w}–${material.b} after ${Math.ceil(result.plies / 2)} moves.`;
+    reason === 'move-limit'
+      ? `${verb} on points, ${material.w}–${material.b}, at the ${PLY_LIMIT / 2}-move limit.`
+      : `${verb} ${REASON_TEXT[reason]}. Material ${material.w}–${material.b} after ${moves} moves.`;
   if (over) {
     $('#result-title').textContent = 'Game over';
     $('#result-detail').textContent =
@@ -508,7 +512,8 @@ function showResult(result: BattleResult): void {
       (newBest ? 'New best!' : `Best: ${state.best}.`);
     $('#next').textContent = 'New run';
   } else {
-    $('#result-title').textContent = winner === 'w' ? 'Victory' : winner === 'b' ? 'Defeat' : 'Draw';
+    const title = winner === 'w' ? 'Victory' : winner === 'b' ? 'Defeat' : 'Draw';
+    $('#result-title').textContent = reason === 'move-limit' ? `${title} on points` : title;
     const lifeNote = winner === 'b' ? ` −1 life (${state.run.lives} left).` : '';
     $('#result-detail').textContent = `${outcome} +${roundIncome(winner)} gold.${lifeNote}`;
     $('#next').textContent = 'Next round';

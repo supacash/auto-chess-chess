@@ -53,8 +53,8 @@ Draft and place a chess army, then watch an engine play the round for both sides
 
 ## Battle Rules
 - **First move:** random each round. If one king starts in check, that side moves first. If both kings start in check, the AI re-places its army.
-- **Move limit:** 60 plies (30 moves each).
-- **Win:** checkmate, or more material left when the move limit is reached.
+- **Move limit:** 90 plies (45 moves each). Simulation showed 60 left 68% of battles undecided at the limit; at 90, half end in checkmate with unchanged win rates (see SIMULATION.md §7).
+- **Win:** checkmate, or more material left when the move limit is reached. The second is shown as a win (or defeat) **on points**, so it reads as a normal result.
 - **Draw:** equal material at the limit, stalemate, threefold repetition or insufficient material.
 
 ## AI Opponent

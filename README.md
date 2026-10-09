@@ -10,7 +10,7 @@ Runs in the browser and is built for phones first. **[Play it here](https://supa
    pawn → knight/bishop (2g) → rook (2g) → queen (4g). Selling refunds the piece's value minus 1.
 2. **Place.** Drag or tap pieces into your three home rows. The king can't go on the front row, and pawns can't go on the back row.
    You can see which pieces the opponent has and its style, but not where they are.
-3. **Fight.** The engine plays both sides. A round ends on checkmate, or after 30 moves each, when the side with more material wins.
+3. **Fight.** The engine plays both sides. A round ends on checkmate, or after 45 moves each, when the side with more material wins on points.
 4. **Repeat.** Every round you earn 5 gold, +2 for a win or +1 for a draw. A loss costs one of your 3 lives. Your score is the number of rounds won.
 
 Your run is saved in the browser and resumes after a reload. Leaving in the middle of a battle counts as a loss.

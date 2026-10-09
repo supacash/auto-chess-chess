@@ -18,7 +18,7 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 
 ## Conventions
 - Coordinates: `Square { file: 0-7, rank: 0-7 }`. The player is always ranks 0–2 (shown at the bottom). The AI is ranks 5–7, mirrored when building engine positions.
-- These rules differ from standard chess and are easy to get wrong: king not on the front home row, no pawns on the back home row, no castling, two-square pawn moves only from rank 2, temporary promotion, 60-ply limit with a material tiebreak. See DESIGN.md.
+- These rules differ from standard chess and are easy to get wrong: king not on the front home row, no pawns on the back home row, no castling, two-square pawn moves only from rank 2, temporary promotion, 90-ply limit with a material ("on points") tiebreak. See DESIGN.md.
 - Keep rule functions pure and immutable (return new arrays). The UI re-renders from state.
 - No UI framework. Vanilla TS + CSS variables. Mobile layout must work at a 360px width.
 - Dependencies: chess.js (rules/FEN; positions are loaded with `skipValidation`) and stockfish 19 lite single-threaded WASM (GPLv3, loaded as a separate worker file).

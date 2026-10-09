@@ -2,7 +2,7 @@ import type { Chess, Color } from 'chess.js';
 import { PIECE_VALUE, type PieceType } from './pieces';
 
 /** Total half-moves before the round ends on material. */
-export const PLY_LIMIT = 60;
+export const PLY_LIMIT = 90;
 
 export type Winner = Color | 'draw';
 export type EndReason =
