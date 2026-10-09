@@ -4,7 +4,7 @@ import { aiBudget, draftAiArmy, pickStyle, placeAiArmy } from '../rules/aiArmy';
 import type { Winner } from '../rules/battle';
 import type { Piece } from '../rules/pieces';
 import { BASE_INCOME, DRAW_BONUS } from '../rules/economy';
-import { randomInt, seededRng, shuffle } from '../rules/rng';
+import { type Rng, seededRng, shuffle } from '../rules/rng';
 
 // A live, TFT-style match: four players shop and place at the same time, are paired off each round,
 // and lose health when they lose a battle. The last one standing wins. Everything here is pure and
@@ -31,10 +31,15 @@ export interface MatchPlayer {
   hp: number;
   /** Final place (1 = winner), set when knocked out or when the match is won; null while still in. */
   place: number | null;
+  /**
+   * Who they fought last round (for the odd player out: whose copy), so the next round can pair
+   * them with someone else. Null before the first round (and missing in rooms from older versions).
+   */
+  lastOpponent?: string | null;
 }
 
 export function newPlayers(entries: { id: string; name: string; bot: boolean }[]): MatchPlayer[] {
-  return entries.map((e) => ({ ...e, hp: START_HP, place: null }));
+  return entries.map((e) => ({ ...e, hp: START_HP, place: null, lastOpponent: null }));
 }
 
 /** Players still in the match. */
@@ -76,14 +81,40 @@ export function mixSeed(seed: number, round: number, salt = 0): number {
 
 /**
  * Pairs the players still in for `round`, randomly (sides too) but the same on every client. With an
- * odd number left, the last player fights a copy of a random other player's army.
+ * odd number left, the last player fights a copy of a random other player's army. Nobody meets last
+ * round's opponent again when another pairing avoids it (with two left, it can't be avoided).
  */
 export function pairRound(players: MatchPlayer[], seed: number, round: number): Pairing[] {
   const rng = seededRng(mixSeed(seed, round));
-  const order = shuffle(
-    alive(players).map((p) => p.id),
-    rng,
+  const ids = alive(players).map((p) => p.id);
+  const last = new Map(players.map((p) => [p.id, p.lastOpponent ?? null]));
+  let best: Pairing[] = [];
+  let bestRepeats = Number.POSITIVE_INFINITY;
+  // Every order of the (at most MATCH_SIZE) players, shuffled: the first with the fewest repeats wins.
+  for (const order of shuffle(permutations(ids), rng)) {
+    if (bestRepeats === 0) break;
+    const pairings = pairOrder(order, seed, round, rng);
+    // Only a side really in the battle counts: a copy's owner isn't meeting anyone.
+    const repeats = pairings.filter(
+      (p) => (p.copy !== 'w' && last.get(p.white) === p.black) || (p.copy !== 'b' && last.get(p.black) === p.white),
+    ).length;
+    if (repeats < bestRepeats) {
+      best = pairings;
+      bestRepeats = repeats;
+    }
+  }
+  return best;
+}
+
+function permutations<T>(items: T[]): T[][] {
+  if (items.length <= 1) return [items];
+  return items.flatMap((item, i) =>
+    permutations([...items.slice(0, i), ...items.slice(i + 1)]).map((rest) => [item, ...rest]),
   );
+}
+
+/** Pairs players in `order` two by two (the first of each pair is white); an odd last one fights a copy. */
+function pairOrder(order: string[], seed: number, round: number, rng: Rng): Pairing[] {
   const out: Pairing[] = [];
   const pair = (white: string, black: string, copy: Color | null) =>
     out.push({ white, black, copy, seed: mixSeed(seed, round, out.length + 1) });
@@ -92,7 +123,8 @@ export function pairRound(players: MatchPlayer[], seed: number, round: number): 
   if (order.length % 2 === 1 && order.length > 1) {
     const odd = order[order.length - 1];
     const others = order.slice(0, -1);
-    const copied = others[randomInt(rng, others.length)];
+    // Whose army is copied comes from the order too, so every choice is one of the orders tried.
+    const copied = others[0];
     if (rng() < 0.5) pair(odd, copied, 'b');
     else pair(copied, odd, 'w');
   }
@@ -141,6 +173,12 @@ export function applyRound(players: MatchPlayer[], round: number, results: Pairi
   for (const p of knockedOut) p.place = place--;
   const left = alive(next);
   if (left.length === 1) left[0].place = 1;
+  for (const { pairing } of results) {
+    const white = next.find((p) => p.id === pairing.white);
+    const black = next.find((p) => p.id === pairing.black);
+    if (white && pairing.copy !== 'w') white.lastOpponent = pairing.black;
+    if (black && pairing.copy !== 'b') black.lastOpponent = pairing.white;
+  }
   return next;
 }
 

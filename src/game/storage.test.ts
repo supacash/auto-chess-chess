@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { makePiece } from '../rules/pieces';
 import { newRun } from '../rules/run';
-import { migrateSave, parseSave, SAVE_VERSION, type SavedGame } from './storage';
+import { migrateSave, parseMatch, parseSave, SAVE_VERSION, type SavedGame } from './storage';
 
 function sample(): SavedGame {
   const run = newRun();
@@ -155,5 +155,26 @@ describe('parseSave', () => {
     const parsed = parseSave(g)!;
     expect('extra' in parsed.run).toBe(false);
     expect('evil' in parsed.run.shop.pieces[0]).toBe(false);
+  });
+});
+
+describe('parseMatch', () => {
+  const match = {
+    code: 'ABCD',
+    uid: 'u1',
+    round: 3,
+    streak: -2,
+    at: 1000,
+    shop: { gold: 4, pieces: [makePiece('K', { file: 4, rank: 0 }), makePiece('N')], offers: ['B', 'R'] },
+  };
+
+  it('reads back a saved match', () => {
+    expect(parseMatch(JSON.parse(JSON.stringify(match)))).toEqual(match);
+  });
+
+  it('rejects broken saves', () => {
+    expect(parseMatch(null)).toBeNull();
+    expect(parseMatch({ ...match, round: 0 })).toBeNull();
+    expect(parseMatch({ ...match, shop: { ...match.shop, pieces: [{ type: 'X' }] } })).toBeNull();
   });
 });

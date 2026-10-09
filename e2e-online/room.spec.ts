@@ -110,3 +110,36 @@ test('a player who leaves mid-shop is timed out and the match carries on', async
   await host.locator('#skip').click();
   await expect(host.locator('#result')).toBeVisible({ timeout: 120_000 });
 });
+
+test('a player who reloads mid-match rejoins it from the menu', async ({ browser }) => {
+  const host = await player(browser);
+  const guest = await player(browser);
+
+  await openMultiplayer(host);
+  await host.locator('#match-dialog').getByRole('button', { name: 'Create room' }).click();
+  await expect(host.locator('#lobby-code')).toHaveText(/^[A-Z]{4}$/, { timeout: 30_000 });
+  const code = (await host.locator('#lobby-code').textContent())!.trim();
+  await openMultiplayer(guest);
+  await guest.locator('#mp-code').fill(code);
+  await guest.locator('#match-dialog').getByRole('button', { name: 'Join room' }).click();
+  await expect(host.locator('#lobby-start')).toHaveText('Start with 2 bots');
+  await host.locator('#lobby-start').click();
+  await expect(guest.locator('#match-hud')).toBeVisible();
+
+  // The guest reloads during the shop: the menu offers the match back, with the same seat.
+  await guest.reload();
+  await expect(guest.locator('#menu-rejoin')).toBeVisible();
+  await expect(guest.locator('#menu-rejoin-detail')).toContainText(`Room ${code} · round 1`);
+  await guest.locator('#menu-rejoin').click();
+  await expect(guest.locator('#match-round')).toContainText(`Round 1 · Shop · 4 left · Room ${code}`);
+  await expect(guest.locator('#match-players .player.me')).toHaveCount(1);
+
+  // And the round carries on for both.
+  await placeKingAndReady(host);
+  await placeKingAndReady(guest);
+  for (const page of [host, guest]) {
+    await expect(page.locator('#battle')).toBeVisible();
+    await page.locator('#skip').click();
+    await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
+  }
+});

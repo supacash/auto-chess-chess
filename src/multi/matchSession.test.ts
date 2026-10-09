@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOARD_8 } from '../chess/boardSpec';
 import { loadRulesForNode } from '../chess/testRules';
-import { PIECES } from '../rules/pieces';
+import { BASE_INCOME } from '../rules/economy';
+import { makePiece, PIECES } from '../rules/pieces';
 import { armyErrors } from '../rules/placement';
 import { seededRng } from '../rules/rng';
 import { botArmy, pairRound, START_HP } from './match';
@@ -127,5 +128,29 @@ describe('MatchSession', () => {
     m.onArmyChange = (types) => seen.push(types);
     m.setPieces(withKingPlaced(m.shop.pieces, BOARD_8));
     expect(seen).toEqual([['K']]);
+  });
+});
+
+describe('MatchSession.resume', () => {
+  const shop = { gold: 5, pieces: [makePiece('K', { file: 4, rank: 0 }), makePiece('Q')], offers: ['N' as const] };
+  const saved = (round: number) => ({ round, streak: 3, shop });
+
+  it('picks up the saved shop and streak in the same round', () => {
+    const m = match();
+    m.resume(saved(4), 4);
+    expect(m.round).toBe(4);
+    expect(m.shop).toEqual(shop);
+    expect(m.streaks.get('me')).toBe(3);
+    expect(m.phase).toBe('shop');
+  });
+
+  it('adds base income for missed rounds and starts the streak over', () => {
+    const m = match();
+    m.resume(saved(4), 6);
+    expect(m.round).toBe(6);
+    expect(m.shop.gold).toBe(5 + 2 * BASE_INCOME);
+    expect(m.shop.pieces).toEqual(shop.pieces);
+    expect(m.shop.offers).not.toEqual(['N']);
+    expect(m.streaks.get('me')).toBe(0);
   });
 });

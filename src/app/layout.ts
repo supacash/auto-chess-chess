@@ -23,6 +23,9 @@ export function renderLayout(root: HTMLElement): void {
       <button type="button" id="menu-resume" class="primary">
         Resume game<small id="menu-resume-detail"></small>
       </button>
+      <button type="button" id="menu-rejoin" class="primary" hidden>
+        Rejoin match<small id="menu-rejoin-detail"></small>
+      </button>
       <button type="button" id="menu-new">New game</button>
       <button type="button" id="menu-multiplayer">Multiplayer</button>
       <button type="button" id="menu-profile">Profile</button>

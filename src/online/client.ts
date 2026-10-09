@@ -129,6 +129,12 @@ export class RoomClient {
     });
   }
 
+  /** The room as it is now (null if it doesn't exist). */
+  async getRoom(code: string): Promise<Room | null> {
+    const snap = await getDoc(doc(this.db, 'rooms', code));
+    return snap.exists() ? fromStored(snap.data()) : null;
+  }
+
   /** Calls `onChange` with the room now and after every change (null if it doesn't exist). */
   watch(code: string, onChange: (room: Room | null) => void): () => void {
     return onSnapshot(doc(this.db, 'rooms', code), (snap) => onChange(snap.exists() ? fromStored(snap.data()) : null));

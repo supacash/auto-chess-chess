@@ -13,6 +13,7 @@ import { Session } from './app/session';
 import { loadRules } from './chess/loadRules';
 import { Engine } from './engine/stockfish';
 import { ManualBattle } from './game/manualBattle';
+import { clearMatch, loadMatch } from './game/storage';
 import { generateName } from './multi/names';
 import { isRoomCode, normalizeCode } from './online/room';
 import type { RunSettings } from './rules/difficulty';
@@ -59,6 +60,7 @@ $('#menu-resume').addEventListener('click', () => {
   } else showPlacement();
 });
 $('#menu-replay').addEventListener('click', () => void watchReplay());
+$('#menu-rejoin').addEventListener('click', () => void rejoinMatch());
 const match = new MatchController({
   placement,
   battle,
@@ -150,6 +152,33 @@ async function openRoom(action: 'create' | 'join', blitz: boolean): Promise<void
   }
 }
 
+/** Rejoins the online match this device was in (after a reload, or after leaving it). */
+async function rejoinMatch(): Promise<void> {
+  const saved = loadMatch();
+  if (!saved || busy || match.active) return;
+  const button = $<HTMLButtonElement>('#menu-rejoin');
+  button.disabled = true;
+  $('#menu-rejoin-detail').textContent = 'Connecting…';
+  try {
+    const { RoomClient } = await import('./online/client');
+    const client = await RoomClient.connect();
+    const room = await client.getRoom(saved.code);
+    const me = room?.players.find((p) => p.id === client.uid);
+    if (!room || client.uid !== saved.uid || room.status !== 'playing' || !me || me.place !== null) {
+      clearMatch();
+      showMenu(room?.status === 'over' ? 'That match has finished.' : 'That match can’t be rejoined any more.');
+      return;
+    }
+    hideMenu();
+    match.startOnline(client, room, saved);
+  } catch (err) {
+    console.error(err);
+    showMenu(`Couldn’t rejoin the match: ${err instanceof Error ? err.message : String(err)}`);
+  } finally {
+    button.disabled = false;
+  }
+}
+
 let engine: Engine | null = null;
 let busy = false;
 
@@ -172,7 +201,11 @@ function showMenu(notice = ''): void {
   $('#menu-resume-detail').textContent = session.manual
     ? `Round ${round} · your game is in progress`
     : `Round ${round} · ${lives} ${lives === 1 ? 'life' : 'lives'} left`;
-  $('#menu-new').classList.toggle('primary', !inProgress);
+  const saved = match.active ? null : loadMatch();
+  $('#menu-rejoin').hidden = !saved;
+  $('#menu-rejoin-detail').textContent = saved ? `Room ${saved.code} · round ${saved.round}` : '';
+  $('#menu-resume').classList.toggle('primary', !saved);
+  $('#menu-new').classList.toggle('primary', !inProgress && !saved);
   $('#menu-replay').hidden = !session.lastReplay;
   const note = $('#menu-notice');
   note.hidden = !notice;

@@ -15,6 +15,7 @@ import { type MatchBattle, MatchSession, withKingPlaced } from '../multi/matchSe
 import { generateName, ordinal } from '../multi/names';
 import type { RoomClient } from '../online/client';
 import { botBattleComputer, canFinishRound, canStartBattle, resultKey, type Room, shopDeadline } from '../online/room';
+import { clearMatch, type SavedMatch, saveMatch } from '../game/storage';
 import { randomSeed, seededRng } from '../rules/rng';
 import { BattleAborted, type BattleScreen } from './battleScreen';
 import { $, escapeHtml, sleep } from './dom';
@@ -106,22 +107,66 @@ export class MatchController {
     this.begin();
   }
 
-  /** Joins a started online match in `room` (from the lobby). */
-  startOnline(client: RoomClient, room: Room): void {
+  /**
+   * Joins a started online match in `room`: from the lobby, or rejoining one after a reload with
+   * what this device saved (its shop and streak).
+   */
+  startOnline(client: RoomClient, room: Room, saved: SavedMatch | null = null): void {
     const m = new MatchSession(room.seed, client.uid, room.players, room.settings, Math.random);
     m.players = room.players;
+    if (saved) m.resume(saved, room.round);
     this.match = m;
-    this.online = { client, code: room.code, room, stopWatching: () => {}, submitted: 0, fought: 0, botsComputed: 0 };
-    this.online.stopWatching = client.watch(room.code, (r) => this.onRoom(r));
+    const o: Online = {
+      client,
+      code: room.code,
+      room,
+      stopWatching: () => {},
+      submitted: 0,
+      fought: 0,
+      botsComputed: 0,
+    };
+    this.online = o;
+    const inBattle = room.phase === 'battle';
+    // Rejoining after this device already finished the round's battle: wait for the others.
+    const finished = inBattle && room.done[client.uid] === room.round;
+    if (finished) o.fought = room.round;
+    if (!inBattle && room.ready[client.uid] === room.round) o.submitted = room.round;
+    o.stopWatching = client.watch(room.code, (r) => this.onRoom(r));
     // Share what's placed (types only) a moment after each change, so the next opponent can see it.
     let pending = 0;
     m.onArmyChange = (types) => {
+      this.save();
       clearTimeout(pending);
       pending = window.setTimeout(() => {
         if (this.match === m && this.online) void this.online.client.sharePreview(room.code, types).catch(console.warn);
       }, 800);
     };
     this.begin();
+    if (finished) {
+      m.lockArmies();
+      this.stopTimer();
+      this.deps.placement.hide();
+      this.deps.battle.showWaiting('Waiting for the other players to finish their battles…');
+      this.startWaitingTicks();
+      this.renderHud();
+    } else if (o.submitted === room.round) {
+      this.deps.placement.setBusy(true);
+      this.deps.placement.setMessage('Ready! Waiting for the other players…');
+    }
+  }
+
+  /** Online: keeps this device's side of the match (shop, streak) so a reload can rejoin it. */
+  private save(): void {
+    const m = this.match;
+    if (!this.online || !m) return;
+    saveMatch({
+      code: this.online.code,
+      uid: m.myId,
+      round: m.round,
+      shop: m.shop,
+      streak: m.streaks.get(m.myId) ?? 0,
+      at: Date.now(),
+    });
   }
 
   private begin(): void {
@@ -154,6 +199,7 @@ export class MatchController {
     placement.show();
     placement.setMessage('');
     if (this.online) {
+      this.save();
       // Pieces carry over between rounds: share them right away for the new round's opponent.
       void this.online.client.sharePreview(this.online.code, m.placedTypes()).catch(console.warn);
       this.computeEarlyBotBattles();
@@ -470,6 +516,7 @@ export class MatchController {
     if (final && m.phase === 'over') {
       const place = m.me.place ?? 1;
       this.deps.records.matchEnd(this.online !== null, m.settings.blitz, place);
+      if (this.online) clearMatch();
       if (this.online) void this.online.client.markDone(this.online.code, this.online.fought).catch(console.warn);
       this.deps.battle.showCard({
         title: place === 1 ? 'You win the match!' : `You finished ${ordinal(place)}`,
