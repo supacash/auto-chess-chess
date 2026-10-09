@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, MAX_PAWNS, pickStyle, placeAiArmy } from './aiArmy';
+import { fitsEngine } from './composition';
 import { MAX_ARMY, type PieceType, PIECE_VALUE } from './pieces';
 import { armyErrors } from './placement';
 import { seededRng } from './rng';
@@ -29,13 +30,14 @@ describe('pickStyle', () => {
 describe('draftAiArmy', () => {
   it('has one king and respects budget, army cap and pawn cap for every style', () => {
     for (const s of AI_STYLES) {
-      for (const budget of [3, 6, 12, 25, 60]) {
+      for (const budget of [3, 6, 12, 25, 60, 100]) {
         for (let seed = 0; seed < 10; seed++) {
           const types = draftAiArmy(budget, s, seededRng(seed));
           expect(count(types, 'K')).toBe(1);
           expect(points(types)).toBeLessThanOrEqual(budget);
           expect(types.length).toBeLessThanOrEqual(MAX_ARMY);
           expect(count(types, 'P')).toBeLessThanOrEqual(MAX_PAWNS);
+          expect(fitsEngine(types)).toBe(true);
         }
       }
     }

@@ -63,11 +63,13 @@ Every run is still alive after round 10, with an average score of 6.3. 298 of 10
 
 ## Problems found
 
-1. **Stockfish refuses armies the game allows (bug, affects the real game).** Stockfish 17+ rejects a position when a side's pawns plus "promoted" pieces exceed 8. Promoted pieces are knights, bishops or rooks beyond 2, and queens beyond 1. For example, 7 pawns + 4 bishops counts as 9. The engine prints `CRITICAL ERROR … Unsupported position. Too many pieces for WHITE` and then never sends `bestmove`.
+1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. `--ai-budget 0,6` plays all 1000 battles.
+   **Stockfish refuses armies the game allows (bug, affects the real game).** Stockfish 17+ rejects a position when a side's pawns plus "promoted" pieces exceed 8. Promoted pieces are knights, bishops or rooks beyond 2, and queens beyond 1. For example, 7 pawns + 4 bishops counts as 9. The engine prints `CRITICAL ERROR … Unsupported position. Too many pieces for WHITE` and then never sends `bestmove`.
    - The player can buy into this. `draftAiArmy` produces it too: at current budgets 15 of 1000 AI armies, and 160 of 1000 at 6×round. Once the pawn cap is hit, leftovers pile into upgrades.
    - In the browser, `Engine.candidates` waits for `bestmove` forever, so **the battle would freeze**.
    - Fix ideas: enforce the limit in placement, the shop and the drafter (e.g. at most 2 each of N/B/R and 1 Q beyond what pawns allow), and/or add a timeout in `Engine.candidates`.
-2. **Stockfish lite hangs on some legal positions (bug, affects the real game).** It hangs every time on `8/6k1/8/b7/8/1B2K1N1/5N2/5B2 b - - 0 15` at depth 6+, with MultiPV 1 or 3 and in a fresh process. That position has two same-coloured white bishops, which needs 3+ bishops. A second hang, `8/k2r2B1/1pb5/8/1KB1b2P/8/8/8 w - - 6 30`, has two same-coloured black bishops. Each came up in about 1 of 1000 battles.
+2. **Fixed:** `Engine.candidates` returns no moves on the CRITICAL ERROR line or after a 10 s timeout (restarting the worker), so `runBattle` plays a random legal move.
+   **Stockfish lite hangs on some legal positions (bug, affects the real game).** It hangs every time on `8/6k1/8/b7/8/1B2K1N1/5N2/5B2 b - - 0 15` at depth 6+, with MultiPV 1 or 3 and in a fresh process. That position has two same-coloured white bishops, which needs 3+ bishops. A second hang, `8/k2r2B1/1pb5/8/1KB1b2P/8/8/8 w - - 6 30`, has two same-coloured black bishops. Each came up in about 1 of 1000 battles.
    - The browser game would freeze here too. A per-search timeout in the browser engine, with a random-move fallback, would cover both bugs.
    - Separately, some searches stall once and recover after an engine restart. That was about 2 per 1000 battles at depth 8 and 13 per 1000 at depth 12.
 3. **The AI budget curve is far too flat.** Player army value grows 5–7 per round, the AI's only 2.

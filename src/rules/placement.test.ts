@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { COMPOSITION_ERROR } from './composition';
 import { makePiece, type Square } from './pieces';
 import { armyErrors, canPlace, movePiece, pieceAt } from './placement';
 
@@ -81,5 +82,13 @@ describe('armyErrors', () => {
     const errs = armyErrors([makePiece('K', sq(4, 2)), makePiece('N', sq(0, 0)), makePiece('B', sq(0, 0))]);
     expect(errs).toContain('Two pieces on a1');
     expect(errs.some((e) => e.startsWith('e3'))).toBe(true);
+  });
+
+  it('flags placed armies the engine refuses, but not benched extras', () => {
+    const pawns = Array.from({ length: 8 }, (_, f) => makePiece('P', sq(f, 1)));
+    const bishops = [makePiece('B', sq(0, 0)), makePiece('B', sq(1, 0)), makePiece('B', sq(2, 0))];
+    const king = makePiece('K', sq(4, 0));
+    expect(armyErrors([king, ...pawns, ...bishops])).toContain(COMPOSITION_ERROR);
+    expect(armyErrors([king, ...pawns, ...bishops.slice(0, 2), makePiece('B')])).toEqual([]);
   });
 });

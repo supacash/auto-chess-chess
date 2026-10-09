@@ -1,4 +1,5 @@
 import type { Winner } from './battle';
+import { COMPOSITION_ERROR, fitsEngine } from './composition';
 import { makePiece, MAX_ARMY, type Piece, type PieceType, PIECE_NAME, PIECE_VALUE } from './pieces';
 
 export const START_ARMY: PieceType[] = ['K', 'P', 'P', 'P'];
@@ -47,6 +48,7 @@ export function roundIncome(winner: Winner): number {
 export function buyPawn(shop: Shop): ShopResult {
   if (shop.pieces.length >= MAX_ARMY) return { ok: false, error: `Army is full (${MAX_ARMY} pieces)` };
   if (shop.gold < PAWN_COST) return { ok: false, error: 'Not enough gold' };
+  if (!fitsEngine([...shop.pieces.map((p) => p.type), 'P'])) return { ok: false, error: COMPOSITION_ERROR };
   return { ok: true, shop: { gold: shop.gold - PAWN_COST, pieces: [...shop.pieces, makePiece('P')] } };
 }
 
@@ -59,10 +61,9 @@ export function upgradePiece(shop: Shop, pieceId: string, to: PieceType): ShopRe
   }
   const cost = upgradeCost(piece.type, to);
   if (shop.gold < cost) return { ok: false, error: 'Not enough gold' };
-  return {
-    ok: true,
-    shop: { gold: shop.gold - cost, pieces: shop.pieces.map((p) => (p.id === pieceId ? { ...p, type: to } : p)) },
-  };
+  const pieces = shop.pieces.map((p) => (p.id === pieceId ? { ...p, type: to } : p));
+  if (!fitsEngine(pieces.map((p) => p.type))) return { ok: false, error: COMPOSITION_ERROR };
+  return { ok: true, shop: { gold: shop.gold - cost, pieces } };
 }
 
 export function sellPiece(shop: Shop, pieceId: string): ShopResult {

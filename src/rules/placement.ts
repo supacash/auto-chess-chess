@@ -1,3 +1,4 @@
+import { COMPOSITION_ERROR, fitsEngine } from './composition';
 import { type Piece, type PieceType, type Square, sameSquare, squareName } from './pieces';
 
 /** Number of home ranks each side controls. */
@@ -65,5 +66,7 @@ export function armyErrors(pieces: Piece[]): string[] {
     const err = placementError(p.type, p.square);
     if (err) errors.push(`${name}: ${err}`);
   }
+  // The shop already enforces this; checking placed pieces also covers armies saved before the rule.
+  if (!fitsEngine(pieces.filter((p) => p.square).map((p) => p.type))) errors.push(COMPOSITION_ERROR);
   return errors;
 }

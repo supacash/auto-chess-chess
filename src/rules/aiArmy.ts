@@ -1,3 +1,4 @@
+import { fitsEngine, MAX_PAWN_SLOTS, pawnSlots } from './composition';
 import { UPGRADES, upgradeCost } from './economy';
 import { makePiece, MAX_ARMY, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
 import { canPlace, HOME_RANKS, pieceAt } from './placement';
@@ -5,7 +6,7 @@ import { type Rng, randomInt } from './rng';
 
 // All squares here are AI-local: rank 0 is the AI's back row, rank 2 its front row.
 
-export const MAX_PAWNS = 8;
+export const MAX_PAWNS = MAX_PAWN_SLOTS;
 
 /** How an AI opponent drafts and lays out its army. */
 export interface AiStyle {
@@ -91,14 +92,14 @@ export function pickStyle(rng: Rng): AiStyle {
 /**
  * Picks piece types (always including the king) whose values sum to at most `budget`:
  * non-pawn pieces by the style's weights, the rest as pawns, and any budget left once
- * the pawn cap is hit goes into upgrades.
+ * the pawn cap is hit goes into upgrades. The army always fits the engine's piece limit (composition.ts).
  */
 export function draftAiArmy(budget: number, style: AiStyle, rng: Rng): PieceType[] {
   const types: PieceType[] = ['K'];
   let pieceBudget = budget - Math.round(budget * style.pawnShare);
   const options = (['Q', 'R', 'B', 'N'] as const).filter((t) => (style.weights[t] ?? 0) > 0);
   while (types.length < MAX_ARMY) {
-    const affordable = options.filter((t) => PIECE_VALUE[t] <= pieceBudget);
+    const affordable = options.filter((t) => PIECE_VALUE[t] <= pieceBudget && fitsEngine([...types, t]));
     if (affordable.length === 0) break;
     const pick = weightedPick(affordable, (t) => style.weights[t]!, rng);
     types.push(pick);
@@ -106,7 +107,7 @@ export function draftAiArmy(budget: number, style: AiStyle, rng: Rng): PieceType
   }
 
   let left = budget - points(types);
-  const pawns = Math.max(0, Math.min(left, MAX_PAWNS, MAX_ARMY - types.length));
+  const pawns = Math.max(0, Math.min(left, MAX_PAWNS - pawnSlots(types), MAX_ARMY - types.length));
   for (let i = 0; i < pawns; i++) types.push('P');
   left -= pawns;
   // Upgrades cost 2 or 4, so an odd leftover can't be spent; trade a pawn back to make it even.
@@ -119,7 +120,12 @@ export function draftAiArmy(budget: number, style: AiStyle, rng: Rng): PieceType
   for (;;) {
     const order = types.map((t, i) => [t, i] as const).sort(([a], [b]) => PIECE_VALUE[a] - PIECE_VALUE[b]);
     const found = order
-      .map(([from, i]) => ({ i, to: UPGRADES[from].filter((to) => upgradeCost(from, to) <= left) }))
+      .map(([from, i]) => ({
+        i,
+        to: UPGRADES[from].filter(
+          (to) => upgradeCost(from, to) <= left && fitsEngine(types.map((t, j) => (j === i ? to : t))),
+        ),
+      }))
       .find((o) => o.to.length > 0);
     if (!found) break;
     const to = weightedPick(found.to, (t) => style.weights[t] ?? 0.1, rng);

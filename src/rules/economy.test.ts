@@ -10,7 +10,7 @@ import {
   upgradeCost,
   upgradePiece,
 } from './economy';
-import { makePiece, MAX_ARMY, PIECE_VALUE } from './pieces';
+import { makePiece, MAX_ARMY, type PieceType, PIECE_VALUE } from './pieces';
 
 const ok = (r: ShopResult): Shop => {
   if (!r.ok) throw new Error(r.error);
@@ -97,5 +97,30 @@ describe('roundIncome', () => {
     expect(roundIncome('w')).toBe(7);
     expect(roundIncome('draw')).toBe(6);
     expect(roundIncome('b')).toBe(5);
+  });
+});
+
+describe('engine piece limit', () => {
+  const shopOf = (types: string, gold = 100): Shop => ({
+    gold,
+    pieces: types.split('').map((t) => makePiece(t as PieceType)),
+  });
+
+  it('refuses a pawn that would push pawns + extra pieces past 8', () => {
+    expect(buyPawn(shopOf('KPPPPPPPP')).ok).toBe(false);
+    expect(buyPawn(shopOf('KPPPPPPPBBB')).ok).toBe(false);
+    expect(buyPawn(shopOf('KPPPPPPPBB')).ok).toBe(true);
+  });
+
+  it('refuses an upgrade into an extra piece when the limit is full', () => {
+    const shop = shopOf('KPPPPPPPPRRN');
+    const knight = shop.pieces.find((p) => p.type === 'N')!;
+    expect(upgradePiece(shop, knight.id, 'R').ok).toBe(false);
+  });
+
+  it('allows upgrades that keep the count the same', () => {
+    // Pawn → third bishop: one pawn fewer, one extra bishop more.
+    const shop = shopOf('KPPPPPPPPBB');
+    expect(upgradePiece(shop, shop.pieces[1].id, 'B').ok).toBe(true);
   });
 });
