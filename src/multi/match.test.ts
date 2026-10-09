@@ -36,7 +36,7 @@ describe('match setup', () => {
   it('starts everyone at full health, not placed', () => {
     expect(four().every((p) => p.hp === START_HP && p.place === null)).toBe(true);
     expect(shopSeconds({ blitz: false })).toBe(45);
-    expect(shopSeconds({ blitz: true })).toBe(15);
+    expect(shopSeconds({ blitz: true })).toBe(20);
   });
 });
 

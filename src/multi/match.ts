@@ -14,7 +14,7 @@ export const MATCH_SIZE = 4;
 export const START_HP = 20;
 /** Seconds to shop and place each round (Blitz rooms get BLITZ_SECONDS). Ends early when all are ready. */
 export const SHOP_SECONDS = 45;
-export const BLITZ_SECONDS = 15;
+export const BLITZ_SECONDS = 20;
 
 export interface MatchSettings {
   blitz: boolean;

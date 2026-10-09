@@ -99,7 +99,7 @@ test('a player who leaves mid-shop is timed out and the match carries on', async
   await host.locator('#lobby-start').click();
   await expect(guest.locator('#match-hud')).toBeVisible();
 
-  // The guest walks away; the host readies. The 15 s Blitz shop closes without the guest.
+  // The guest walks away; the host readies. The 20 s Blitz shop closes without the guest.
   await guest.context().close();
   await placeKingAndReady(host);
   await expect(host.locator('#battle')).toBeVisible({ timeout: 40_000 });

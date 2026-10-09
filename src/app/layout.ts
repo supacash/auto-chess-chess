@@ -128,7 +128,7 @@ export function renderLayout(root: HTMLElement): void {
         number plus 1 per 5 points the winner has left. Last one standing wins.
       </p>
       <p class="dialog-text muted">Classic 8×8, standard pieces, auto battles.</p>
-      <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 15-second shop instead of 45</label>
+      <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 20-second shop instead of 45</label>
       <div class="actions">
         <button type="submit" value="create" class="primary">Create room</button>
         <button type="submit" value="bots">Play vs 3 bots</button>
