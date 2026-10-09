@@ -1,0 +1,173 @@
+import { homeSquares, pawnSquares } from '../chess/boardSpec';
+import {
+  buyPawn,
+  PAWN_COST,
+  type ShopResult,
+  sellPiece,
+  sellValue,
+  UPGRADES,
+  upgradeCost,
+  upgradePiece,
+} from '../rules/economy';
+import { MAX_ARMY, type Piece, PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
+import { PlacementBoard } from '../ui/board';
+import { inlineGlyph } from '../ui/boardDom';
+import { $ } from './dom';
+import { renderHeader } from './header';
+import type { Session } from './session';
+
+const PIECE_ORDER: PieceType[] = ['K', 'Q', 'R', 'B', 'N', 'P'];
+
+/** The placement screen: board, bench, shop, opponent preview and the Fight button. */
+export class PlacementScreen {
+  private readonly section = $('#placement');
+  private readonly message = $('#message');
+  private readonly fightBtn = $<HTMLButtonElement>('#fight');
+  private readonly board: PlacementBoard;
+  private selected: string | null = null;
+  private busy = false;
+  /** Variant of the board last shown, to announce when it grows. */
+  private shownBoard: string | null = null;
+
+  constructor(
+    private readonly session: Session,
+    onFight: () => void,
+  ) {
+    this.board = new PlacementBoard($('#board-root'), session.run.shop.pieces, {
+      onChange: (pieces) => this.piecesChanged(pieces),
+      onMessage: (text) => this.setMessage(text),
+      onSelect: (id) => {
+        this.selected = id;
+        this.renderShop();
+      },
+    });
+
+    $('#clear').addEventListener('click', () => {
+      const pieces = this.session.run.shop.pieces.map((p) => ({ ...p, square: null }));
+      this.board.setPieces(pieces);
+      this.setMessage('');
+      this.piecesChanged(pieces);
+    });
+    $('#buy-pawn').addEventListener('click', () => this.applyShop(buyPawn(this.session.run.shop)));
+    $('#piece-actions').addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
+      if (!btn || !this.selected) return;
+      const shop = this.session.run.shop;
+      if (btn.dataset.upgrade) this.applyShop(upgradePiece(shop, this.selected, btn.dataset.upgrade as PieceType));
+      else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
+    });
+    this.fightBtn.addEventListener('click', onFight);
+  }
+
+  /** Shows the screen for the session's current round. */
+  show(): void {
+    this.section.hidden = false;
+    const spec = this.session.board;
+    const grew = this.shownBoard !== null && this.shownBoard !== spec.variant;
+    this.shownBoard = spec.variant;
+    this.setMessage('');
+    const notice = $('#notice');
+    notice.hidden = !grew;
+    notice.textContent = grew ? `The board grew to ${spec.files}×${spec.ranks}: more room for your army!` : '';
+
+    this.session.fitPiecesToBoard();
+    this.board.setSpec(spec);
+    this.board.setPieces(this.session.run.shop.pieces);
+    this.board.setEnemy(this.session.run.settings.reveal ? this.session.aiPieces : null);
+    this.renderOpponent();
+    renderHeader(this.session);
+    this.piecesChanged(this.session.run.shop.pieces);
+  }
+
+  hide(): void {
+    this.section.hidden = true;
+  }
+
+  /** A new run's first board isn't "growth", and nothing is selected. */
+  resetForNewRun(): void {
+    this.shownBoard = null;
+    this.selected = null;
+  }
+
+  setMessage(text: string): void {
+    this.message.textContent = text;
+  }
+
+  /** While a battle is starting, Fight is disabled and nothing stays selected. */
+  setBusy(busy: boolean): void {
+    this.busy = busy;
+    if (busy) this.board.clearSelection();
+    this.updateFight();
+  }
+
+  private piecesChanged(pieces: Piece[]): void {
+    this.session.setPieces(pieces);
+    const placed = pieces.filter((p) => p.square);
+    const points = placed.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0);
+    $('#points').textContent =
+      `${placed.length}/${homeSquares(this.session.board)} squares filled · ${points} pts on board · army ${pieces.length}/${MAX_ARMY}`;
+    this.updateFight();
+    this.renderShop();
+  }
+
+  private updateFight(): void {
+    const errors = this.session.armyErrors();
+    this.fightBtn.disabled = this.busy || errors.length > 0;
+    this.fightBtn.title = errors.join('\n');
+  }
+
+  private renderOpponent(): void {
+    const { aiPieces, aiStyle } = this.session;
+    const types = aiPieces.map((p) => p.type).sort((a, b) => PIECE_ORDER.indexOf(a) - PIECE_ORDER.indexOf(b));
+    const points = types.reduce((s, t) => s + PIECE_VALUE[t], 0);
+    $('#opponent').innerHTML =
+      `Opponent · <strong>${aiStyle.name}</strong>: ` +
+      `<span class="glyphs">${types.map(inlineGlyph).join('')}</span> · ${points} pts`;
+  }
+
+  /** Gold, the buy button, and upgrade/sell buttons for the selected piece. */
+  private renderShop(): void {
+    const { gold, pieces } = this.session.run.shop;
+    $('#gold').textContent = `${gold}g`;
+    const buy = $<HTMLButtonElement>('#buy-pawn');
+    buy.disabled = gold < PAWN_COST || pieces.length >= MAX_ARMY;
+    // On a full board, more pawns only wait on the bench: point players at upgrades instead.
+    const spec = this.session.board;
+    const pawns = pieces.filter((p) => p.type === 'P').length;
+    const boardFull = pieces.length >= homeSquares(spec) || pawns >= pawnSquares(spec);
+    buy.textContent = boardFull ? `Board full: upgrade instead (pawn ${PAWN_COST}g)` : `Buy pawn · ${PAWN_COST}g`;
+    buy.classList.toggle('muted', boardFull);
+
+    const actions = $('#piece-actions');
+    const piece = pieces.find((p) => p.id === this.selected);
+    if (!piece) {
+      actions.innerHTML = `<span class="hint">Tap a piece to upgrade or sell it.</span>`;
+      return;
+    }
+    const upgrades = UPGRADES[piece.type]
+      .map((to) => {
+        const cost = upgradeCost(piece.type, to);
+        const disabled = gold < cost ? 'disabled' : '';
+        return `<button type="button" data-upgrade="${to}" ${disabled}>${inlineGlyph(to)} ${PIECE_NAME[to]} · ${cost}g</button>`;
+      })
+      .join('');
+    const sell =
+      piece.type === 'K'
+        ? ''
+        : `<button type="button" class="sell" data-sell>Sell · +${sellValue(piece.type)}g</button>`;
+    const maxed = upgrades === '' && piece.type !== 'K' ? '<span class="hint">Fully upgraded</span>' : '';
+    actions.innerHTML = `<span class="selected-name">${PIECE_NAME[piece.type]}</span>${upgrades}${maxed}${sell}`;
+  }
+
+  /** Applies a shop action, or shows why it failed. */
+  private applyShop(result: ShopResult): void {
+    if (!result.ok) {
+      this.setMessage(result.error);
+      return;
+    }
+    this.setMessage('');
+    this.session.setShop(result.shop);
+    this.board.setPieces(result.shop.pieces);
+    this.piecesChanged(result.shop.pieces);
+  }
+}

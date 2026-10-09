@@ -14,8 +14,9 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - `src/chess/` — board specs (`boardSpec.ts`, also generates the Fairy-Stockfish `variants.ini`), size-agnostic FEN helpers (`fen.ts`), and the rules `Game` wrapper around ffish (`rules.ts`). ffish loads async: `loadRules.ts` in the browser, `testRules.ts` in tests/the simulator.
 - `src/engine/` — Fairy-Stockfish UCI wrapper (`stockfish.ts`) and move picking/UCI parsing (`pick.ts`, pure + tested).
 - `src/game/` — orchestration that combines rules and engine (`runBattle.ts`, tested with a fake engine).
-- `src/ui/` — DOM rendering and input (Pointer Events, touch-first). `boardDom.ts` holds shared glyph and square helpers.
-- `src/main.ts` — app wiring and phase flow (placement → battle → result).
+- `src/app/` — the app around the rules: `session.ts` (the run, opponent, best score, saving and run flow; no DOM, unit tested), the screens (`placementScreen.ts`, `battleScreen.ts`, `newRunDialog.ts`, `header.ts`) and the page shell (`layout.ts`).
+- `src/ui/` — reusable board widgets (Pointer Events, touch-first): the placement board, the battle view, and shared piece/square helpers in `boardDom.ts`.
+- `src/main.ts` — wires the session to the screens and runs the fight sequence (placement → battle → result).
 - `scripts/copy-engine.mjs` copies Fairy-Stockfish, ffish and coi-serviceworker into `public/` (gitignored). It runs automatically before `dev` and `build`.
 
 ## Conventions
