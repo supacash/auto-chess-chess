@@ -102,6 +102,14 @@ test('Play it: move, resume after a reload, undo and resign', async ({ page }) =
   await expect(status).toHaveText(/Your move/, { timeout: 60_000 });
   await expect(page.locator('#lives .heart.full')).toHaveCount(3);
 
+  // Menu pauses the game (it's saved); Resume game carries on from the same position.
+  await page.locator('#menu-button').click();
+  await expect(page.locator('#menu')).toBeVisible();
+  await expect(page.locator('#menu-resume-detail')).toContainText('in progress');
+  await page.locator('#menu-resume').click();
+  await expect(status).toHaveText(/Your move/, { timeout: 60_000 });
+  await expect(page.locator('#undo')).toBeEnabled();
+
   await page.locator('#undo').click();
   await expect(page.locator('#undo')).toBeDisabled();
 

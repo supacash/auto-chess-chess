@@ -47,7 +47,14 @@ export class BattleAborted extends Error {
   }
 }
 
-type PlayerAction = { kind: 'move'; uci: string } | { kind: 'undo' } | { kind: 'resign' };
+type PlayerAction = { kind: 'move'; uci: string } | { kind: 'undo' } | { kind: 'resign' } | { kind: 'pause' };
+
+/** Thrown by playManual() when the player leaves for the menu: the game stays saved, to resume later. */
+export class GamePaused extends Error {
+  constructor() {
+    super('Game paused');
+  }
+}
 
 /** The battle screen: animated board, eval bar, playback speed, and the result. */
 export class BattleScreen {
@@ -276,14 +283,32 @@ export class BattleScreen {
     this.showSides(true);
     draw();
 
+    this.inManual = true;
+    this.pauseRequested = false;
+    try {
+      return await this.manualLoop(engine, game, onSave, draw);
+    } finally {
+      this.inManual = false;
+      this.view.setInput(null);
+    }
+  }
+
+  private async manualLoop(
+    engine: MoveSource,
+    game: ManualBattle,
+    onSave: (state: ManualState) => void,
+    draw: (last?: Move) => void,
+  ): Promise<BattleResult> {
     let result = game.result();
     while (!result) {
+      if (this.pauseRequested) throw new GamePaused();
       if (game.playerToMove) {
         this.status.textContent = game.isCheck() ? 'Your move: you are in check!' : 'Your move';
         this.undoBtn.disabled = !game.canUndo();
         this.resignBtn.disabled = false;
         const action = await this.waitForPlayer(game);
         this.view.setInput(null);
+        if (action.kind === 'pause') throw new GamePaused();
         if (action.kind === 'resign') {
           result = game.resign();
           break;
@@ -388,6 +413,20 @@ export class BattleScreen {
   private waiting = false;
   /** Set by abort(): the battle being played stops at its next move. */
   private aborted = false;
+  /** True while a Play it game is on screen; pauseRequested makes it stop at the player's next turn. */
+  private inManual = false;
+  private pauseRequested = false;
+
+  /**
+   * Leaves a Play it game for the menu: at once on the player's turn, or right after the opponent's
+   * move. Returns false if no Play it game is running.
+   */
+  pauseManual(): boolean {
+    if (!this.inManual) return false;
+    this.pauseRequested = true;
+    this.pending?.({ kind: 'pause' });
+    return true;
+  }
 
   /** Stops the battle being played (play() then rejects with BattleAborted). */
   abort(): void {

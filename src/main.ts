@@ -1,5 +1,5 @@
 import './style.css';
-import { BattleScreen } from './app/battleScreen';
+import { BattleScreen, GamePaused } from './app/battleScreen';
 import { $ } from './app/dom';
 import { renderHeader } from './app/header';
 import { renderLayout } from './app/layout';
@@ -38,7 +38,9 @@ const battle = new BattleScreen(
 );
 const newRun = new NewRunDialog(startNewRun);
 $('#menu-button').addEventListener('click', () => {
-  if (!busy) showMenu();
+  // During a Play it game, Menu pauses it (it's saved after every move); Resume game picks it up.
+  if (busy) battle.pauseManual();
+  else showMenu();
 });
 $('#menu-new').addEventListener('click', openNewRun);
 $('#menu-resume').addEventListener('click', () => {
@@ -195,11 +197,17 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
     const spec = session.board;
     const color = session.run.color;
     placement.hide();
+    // Auto battles can't be left midway (leaving counts as a loss); Play it games can be paused.
+    $<HTMLButtonElement>('#menu-button').disabled = !session.manual;
     const result = await play(loaded);
     const outcome = session.finishBattle(result);
     renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
   } catch (err) {
+    if (err instanceof GamePaused) {
+      showMenu();
+      return;
+    }
     console.error(err);
     session.manual = null;
     session.persist(); // the battle never finished, so don't count it as abandoned
@@ -208,6 +216,7 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
   } finally {
     busy = false;
     placement.setBusy(false);
+    $<HTMLButtonElement>('#menu-button').disabled = false;
   }
 }
 
