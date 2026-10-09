@@ -16,8 +16,8 @@ import { type BattleResult, material, PLY_LIMIT } from '../../src/rules/battle';
 import { roundIncome, START_ARMY, START_GOLD } from '../../src/rules/economy';
 import { PIECE_VALUE } from '../../src/rules/pieces';
 import { startPosition } from '../../src/rules/position';
-import { seededRng } from '../../src/rules/rng';
-import { NodeEngine } from './nodeEngine';
+import { randomInt, seededRng } from '../../src/rules/rng';
+import { EngineFailure, NodeEngine } from './nodeEngine';
 
 const LIVES = 3;
 /** Placement retries when both kings start in check (the game re-places the AI army). */
@@ -33,6 +33,7 @@ const { values: opts } = parseArgs({
     'player-style': { type: 'string', default: 'random' },
     lead: { type: 'string', default: '5' },
     'player-points': { type: 'string', default: 'economy' },
+    'ai-budget': { type: 'string' },
     json: { type: 'boolean', default: false },
   },
 });
@@ -46,6 +47,11 @@ const LEAD = Number(opts.lead);
 const PLAYER_STYLE = opts['player-style']!;
 /** economy = start army + gold + income so far; ai = same budget as this round's AI (isolates engine/style balance). */
 const PLAYER_POINTS = opts['player-points']!;
+/** `--ai-budget base,perRound` replaces aiBudget's 4 + 2×round (the ±1 noise is kept). */
+const AI_BUDGET = opts['ai-budget']?.split(',').map(Number);
+if (AI_BUDGET && (AI_BUDGET.length !== 2 || AI_BUDGET.some(Number.isNaN))) {
+  throw new Error('--ai-budget must be base,perRound (e.g. 0,6)');
+}
 if (PLAYER_POINTS !== 'economy' && PLAYER_POINTS !== 'ai') throw new Error('--player-points must be economy or ai');
 if (PLAYER_STYLE !== 'random' && !AI_STYLES.some((s) => s.id === PLAYER_STYLE)) {
   throw new Error(`--player-style must be random or one of: ${AI_STYLES.map((s) => s.id).join(', ')}`);
@@ -63,16 +69,34 @@ interface GameRecord {
   peakLeader: 'w' | 'b' | null;
 }
 
+/** A battle Stockfish could not play out (see EngineFailure); it is left out of W/D/L. */
+interface RejectedRecord {
+  kind: 'rejected' | 'hung';
+  round: number;
+  plies: number;
+  fen: string;
+  /** For `rejected`: whose army Stockfish objected to. */
+  side: 'player' | 'AI' | null;
+}
+
+interface RunRecord {
+  games: GameRecord[];
+  rejected: RejectedRecord[];
+}
+
 /** One run: rounds 1..ROUNDS in order, carrying the player's gold from round to round. */
-async function playRun(run: number, engine: NodeEngine): Promise<GameRecord[]> {
+async function playRun(run: number, engine: NodeEngine, onGame: () => void): Promise<RunRecord> {
   const rng = seededRng(SEED * 100_003 + run);
   const records: GameRecord[] = [];
+  const rejected: RejectedRecord[] = [];
   const runStyle = PLAYER_STYLE === 'random' ? pickStyle(rng) : AI_STYLES.find((s) => s.id === PLAYER_STYLE)!;
   let playerPoints = START_ARMY.reduce((s, t) => s + PIECE_VALUE[t], 0) + START_GOLD;
 
   for (let round = 1; round <= ROUNDS; round++) {
     const aiStyle = pickStyle(rng);
-    const aiPoints = aiBudget(round, rng);
+    const aiPoints = AI_BUDGET
+      ? Math.max(1, AI_BUDGET[0] + AI_BUDGET[1] * round + randomInt(rng, 3) - 1)
+      : aiBudget(round, rng);
     if (PLAYER_POINTS === 'ai') playerPoints = aiPoints;
     const player = placeAiArmy(draftAiArmy(playerPoints, runStyle, rng), runStyle, rng);
     const aiTypes = draftAiArmy(aiPoints, aiStyle, rng);
@@ -85,14 +109,27 @@ async function playRun(run: number, engine: NodeEngine): Promise<GameRecord[]> {
 
     let peakLead = 0;
     let peakLeader: 'w' | 'b' | null = null;
-    const result = await runBattle(start.fen, engine, rng, async (_move, chess) => {
-      const m = material(chess);
-      const lead = Math.abs(m.w - m.b);
-      if (lead > peakLead) {
-        peakLead = lead;
-        peakLeader = m.w > m.b ? 'w' : 'b';
-      }
-    });
+    let plies = 0;
+    let result: BattleResult;
+    try {
+      result = await runBattle(start.fen, engine, rng, async (_move, chess, ply) => {
+        plies = ply;
+        const m = material(chess);
+        const lead = Math.abs(m.w - m.b);
+        if (lead > peakLead) {
+          peakLead = lead;
+          peakLeader = m.w > m.b ? 'w' : 'b';
+        }
+      });
+    } catch (e) {
+      if (!(e instanceof EngineFailure)) throw e;
+      const side = e.kind === 'hung' ? null : /WHITE/.test(e.detail) ? 'player' : 'AI';
+      rejected.push({ kind: e.kind, round, plies, fen: e.fen, side });
+      playerPoints += roundIncome('draw');
+      onGame();
+      continue;
+    }
+    onGame();
 
     records.push({
       round,
@@ -106,7 +143,7 @@ async function playRun(run: number, engine: NodeEngine): Promise<GameRecord[]> {
     });
     playerPoints += roundIncome(result.winner);
   }
-  return records;
+  return { games: records, rejected };
 }
 
 // ---------- aggregation ----------
@@ -174,8 +211,10 @@ function table(title: string, rows: [string, Bucket][]): string {
   return [`\n${title}`, fmt(head), widths.map((w) => '-'.repeat(w)).join('  '), ...body.map(fmt)].join('\n');
 }
 
-function report(runs: GameRecord[][]): string {
+function report(records: RunRecord[]): string {
+  const runs = records.map((r) => r.games);
   const games = runs.flat();
+  const rejected = records.flatMap((r) => r.rejected);
   const total = emptyBucket();
   const byRound = new Map<number, Bucket>();
   const byStyle = new Map<string, Bucket>(AI_STYLES.map((s) => [s.name, emptyBucket()]));
@@ -205,7 +244,8 @@ function report(runs: GameRecord[][]): string {
 
   const out = [
     `Auto Chess Chess sim — ${RUNS} runs × ${ROUNDS} rounds, seed ${SEED}, depth ${DEPTH ?? SEARCH_DEPTH}, ` +
-      `ply limit ${PLY_LIMIT}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}`,
+      `ply limit ${PLY_LIMIT}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
+      `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round` : '4 + 2×round'} ±1`,
     'W/D/L are from the player\'s side. "lead≥N" = games where a side was ever ≥N points of material ahead;',
     '"no mate"/"no win" = share of those where that side failed to checkmate / failed to win at all.',
     table('By round', [...byRound.entries()].sort(([a], [b]) => a - b).map(([r, b]) => [`round ${r}`, b])),
@@ -216,6 +256,26 @@ function report(runs: GameRecord[][]): string {
     `Run score (wins before ${LIVES} losses): avg ${avgScore.toFixed(2)}, ` +
       `${pct(scores.filter((s) => s.survived).length, scores.length)} of runs still alive after round ${ROUNDS}`,
   ];
+  const all = games.length + rejected.length;
+  const refused = rejected.filter((r) => r.kind === 'rejected');
+  const hung = rejected.filter((r) => r.kind === 'hung');
+  if (refused.length) {
+    const atStart = refused.filter((r) => r.plies === 0).length;
+    const byAi = refused.filter((r) => r.side === 'AI').length;
+    out.push(
+      `\nStockfish REJECTED ${refused.length} of ${all} battles as unsupported positions ` +
+        `(${atStart} at the starting position, the rest after a promotion; ${byAi} for the AI's army, ` +
+        `${refused.length - byAi} for the player's). Examples:`,
+      ...refused.slice(0, 3).map((r) => `  round ${r.round}, ply ${r.plies}: ${r.fen}`),
+    );
+  }
+  if (hung.length) {
+    out.push(
+      `\nStockfish HUNG (no bestmove, even after a restart) in ${hung.length} of ${all} battles. Examples:`,
+      ...hung.slice(0, 3).map((r) => `  round ${r.round}, ply ${r.plies}: ${r.fen}`),
+    );
+  }
+  if (rejected.length) out.push('These battles are left out of the tables above and count as draws for income.');
   return out.join('\n');
 }
 
@@ -224,24 +284,35 @@ function report(runs: GameRecord[][]): string {
 async function main(): Promise<void> {
   const t0 = Date.now();
   const engines = await Promise.all(Array.from({ length: WORKERS }, () => NodeEngine.create(DEPTH)));
-  const results: GameRecord[][] = new Array(RUNS);
+  const results: RunRecord[] = new Array(RUNS);
   let next = 0;
   let done = 0;
+  let games = 0;
+  const progress = () => {
+    if (opts.json) return;
+    const secs = ((Date.now() - t0) / 1000).toFixed(0);
+    process.stderr.write(`\r${done}/${RUNS} runs, ${games}/${RUNS * ROUNDS} games (${secs}s)  `);
+  };
   await Promise.all(
     engines.map(async (engine) => {
       while (next < RUNS) {
         const run = next++;
-        results[run] = await playRun(run, engine);
+        results[run] = await playRun(run, engine, () => {
+          games++;
+          progress();
+        });
         done++;
-        if (!opts.json) process.stderr.write(`\r${done}/${RUNS} runs (${((Date.now() - t0) / 1000).toFixed(0)}s)`);
+        progress();
       }
     }),
   );
   for (const e of engines) e.terminate();
   if (!opts.json) process.stderr.write('\n');
 
-  if (opts.json) console.log(JSON.stringify(results.flat(), null, 1));
-  else console.log(report(results) + `\n\nTook ${((Date.now() - t0) / 1000).toFixed(0)}s with ${WORKERS} engines.`);
+  if (opts.json) console.log(JSON.stringify(results, null, 1));
+  else console.log(report(results) + 
+      `\n\nTook ${((Date.now() - t0) / 1000).toFixed(0)}s with ${WORKERS} engines ` +
+      `(${engines.reduce((s, e) => s + e.restarts, 0)} stalled searches restarted).`);
 }
 
 main().catch((e) => {
