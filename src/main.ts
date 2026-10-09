@@ -1,5 +1,5 @@
 import './style.css';
-import { boardForRound, type BoardSpec, homeSquares, plyLimit } from './chess/boardSpec';
+import { type BoardSpec, homeSquares, pawnSquares, plyLimit } from './chess/boardSpec';
 import { loadRules } from './chess/loadRules';
 import { checkmateEval, evalShare, formatEval } from './engine/pick';
 import { Engine } from './engine/stockfish';
@@ -7,7 +7,7 @@ import { runBattle } from './game/runBattle';
 import { clearGame, loadBest, loadGame, saveBest, saveGame } from './game/storage';
 import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, pickStyle, placeAiArmy } from './rules/aiArmy';
 import { type BattleResult, type EndReason, material } from './rules/battle';
-import { DIFFICULTIES, difficulty, isDifficultyId, type RunSettings } from './rules/difficulty';
+import { DEFAULT_SETTINGS, DIFFICULTIES, difficulty, isDifficultyId, type RunSettings } from './rules/difficulty';
 import {
   buyPawn,
   PAWN_COST,
@@ -22,6 +22,7 @@ import {
 import { MAX_ARMY, type Piece, type PieceType, PIECE_NAME, PIECE_VALUE } from './rules/pieces';
 import { armyErrors, fitToBoard } from './rules/placement';
 import { type StartPosition, startPosition } from './rules/position';
+import { gameMode, isModeId, MODES } from './rules/mode';
 import { applyResult, hasStarted, isRunOver, newRun, nextRound, type Run, runScore, START_LIVES } from './rules/run';
 import { BattleView } from './ui/battleView';
 import { inlineGlyph } from './ui/boardDom';
@@ -63,14 +64,6 @@ app.innerHTML = `
       Place your king and any other pieces in your home rows (the lit squares), spend gold on pawns and upgrades, then press
       <strong>Fight</strong>. The engine plays both sides. Lose a round and you lose a life.
     </p>
-    <div class="settings">
-      <label>Difficulty
-        <select id="difficulty">
-          ${DIFFICULTIES.map((d) => `<option value="${d.id}">${d.name} (+${d.perRound} AI pts/round)</option>`).join('')}
-        </select>
-      </label>
-      <label><input type="checkbox" id="reveal" /> Reveal opponent's placement</label>
-    </div>
     <p class="notice" id="notice" role="status" hidden></p>
     <p class="opponent" id="opponent"></p>
     <div id="board-root"></div>
@@ -109,6 +102,32 @@ app.innerHTML = `
     </div>
   </section>
 
+  <dialog id="new-run-dialog" aria-labelledby="new-run-title">
+    <form method="dialog" class="new-run-form">
+      <h2 id="new-run-title">New run</h2>
+      <fieldset>
+        <legend>Board</legend>
+        ${MODES.map(
+          (m) => `<label class="choice">
+            <input type="radio" name="nr-mode" value="${m.id}" />
+            <span><strong>${m.name}</strong><small>${m.description}</small></span>
+          </label>`,
+        ).join('')}
+      </fieldset>
+      <label class="field">Difficulty
+        <select id="nr-difficulty">
+          ${DIFFICULTIES.map((d) => `<option value="${d.id}">${d.name} (+${d.perRound} AI pts/round)</option>`).join('')}
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="nr-reveal" /> Reveal the opponent's placement (easier)</label>
+      <p class="warning" id="nr-warning" hidden>Starting a new run abandons the one in progress.</p>
+      <div class="actions">
+        <button type="submit" value="cancel" formnovalidate>Cancel</button>
+        <button type="submit" value="start" class="primary">Start run</button>
+      </div>
+    </form>
+  </dialog>
+
   <footer class="credits">
     Chess engine: <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener">Fairy-Stockfish</a>
     via <a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener">fairy-stockfish.wasm</a>
@@ -140,6 +159,8 @@ const state = {
   busy: false,
   /** Variant of the board last shown in placement, to announce when it grows. */
   shownBoard: null as string | null,
+  /** No saved run on load: offer the New run window so players see the modes. */
+  firstVisit: false,
 };
 
 // ---- persistence ----
@@ -161,13 +182,14 @@ function restoreOrStart(): string {
   if (!saved || !style) {
     state.run = newRun();
     draftOpponent();
-    state.best = loadBest(state.run.settings.difficulty);
+    state.best = bestFor(state.run.settings);
+    state.firstVisit = true;
     return '';
   }
   state.run = saved.run;
   state.aiStyle = style;
   state.aiPieces = saved.ai.pieces;
-  state.best = loadBest(state.run.settings.difficulty);
+  state.best = bestFor(state.run.settings);
   if (!saved.battleInProgress) return '';
 
   // The page was closed or reloaded mid-battle: count it as a loss.
@@ -177,7 +199,7 @@ function restoreOrStart(): string {
     const newBest = score > state.best;
     if (newBest) {
       state.best = score;
-      saveBest(score, state.run.settings.difficulty);
+      saveBest(score, state.run.settings.difficulty, state.run.settings.mode);
     }
     state.run = newRun(state.run.settings);
     draftOpponent();
@@ -195,58 +217,64 @@ function restoreOrStart(): string {
 
 // ---- rendering ----
 
-/** The board this round is played on (it grows every few rounds). */
+/** The board a round is played on (in Growing mode it grows every few rounds). */
+function boardOf(round = state.run.round): BoardSpec {
+  return gameMode(state.run.settings.mode).board(round);
+}
+
 function currentBoard(): BoardSpec {
-  return boardForRound(state.run.round);
+  return boardOf();
+}
+
+/** Best score for the run's mode and difficulty. */
+function bestFor(settings: RunSettings): number {
+  return loadBest(settings.difficulty, settings.mode);
 }
 
 function draftOpponent(): void {
   const spec = currentBoard();
   state.aiStyle = pickStyle(rng);
-  const budget = aiBudget(state.run.round, rng, difficulty(state.run.settings.difficulty).perRound);
+  const { settings } = state.run;
+  const mode = gameMode(settings.mode);
+  const budget = aiBudget(state.run.round, rng, difficulty(settings.difficulty).perRound, mode.roundOneDiscount, mode.aiBonus);
   state.aiPieces = placeAiArmy(draftAiArmy(budget, state.aiStyle, rng, spec), state.aiStyle, rng, spec);
 }
 
-/** Syncs the settings controls and the revealed opponent with the run. */
-function renderSettings(): void {
-  const { settings } = state.run;
-  $<HTMLSelectElement>('#difficulty').value = settings.difficulty;
-  $<HTMLInputElement>('#reveal').checked = settings.reveal;
-  board.setEnemy(settings.reveal ? state.aiPieces : null);
+/** Shows the opponent's placement if the run was started with Reveal on. */
+function renderReveal(): void {
+  board.setEnemy(state.run.settings.reveal ? state.aiPieces : null);
 }
 
-/**
- * Settings are fixed for a run. Before the first battle they apply straight away (keeping the
- * player's army); after that, changing them starts a new run.
- */
-function changeSettings(): void {
-  const value = $<HTMLSelectElement>('#difficulty').value;
-  const settings: RunSettings = {
-    difficulty: isDifficultyId(value) ? value : state.run.settings.difficulty,
-    reveal: $<HTMLInputElement>('#reveal').checked,
-  };
-  if (hasStarted(state.run)) {
-    if (!window.confirm('Settings apply to a whole run. Abandon this run and start a new one?')) {
-      renderSettings();
-      return;
-    }
-    startNewRun(settings);
-    return;
-  }
-  const redraft = settings.difficulty !== state.run.settings.difficulty;
-  state.run = { ...state.run, settings };
-  state.best = loadBest(settings.difficulty);
-  if (redraft) draftOpponent();
-  persist();
-  showPlacement();
+const newRunDialog = $<HTMLDialogElement>('#new-run-dialog');
+
+/** Opens the New run window, preset to the current run's settings. Runs start only from here. */
+function openNewRunDialog(): void {
+  if (state.busy) return;
+  const { settings } = state.run;
+  newRunDialog.querySelectorAll<HTMLInputElement>('input[name="nr-mode"]').forEach((r) => (r.checked = r.value === settings.mode));
+  $<HTMLSelectElement>('#nr-difficulty').value = settings.difficulty;
+  $<HTMLInputElement>('#nr-reveal').checked = settings.reveal;
+  $('#nr-warning').hidden = !hasStarted(state.run) || isRunOver(state.run);
+  newRunDialog.returnValue = '';
+  newRunDialog.showModal();
 }
+
+newRunDialog.addEventListener('close', () => {
+  if (newRunDialog.returnValue !== 'start') return;
+  const mode = newRunDialog.querySelector<HTMLInputElement>('input[name="nr-mode"]:checked')?.value;
+  const level = $<HTMLSelectElement>('#nr-difficulty').value;
+  startNewRun({
+    mode: isModeId(mode) ? mode : DEFAULT_SETTINGS.mode,
+    difficulty: isDifficultyId(level) ? level : DEFAULT_SETTINGS.difficulty,
+    reveal: $<HTMLInputElement>('#nr-reveal').checked,
+  });
+});
 
 function renderOpponent(): void {
   const types = state.aiPieces.map((p) => p.type).sort((a, b) => PIECE_ORDER.indexOf(a) - PIECE_ORDER.indexOf(b));
   const points = types.reduce((s, t) => s + PIECE_VALUE[t], 0);
   $('#opponent').innerHTML =
     `Opponent · <strong>${state.aiStyle.name}</strong>` +
-    (state.aiStyle.tough ? ` <span class="tough" title="This style wins more often than the others">tough</span>` : '') +
     `: ` +
     `<span class="glyphs">${types.map(inlineGlyph).join('')}</span> · ${points} pts`;
 }
@@ -254,7 +282,7 @@ function renderOpponent(): void {
 /** `round` lets the result screen keep showing the round just played. */
 function renderHeader(round = state.run.round): void {
   const { lives, record } = state.run;
-  const spec = boardForRound(round);
+  const spec = boardOf(round);
   $('#round').textContent = `Round ${round} · ${spec.files}×${spec.ranks}`;
   const livesEl = $('#lives');
   livesEl.innerHTML = Array.from(
@@ -288,7 +316,14 @@ function updatePlacement(pieces: Piece[]): void {
 function updateShop(): void {
   const { gold, pieces } = state.run.shop;
   $('#gold').textContent = `${gold}g`;
-  $<HTMLButtonElement>('#buy-pawn').disabled = gold < PAWN_COST || pieces.length >= MAX_ARMY;
+  const buy = $<HTMLButtonElement>('#buy-pawn');
+  buy.disabled = gold < PAWN_COST || pieces.length >= MAX_ARMY;
+  // On a full board, more pawns only wait on the bench: point players at upgrades instead.
+  const spec = currentBoard();
+  const pawns = pieces.filter((p) => p.type === 'P').length;
+  const boardFull = pieces.length >= homeSquares(spec) || pawns >= pawnSquares(spec);
+  buy.textContent = boardFull ? `Board full: upgrade instead (pawn ${PAWN_COST}g)` : `Buy pawn · ${PAWN_COST}g`;
+  buy.classList.toggle('muted', boardFull);
 
   const actions = $('#piece-actions');
   const piece = pieces.find((p) => p.id === state.selected);
@@ -335,7 +370,7 @@ function showPlacement(): void {
   state.run = { ...state.run, shop: { ...state.run.shop, pieces: fitToBoard(state.run.shop.pieces, spec) } };
   board.setSpec(spec);
   board.setPieces(state.run.shop.pieces);
-  renderSettings();
+  renderReveal();
   renderOpponent();
   renderHeader();
   updatePlacement(state.run.shop.pieces);
@@ -371,8 +406,6 @@ $('#piece-actions').addEventListener('click', (e) => {
 });
 
 fightBtn.addEventListener('click', () => void fight());
-$('#difficulty').addEventListener('change', changeSettings);
-$('#reveal').addEventListener('change', changeSettings);
 
 $('#playback').addEventListener('click', (e) => {
   const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
@@ -383,22 +416,19 @@ $('#playback').addEventListener('click', (e) => {
 });
 
 $('#next').addEventListener('click', () => {
-  if (isRunOver(state.run)) startNewRun();
+  if (isRunOver(state.run)) openNewRunDialog();
   else showPlacement();
 });
 
-$('#new-run').addEventListener('click', () => {
-  if (state.busy) return;
-  if (hasStarted(state.run) && !window.confirm('Abandon this run and start over?')) return;
-  startNewRun();
-});
+$('#new-run').addEventListener('click', openNewRunDialog);
 
 /** Starts over, keeping the current settings unless new ones are given. */
 function startNewRun(settings: RunSettings = state.run.settings): void {
   clearGame();
   state.run = newRun(settings);
-  state.best = loadBest(settings.difficulty);
+  state.best = bestFor(settings);
   state.selected = null;
+  state.shownBoard = null; // a new run's first board isn't "growth"
   draftOpponent();
   showPlacement();
 }
@@ -511,7 +541,7 @@ function showResult(result: BattleResult): void {
   if (over) {
     if (newBest) {
       state.best = score;
-      saveBest(score, state.run.settings.difficulty);
+      saveBest(score, state.run.settings.difficulty, state.run.settings.mode);
     }
     clearGame();
   } else {
@@ -531,7 +561,7 @@ function showResult(result: BattleResult): void {
   // A move-limit result is a normal way to win, so name it plainly instead of looking like a stuck game.
   const outcome =
     reason === 'move-limit'
-      ? `${verb} on points, ${material.w}–${material.b}, at the ${plyLimit(boardForRound(playedRound)) / 2}-move limit.`
+      ? `${verb} on points, ${material.w}–${material.b}, at the ${plyLimit(boardOf(playedRound)) / 2}-move limit.`
       : `${verb} ${REASON_TEXT[reason]}. Material ${material.w}–${material.b} after ${moves} moves.`;
   if (over) {
     $('#result-title').textContent = 'Game over';
@@ -555,3 +585,4 @@ function sleep(ms: number): Promise<void> {
 const notice = restoreOrStart();
 showPlacement();
 messageEl.textContent = notice;
+if (state.firstVisit) openNewRunDialog();

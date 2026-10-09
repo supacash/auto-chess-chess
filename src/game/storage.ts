@@ -1,5 +1,6 @@
 import { AI_STYLES } from '../rules/aiArmy';
 import { DEFAULT_SETTINGS, type DifficultyId, isDifficultyId, type RunSettings } from '../rules/difficulty';
+import { isModeId, type ModeId } from '../rules/mode';
 import type { Piece } from '../rules/pieces';
 import { BOARDS } from '../chess/boardSpec';
 
@@ -48,23 +49,27 @@ export function clearGame(): void {
   }
 }
 
-/** Each difficulty has its own best score. Normal keeps the original key so earlier bests carry over. */
-function bestKey(difficulty: DifficultyId): string {
+/**
+ * Each mode and difficulty has its own best score. Classic keeps the original keys so earlier
+ * bests (all played on 8×8) carry over.
+ */
+function bestKey(difficulty: DifficultyId, mode: ModeId): string {
+  if (mode === 'growing') return `acc.best.growing.${difficulty}.v1`;
   return difficulty === 'normal' ? BEST_KEY : `acc.best.${difficulty}.v1`;
 }
 
-export function loadBest(difficulty: DifficultyId = 'normal'): number {
+export function loadBest(difficulty: DifficultyId = 'normal', mode: ModeId = 'classic'): number {
   try {
-    const best = Number(localStorage.getItem(bestKey(difficulty)));
+    const best = Number(localStorage.getItem(bestKey(difficulty, mode)));
     return Number.isInteger(best) && best > 0 ? best : 0;
   } catch {
     return 0;
   }
 }
 
-export function saveBest(score: number, difficulty: DifficultyId = 'normal'): void {
+export function saveBest(score: number, difficulty: DifficultyId = 'normal', mode: ModeId = 'classic'): void {
   try {
-    localStorage.setItem(bestKey(difficulty), String(score));
+    localStorage.setItem(bestKey(difficulty, mode), String(score));
   } catch {
     // ignore
   }
@@ -89,6 +94,8 @@ export function parseSave(data: unknown): SavedGame | null {
   // Saves from before settings existed (or with bad values) fall back to the defaults.
   const s = isObject(run.settings) ? run.settings : {};
   const settings: RunSettings = {
+    // Runs saved before modes existed were all played on 8×8.
+    mode: isModeId(s.mode) ? s.mode : 'classic',
     difficulty: isDifficultyId(s.difficulty) ? s.difficulty : DEFAULT_SETTINGS.difficulty,
     reveal: typeof s.reveal === 'boolean' ? s.reveal : DEFAULT_SETTINGS.reveal,
   };

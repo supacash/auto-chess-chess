@@ -13,14 +13,17 @@ export const DIFFICULTIES: Difficulty[] = [
   { id: 'hard', name: 'Hard', perRound: 7 },
 ];
 
+import type { ModeId } from './mode';
+
 /** Chosen when a run starts and fixed for that run. */
 export interface RunSettings {
+  mode: ModeId;
   difficulty: DifficultyId;
   /** Show where the opponent's pieces are during placement (an easier mode). */
   reveal: boolean;
 }
 
-export const DEFAULT_SETTINGS: RunSettings = { difficulty: 'normal', reveal: false };
+export const DEFAULT_SETTINGS: RunSettings = { mode: 'growing', difficulty: 'normal', reveal: false };
 
 export function difficulty(id: DifficultyId): Difficulty {
   return DIFFICULTIES.find((d) => d.id === id) ?? DIFFICULTIES[1];

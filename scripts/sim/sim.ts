@@ -13,9 +13,10 @@ import { availableParallelism } from 'node:os';
 import { parseArgs } from 'node:util';
 import { runBattle, SEARCH_DEPTH } from '../../src/game/runBattle';
 import { aiBudget, AI_STYLES, draftAiArmy, pickStyle, placeAiArmy } from '../../src/rules/aiArmy';
-import { BOARD_8, boardForRound, type BoardSpec, plyLimit } from '../../src/chess/boardSpec';
+import { type BoardSpec, plyLimit } from '../../src/chess/boardSpec';
+import { gameMode } from '../../src/rules/mode';
 import { type BattleLimits, type BattleResult, material } from '../../src/rules/battle';
-import { roundIncome, START_ARMY, START_GOLD, startingShop } from '../../src/rules/economy';
+import { roundIncome, START_GOLD, startingShop } from '../../src/rules/economy';
 import { PIECE_VALUE } from '../../src/rules/pieces';
 import { startPosition } from '../../src/rules/position';
 import { randomInt, seededRng } from '../../src/rules/rng';
@@ -70,10 +71,11 @@ const DECISIVE = opts.decisive?.split(',').map(Number);
 if (DECISIVE && (DECISIVE.length !== 2 || DECISIVE.some(Number.isNaN))) {
   throw new Error('--decisive must be lead,plies (e.g. 10,6)');
 }
-/** `--board schedule` (default) plays each round on the game's growing board; `--board 8` uses 8×8 throughout. */
+/** `--board schedule` (default) plays the Growing mode (5×5 → 8×8); `--board 8` plays Classic (8×8 throughout). */
 const BOARD_MODE = opts.board!;
 if (BOARD_MODE !== 'schedule' && BOARD_MODE !== '8') throw new Error('--board must be schedule or 8');
-const boardFor = (round: number): BoardSpec => (BOARD_MODE === '8' ? BOARD_8 : boardForRound(round));
+const MODE = gameMode(BOARD_MODE === '8' ? 'classic' : 'growing');
+const boardFor = (round: number): BoardSpec => MODE.board(round);
 /** `--plies N` replaces the board's move limit (10 × size + 10). */
 const PLY_OVERRIDE = opts.plies ? Number(opts.plies) : null;
 if (PLY_OVERRIDE !== null && !(PLY_OVERRIDE > 0)) throw new Error('--plies must be a positive number');
@@ -120,15 +122,15 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
   const records: GameRecord[] = [];
   const rejected: RejectedRecord[] = [];
   const runStyle = PLAYER_STYLE === 'random' ? pickStyle(rng) : AI_STYLES.find((s) => s.id === PLAYER_STYLE)!;
-  let playerPoints = START_ARMY.reduce((s, t) => s + PIECE_VALUE[t], 0) + START_GOLD;
-  let shop = startingShop();
+  let playerPoints = MODE.startArmy.reduce((s, t) => s + PIECE_VALUE[t], 0) + START_GOLD;
+  let shop = startingShop(MODE.startArmy);
 
   for (let round = 1; round <= ROUNDS; round++) {
     const spec = boardFor(round);
     const aiStyle = pickStyle(rng);
     const aiPoints = AI_BUDGET
       ? Math.max(1, AI_BUDGET[0] + AI_BUDGET[1] * round + randomInt(rng, 3) - 1)
-      : aiBudget(round, rng);
+      : aiBudget(round, rng, 6, MODE.roundOneDiscount, MODE.aiBonus);
     if (PLAYER_POINTS === 'ai') playerPoints = aiPoints;
     let playerTypes;
     if (PLAYER === 'shop') {
@@ -291,8 +293,8 @@ function report(records: RunRecord[]): string {
 
   const out = [
     `Auto Chess Chess sim — ${RUNS} runs × ${ROUNDS} rounds, seed ${SEED}, depth ${DEPTH ?? SEARCH_DEPTH}, ` +
-      `board ${BOARD_MODE === '8' ? '8×8' : '5×5→8×8 schedule'}, ply limit ${PLY_OVERRIDE ?? '10 × size + 10'}${DECISIVE ? `, decisive lead ${DECISIVE[0]} for ${DECISIVE[1]} plies` : ''}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
-      `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round ±1` : '6×round ±1 (round 1: −1)'}`,
+      `mode ${MODE.name}, ply limit ${PLY_OVERRIDE ?? '10 × size + 10'}${DECISIVE ? `, decisive lead ${DECISIVE[0]} for ${DECISIVE[1]} plies` : ''}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
+      `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round ±1` : `6×round${MODE.aiBonus ? ` + ${MODE.aiBonus}` : ''} ±1 (round 1: −${MODE.roundOneDiscount})`}`,
     'W/D/L are from the player\'s side. "lead≥N" = games where a side was ever ≥N points of material ahead;',
     '"no mate"/"no win" = share of those where that side failed to checkmate / failed to win at all.',
     '"±win" = 95% margin of error on the win rate, in points. Treat gaps smaller than the margins as noise.',

@@ -39,14 +39,17 @@ describe('parseSave', () => {
     }
   });
 
-  it('keeps run settings, and gives saves from before settings existed the defaults', () => {
+  it('keeps run settings, and gives saves from before settings existed the defaults (on Classic 8×8)', () => {
     const g: any = JSON.parse(JSON.stringify(sample()));
-    g.run.settings = { difficulty: 'easy', reveal: true };
-    expect(parseSave(g)?.run.settings).toEqual({ difficulty: 'easy', reveal: true });
+    g.run.settings = { mode: 'growing', difficulty: 'easy', reveal: true };
+    expect(parseSave(g)?.run.settings).toEqual({ mode: 'growing', difficulty: 'easy', reveal: true });
     delete g.run.settings;
-    expect(parseSave(g)?.run.settings).toEqual({ difficulty: 'normal', reveal: false });
-    g.run.settings = { difficulty: 'insane', reveal: 1 };
-    expect(parseSave(g)?.run.settings).toEqual({ difficulty: 'normal', reveal: false });
+    expect(parseSave(g)?.run.settings).toEqual({ mode: 'classic', difficulty: 'normal', reveal: false });
+    // Saves from before modes existed were played on 8×8, so they stay Classic.
+    g.run.settings = { difficulty: 'hard', reveal: false };
+    expect(parseSave(g)?.run.settings.mode).toBe('classic');
+    g.run.settings = { mode: 'huge', difficulty: 'insane', reveal: 1 };
+    expect(parseSave(g)?.run.settings).toEqual({ mode: 'classic', difficulty: 'normal', reveal: false });
   });
 
   it('keeps the battle-in-progress flag only when it is true', () => {

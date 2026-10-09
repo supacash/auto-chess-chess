@@ -26,8 +26,8 @@ export interface Shop {
 
 export type ShopResult = { ok: true; shop: Shop } | { ok: false; error: string };
 
-export function startingShop(): Shop {
-  return { gold: START_GOLD, pieces: START_ARMY.map((t) => makePiece(t)) };
+export function startingShop(army: PieceType[] = START_ARMY): Shop {
+  return { gold: START_GOLD, pieces: army.map((t) => makePiece(t)) };
 }
 
 /** An upgrade costs the difference in value, so gold spent always equals army points. */

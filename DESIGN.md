@@ -20,6 +20,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - The score is the number of rounds won. Each difficulty saves its own best score.
 - Each round, the AI army's point budget grows (see AI Opponent).
 - **Run settings** are picked on the placement screen and fixed for the whole run:
+  - **Board (game mode):** *Growing board* (the default) starts on 5×5 and grows to 8×8 (see Board Sizes). *Classic* plays every round on 8×8. Each mode has its own starting army and best scores; runs saved before modes existed load as Classic.
   - **Difficulty:** how fast the AI budget grows. Easy is 5×round, Normal (the default) 6×round, Hard 7×round.
   - **Reveal opponent's placement:** shows where the AI's pieces are during placement, not just its piece list. It's an easier mode and off by default.
   - Before the first battle a change applies straight away (the opponent is redrafted if the difficulty changed). After that, changing a setting asks to start a new run.
@@ -36,7 +37,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 | King | — | Free, always owned, can't be sold |
 
 - An upgrade costs the difference in value, so the gold you've spent always equals your army's point total.
-- **Start:** King + 3 pawns, 3 gold.
+- **Start:** 3 gold, plus King + 4 pawns in Growing mode or King + 3 pawns in Classic. The extra pawn keeps mating material on 5×5, where 5-point armies drew 40% of round 1s; the AI gets the matching point every round in Growing mode (6×round + 1), so both modes have the same balance.
 - **Income per round:** 5 gold, +2 for a win, +1 for a draw.
 - **Selling:** refunds the piece's value minus 1 (minimum 0).
 - **Army cap:** 16 pieces including the king.
@@ -45,7 +46,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - Pieces lost in battle come back for the next round. Battles never destroy your army.
 
 ## Board Sizes
-The board grows during a run, like an auto-battler's board opening up:
+In Growing mode the board grows during a run, like an auto-battler's board opening up:
 
 | Rounds | Board | Home rows each | Home squares | Gap between armies | Move limit |
 |---|---|---|---|---|---|
@@ -56,7 +57,7 @@ The board grows during a run, like an auto-battler's board opening up:
 
 - The move limit is 10 × board size + 10 plies.
 - Placed pieces keep their squares when the board grows (it only gets bigger); a notice announces the new size.
-- Points per round don't change with the board. Armies are limited by home squares: extra player pieces wait on the bench, and the AI spends points it can't place on upgrades.
+- Points per round don't change with the board. Armies are limited by home squares: extra player pieces wait on the bench, and the AI spends points it can't place on upgrades. When your home squares (or pawn squares) are full, the Buy pawn button says "Board full: upgrade instead".
 - Simulation: 64% of battles end in checkmate on the schedule (48% on fixed 8×8) with the same overall balance (SIMULATION.md §9).
 
 ## Placement Rules
@@ -84,7 +85,7 @@ The board grows during a run, like an auto-battler's board opening up:
   | Balanced | ~35% pawns, an even mix | King on d/e behind a pawn shield |
   | Fortress | ~60% pawns, minor pieces and rooks | King tucked on g/h (or b/a) behind a full pawn wall |
   | Heavy Artillery | ~15% pawns, queens and rooks | Rooks on the back row and open files, queen in the centre |
-  | Cavalry Charge | ~25% pawns, knights and bishops | Pieces pushed to the front row. Labelled **tough** in the opponent line: it beats the player more often than the other styles (SIMULATION.md §8). |
+  | Cavalry Charge | ~25% pawns, knights and bishops | Pieces pushed to the front row. It beats the player more often than the other styles (SIMULATION.md §8). |
 - **Drafting:** non-pawn pieces are picked by the style's weights and the rest of the budget goes on pawns (at most 8). Anything left once the pawn cap is hit goes into upgrades. Every step stays within the piece limit, so very large budgets may go partly unspent.
 - **Placement:** every square is scored per piece for the style (rooks prefer the back row, bishops c/f, pawns shield the king and avoid doubling up), with small random noise and a random left/right flip. The king goes first, then pieces from most to least valuable. It follows the same rules as the player.
 

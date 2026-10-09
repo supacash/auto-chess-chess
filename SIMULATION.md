@@ -121,7 +121,7 @@ Wall time is with 14 engines while other sims were running at times, so treat it
 | Knight 2 + forward 0.4 | 27% | 32% / 33% / 38% | 2.72 |
 
 - The style is strong from either side: the stand-in player wins 49–55% when it plays Cavalry, 22–25% with the other styles. Heavy Artillery is always the easiest AI style. At equal points, knight/bishop-heavy armies beat rook/queen-heavy ones in this format, so it is a piece-value effect rather than a Cavalry layout quirk.
-- **Decision:** keep Cavalry as it is and label it "tough" in the opponent line.
+- **Decision:** keep Cavalry as it is. (It was briefly labelled "tough" in the opponent line; the label was removed.)
 
 **Round 1 discount.** Round 1 at 90 plies was 28 / 38 / 34 (W/D/L, 6 v 6 points). With the AI budget 1 point lower in round 1 only (`ROUND_ONE_DISCOUNT`):
 
@@ -152,6 +152,21 @@ Wall time is with 14 engines while other sims were running at times, so treat it
 - **The engine swap kept the balance:** fixed 8×8 on Fairy-Stockfish (run score 3.79) matches Stockfish's 3.97 (§8) within the margin.
 - **Round 1 on 5×5 is drawish:** 50 / 40 / 10 W/D/L, mostly bare kings or insufficient material with 5–6 point armies.
 - An earlier run with a stand-in that kept buying pawns that didn't fit scored only 2.09: on small boards, gold has to go into upgrades. The in-game bench shows extras, but players may need a hint.
+
+### 10. Game modes (2026-10-09, seed 1, 300 runs × 10 rounds, shop player)
+
+Board sizes shipped as a mode: **Growing board** (5×5 → 8×8, King + 4 pawns, AI 6×round + 1) and **Classic** (8×8, King + 3 pawns, AI 6×round). Both keep the round-1 discount.
+
+| | Classic | Growing |
+|---|---|---|
+| Player W/D/L | 42 / 11 / 47 | 38 / 13 / 49 |
+| Run score | 3.79 ±0.33 | 3.36 ±0.30 |
+| Runs alive after round 10 | 26% | 20% |
+| Checkmate | 48% | 65% |
+| Round 1 W/D/L | 59 / 29 / 12 | 55 / 38 / 7 |
+
+- The extra pawn alone (AI +1 only in round 1) made Growing much easier (run score 4.86): the pawn is permanent, so the player stayed a point ahead every round. Giving the AI +1 every round brings the modes within about one margin of each other.
+- **The extra pawn barely reduced 5×5 round-1 draws** (40% → 38%). Small armies on a small board often trade down to bare kings or insufficient material. Deciding "insufficient material" endings on points is the remaining lever.
 
 ## Problems found
 

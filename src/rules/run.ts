@@ -1,6 +1,7 @@
 import type { Winner } from './battle';
 import { DEFAULT_SETTINGS, type RunSettings } from './difficulty';
 import { roundIncome, type Shop, startingShop } from './economy';
+import { gameMode } from './mode';
 
 export const START_LIVES = 3;
 
@@ -14,7 +15,7 @@ export interface Run {
 }
 
 export function newRun(settings: RunSettings = DEFAULT_SETTINGS): Run {
-  return { round: 1, lives: START_LIVES, record: { w: 0, l: 0, d: 0 }, shop: startingShop(), settings };
+  return { round: 1, lives: START_LIVES, record: { w: 0, l: 0, d: 0 }, shop: startingShop(gameMode(settings.mode).startArmy), settings };
 }
 
 /** True once the player has fought a battle; settings can then only change by starting a new run. */

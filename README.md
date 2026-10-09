@@ -1,14 +1,14 @@
 # Auto Chess Chess
 
-An auto-battler built on chess. Draft an army, place it in your three home rows, and press **Fight**: a chess engine plays the round for both sides. Survive as many rounds as you can against stronger and stronger AI armies.
+An auto-battler built on chess. Draft an army, place it in your home rows, and press **Fight**: a chess engine plays the round for both sides. Survive as many rounds as you can against stronger and stronger AI armies.
 
 Runs in the browser and is built for phones first. **[Play it here](https://supacash.github.io/auto-chess-chess/).**
 
 ## How to play
 
-1. **Shop.** You start with a king, 3 pawns and 3 gold. Buy pawns (1g) and upgrade pieces for the difference in their value:
+1. **Shop.** You start with a king, 4 pawns (3 in Classic) and 3 gold. Buy pawns (1g) and upgrade pieces for the difference in their value:
    pawn → knight/bishop (2g) → rook (2g) → queen (4g). Selling refunds the piece's value minus 1.
-2. **Place.** Drag or tap pieces into your three home rows. The king can't go on the front row, and pawns can't go on the back row.
+2. **Place.** Drag or tap pieces into your home rows. In the default *Growing board* mode the board starts at 5×5 and grows every two rounds to 8×8; *Classic* mode is 8×8 throughout. The king can't go on the front row, and pawns can't go on the back row.
    You can see which pieces the opponent has and its style, but not where they are.
 3. **Fight.** The engine plays both sides. A round ends on checkmate, or after 45 moves each, when the side with more material wins on points.
 4. **Repeat.** Every round you earn 5 gold, +2 for a win or +1 for a draw. A loss costs one of your 3 lives. Your score is the number of rounds won.

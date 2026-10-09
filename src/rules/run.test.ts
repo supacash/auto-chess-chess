@@ -33,13 +33,18 @@ describe('run', () => {
   });
 
   it('keeps its settings across rounds and knows when it has started', () => {
-    const settings = { difficulty: 'hard', reveal: true } as const;
+    const settings = { mode: 'classic', difficulty: 'hard', reveal: true } as const;
     let run = newRun(settings);
-    expect(newRun().settings).toEqual({ difficulty: 'normal', reveal: false });
+    expect(newRun().settings).toEqual({ mode: 'growing', difficulty: 'normal', reveal: false });
     expect(hasStarted(run)).toBe(false);
     run = nextRound(applyResult(run, 'draw'));
     expect(hasStarted(run)).toBe(true);
     expect(run.settings).toEqual(settings);
+  });
+
+  it('starts each mode with its own army', () => {
+    expect(newRun({ mode: 'growing', difficulty: 'normal', reveal: false }).shop.pieces.map((p) => p.type)).toEqual(['K', 'P', 'P', 'P', 'P']);
+    expect(newRun({ mode: 'classic', difficulty: 'normal', reveal: false }).shop.pieces.map((p) => p.type)).toEqual(['K', 'P', 'P', 'P']);
   });
 
   it('does not mutate the input', () => {

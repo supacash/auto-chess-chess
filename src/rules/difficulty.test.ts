@@ -14,8 +14,8 @@ describe('difficulty', () => {
     }
   });
 
-  it('defaults to normal without reveal', () => {
-    expect(DEFAULT_SETTINGS).toEqual({ difficulty: 'normal', reveal: false });
+  it('defaults to the growing board on normal without reveal', () => {
+    expect(DEFAULT_SETTINGS).toEqual({ mode: 'growing', difficulty: 'normal', reveal: false });
     expect(difficulty(DEFAULT_SETTINGS.difficulty).perRound).toBe(6);
   });
 
