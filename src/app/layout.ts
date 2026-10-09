@@ -1,5 +1,5 @@
-import { DIFFICULTIES } from '../rules/difficulty';
-import { PAWN_COST } from '../rules/economy';
+import { DIFFICULTIES, SIDES } from '../rules/difficulty';
+import { PAWN_COST, REROLL_COST } from '../rules/economy';
 import { MODES } from '../rules/mode';
 
 /** Playback speeds offered during a battle. */
@@ -32,6 +32,12 @@ export function renderLayout(root: HTMLElement): void {
         <span class="gold" id="gold" aria-label="Gold"></span>
         <button id="buy-pawn" type="button">Buy pawn · ${PAWN_COST}g</button>
       </div>
+      <div class="offers-head">
+        <span class="offers-label">For sale</span>
+        <button id="reroll" type="button">Reroll · ${REROLL_COST}g</button>
+      </div>
+      <div class="offers" id="offers"></div>
+      <div class="offer-detail" id="offer-detail" hidden></div>
       <div class="piece-actions" id="piece-actions"></div>
     </div>
     <p id="message" role="status" aria-live="polite"></p>
@@ -77,6 +83,11 @@ export function renderLayout(root: HTMLElement): void {
       <label class="field">Difficulty
         <select id="nr-difficulty">
           ${DIFFICULTIES.map((d) => `<option value="${d.id}">${d.name} (+${d.perRound} AI pts/round)</option>`).join('')}
+        </select>
+      </label>
+      <label class="field">Play as
+        <select id="nr-side">
+          ${SIDES.map((s) => `<option value="${s.id}">${s.name}</option>`).join('')}
         </select>
       </label>
       <label class="check"><input type="checkbox" id="nr-reveal" /> Reveal the opponent's placement (easier)</label>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applyResult, hasStarted, isRunOver, newRun, nextRound, runScore, START_LIVES } from './run';
+import { seededRng } from './rng';
+import { applyResult, hasStarted, isRunOver, newRun, nextRound, rollColor, runScore, START_LIVES } from './run';
 
 describe('run', () => {
   it('starts at round 1 with full lives and the starting shop', () => {
@@ -33,9 +34,9 @@ describe('run', () => {
   });
 
   it('keeps its settings across rounds and knows when it has started', () => {
-    const settings = { mode: 'classic', difficulty: 'hard', reveal: true } as const;
+    const settings = { mode: 'classic', difficulty: 'hard', reveal: true, side: 'white' } as const;
     let run = newRun(settings);
-    expect(newRun().settings).toEqual({ mode: 'growing', difficulty: 'normal', reveal: false });
+    expect(newRun().settings).toEqual({ mode: 'growing', difficulty: 'normal', reveal: false, side: 'white' });
     expect(hasStarted(run)).toBe(false);
     run = nextRound(applyResult(run, 'draw'));
     expect(hasStarted(run)).toBe(true);
@@ -43,19 +44,12 @@ describe('run', () => {
   });
 
   it('starts each mode with its own army', () => {
-    expect(newRun({ mode: 'growing', difficulty: 'normal', reveal: false }).shop.pieces.map((p) => p.type)).toEqual([
-      'K',
-      'P',
-      'P',
-      'P',
-      'P',
-    ]);
-    expect(newRun({ mode: 'classic', difficulty: 'normal', reveal: false }).shop.pieces.map((p) => p.type)).toEqual([
-      'K',
-      'P',
-      'P',
-      'P',
-    ]);
+    expect(
+      newRun({ mode: 'growing', difficulty: 'normal', reveal: false, side: 'white' }).shop.pieces.map((p) => p.type),
+    ).toEqual(['K', 'P', 'P', 'P', 'P']);
+    expect(
+      newRun({ mode: 'classic', difficulty: 'normal', reveal: false, side: 'white' }).shop.pieces.map((p) => p.type),
+    ).toEqual(['K', 'P', 'P', 'P']);
   });
 
   it('does not mutate the input', () => {
@@ -63,5 +57,17 @@ describe('run', () => {
     applyResult(run, 'b');
     expect(run.lives).toBe(START_LIVES);
     expect(run.record.l).toBe(0);
+  });
+});
+
+describe('player colour', () => {
+  it('is White by default, Black when chosen, and either each round when random', () => {
+    expect(newRun().color).toBe('w');
+    const black = newRun({ mode: 'classic', difficulty: 'normal', reveal: false, side: 'black' });
+    expect(black.color).toBe('b');
+    expect(nextRound(black).color).toBe('b');
+    const rng = seededRng(5);
+    const seen = new Set(Array.from({ length: 20 }, () => rollColor('random', rng)));
+    expect(seen).toEqual(new Set(['w', 'b']));
   });
 });

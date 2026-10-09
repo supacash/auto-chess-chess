@@ -12,7 +12,7 @@
 import { type BoardSpec, homeSquares, pawnSquares } from '../../src/chess/boardSpec';
 import type { AiStyle } from '../../src/rules/aiArmy';
 import { buyPawn, type Shop, UPGRADES, upgradeCost, upgradePiece } from '../../src/rules/economy';
-import { type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
+import { isPawnLike, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
 import { type Rng, weightedPick } from '../../src/rules/rng';
 
 export function armyValue(shop: Shop): number {
@@ -22,7 +22,7 @@ export function armyValue(shop: Shop): number {
 export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec): Shop {
   let shop = start;
   for (;;) {
-    const pawns = shop.pieces.filter((p) => p.type === 'P').length;
+    const pawns = shop.pieces.filter((p) => isPawnLike(p.type)).length;
     const pawnFits = shop.pieces.length < homeSquares(spec) && pawns < pawnSquares(spec);
     const wantPawn = pawnFits && pawns * PIECE_VALUE.P < style.pawnShare * (armyValue(shop) + shop.gold);
     if (wantPawn) {

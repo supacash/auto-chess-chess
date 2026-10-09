@@ -6,6 +6,7 @@ import { type BattleResult, type EndReason, material } from '../rules/battle';
 import { roundIncome } from '../rules/economy';
 import type { Rng } from '../rules/rng';
 import { BattleView } from '../ui/battleView';
+import { displayColor } from '../ui/boardDom';
 import { $, sleep } from './dom';
 import type { BattleOutcome } from './session';
 
@@ -61,6 +62,8 @@ export class BattleScreen {
 
     const limit = plyLimit(spec);
     this.view.render(fen, spec);
+    // The bar's light side is White's: flip it when the player is Black.
+    $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
     this.showEval(0);
     this.status.textContent = firstMover === 'w' ? 'You move first' : 'Opponent moves first';
     await sleep(INTRO_MS);

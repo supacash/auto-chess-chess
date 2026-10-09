@@ -1,4 +1,4 @@
-import type { PieceType } from '../rules/pieces';
+import { PIECE_VALUE, type PieceType } from '../rules/pieces';
 
 /** Pure FEN helpers that work on any board size (multi-digit empty runs, e.g. "10"). */
 
@@ -8,8 +8,6 @@ export interface FenPiece {
   type: PieceType;
   color: Color;
 }
-
-const PIECE_VALUE: Record<PieceType, number> = { K: 0, Q: 9, R: 5, B: 3, N: 3, P: 1 };
 
 /** Board rows from the top rank down; each row has `files` cells. */
 export function parsePlacement(fen: string, files: number): (FenPiece | null)[][] {

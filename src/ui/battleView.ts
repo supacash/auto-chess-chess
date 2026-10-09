@@ -1,6 +1,6 @@
 import { BOARD_8, type BoardSpec, parseSquare, squareName } from '../chess/boardSpec';
 import { fenTurn, parsePlacement } from '../chess/fen';
-import { fillPiece, squareEl } from './boardDom';
+import { displayColor, fillPiece, squareEl } from './boardDom';
 
 export interface LastMove {
   from: string;
@@ -43,7 +43,7 @@ export class BattleView {
         if (occupant) {
           if (occupant.type === 'K' && occupant.color === checkedColor) cell.classList.add('check');
           const el = document.createElement('div');
-          el.className = `piece ${occupant.color === 'w' ? 'white' : 'black'}`;
+          el.className = `piece ${displayColor(occupant.color) === 'w' ? 'white' : 'black'}`;
           fillPiece(el, occupant.type, occupant.color);
           cell.appendChild(el);
         }

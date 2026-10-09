@@ -2,7 +2,6 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { loadRulesForNode } from '../chess/testRules';
 import { makePiece, type PieceType, type Square } from './pieces';
 import { mirror, placementFen, startPosition } from './position';
-import { seededRng } from './rng';
 
 beforeAll(loadRulesForNode);
 
@@ -27,32 +26,26 @@ describe('placementFen', () => {
 
 describe('startPosition', () => {
   it('has no castling or en passant rights', () => {
-    const start = startPosition([piece('K', 4, 0)], [piece('K', 4, 0)], seededRng(1));
+    const start = startPosition([piece('K', 4, 0)], [piece('K', 4, 0)], false);
     expect(start.ok && start.fen.endsWith(' - - 0 1')).toBe(true);
   });
 
-  it('picks both first movers over many seeds when no king is in check', () => {
-    const movers = new Set<string>();
-    for (let seed = 0; seed < 20; seed++) {
-      const start = startPosition([piece('K', 0, 0)], [piece('K', 7, 0)], seededRng(seed));
-      if (start.ok) movers.add(start.firstMover);
-    }
-    expect(movers).toEqual(new Set(['w', 'b']));
+  it('lets the player move first only when asked to', () => {
+    expect(startPosition([piece('K', 0, 0)], [piece('K', 7, 0)], true)).toMatchObject({ ok: true, firstMover: 'w' });
+    const second = startPosition([piece('K', 0, 0)], [piece('K', 7, 0)], false);
+    expect(second).toMatchObject({ ok: true, firstMover: 'b' });
+    expect(second.ok && second.fen.split(' ')[1]).toBe('b');
   });
 
   it('lets a king in check move first', () => {
     // AI rook on e6 (AI-local e3) checks the white king on e1 down the open file.
-    const start = startPosition([piece('K', 4, 0)], [piece('K', 0, 0), piece('R', 4, 2)], seededRng(3));
+    const start = startPosition([piece('K', 4, 0)], [piece('K', 0, 0), piece('R', 4, 2)], false);
     expect(start).toMatchObject({ ok: true, firstMover: 'w' });
   });
 
   it('rejects positions where both kings start in check', () => {
     // Player rook a3 checks the AI king on a8; AI rook e6 checks the player king on e1.
-    const start = startPosition(
-      [piece('K', 4, 0), piece('R', 0, 2)],
-      [piece('K', 0, 0), piece('R', 4, 2)],
-      seededRng(3),
-    );
+    const start = startPosition([piece('K', 4, 0), piece('R', 0, 2)], [piece('K', 0, 0), piece('R', 4, 2)], false);
     expect(start).toEqual({ ok: false, reason: 'both-in-check' });
   });
 });

@@ -144,11 +144,11 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     let player = placeAiArmy(playerTypes, runStyle, rng, spec);
     const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec);
 
-    let start = startPosition(player, placeAiArmy(aiTypes, aiStyle, rng, spec), rng, spec);
+    let start = startPosition(player, placeAiArmy(aiTypes, aiStyle, rng, spec), rng() < 0.5, spec);
     for (let i = 0; !start.ok && i < MAX_REPLACE; i++) {
       // Big armies can make every AI placement fail against one player placement; re-place both then.
       if (i >= MAX_REPLACE / 2) player = placeAiArmy(playerTypes, runStyle, rng, spec);
-      start = startPosition(player, placeAiArmy(aiTypes, aiStyle, rng, spec), rng, spec);
+      start = startPosition(player, placeAiArmy(aiTypes, aiStyle, rng, spec), rng() < 0.5, spec);
     }
     if (!start.ok) throw new Error(`run ${run} round ${round}: could not place armies`);
 

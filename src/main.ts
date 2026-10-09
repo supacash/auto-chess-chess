@@ -56,11 +56,12 @@ async function fight(): Promise<void> {
     }
     const start = session.resolveStart();
     const spec = session.board;
+    const color = session.run.color;
     session.persist(true);
     placement.hide();
     const result = await battle.play(engine, start.fen, start.firstMover, spec, rng);
     const outcome = session.finishBattle(result);
-    renderHeader(session, outcome.playedRound);
+    renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
   } catch (err) {
     console.error(err);

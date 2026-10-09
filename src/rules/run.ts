@@ -1,7 +1,9 @@
+import type { Color } from '../chess/fen';
 import type { Winner } from './battle';
-import { DEFAULT_SETTINGS, type RunSettings } from './difficulty';
+import { DEFAULT_SETTINGS, type RunSettings, type SideId } from './difficulty';
 import { roundIncome, type Shop, startingShop } from './economy';
 import { gameMode } from './mode';
+import type { Rng } from './rng';
 
 export const START_LIVES = 3;
 
@@ -12,15 +14,24 @@ export interface Run {
   record: { w: number; l: number; d: number };
   shop: Shop;
   settings: RunSettings;
+  /** The player's colour this round; white moves first. */
+  color: Color;
 }
 
-export function newRun(settings: RunSettings = DEFAULT_SETTINGS): Run {
+/** The player's colour for a round under `side`. */
+export function rollColor(side: SideId, rng: Rng): Color {
+  if (side === 'random') return rng() < 0.5 ? 'w' : 'b';
+  return side === 'black' ? 'b' : 'w';
+}
+
+export function newRun(settings: RunSettings = DEFAULT_SETTINGS, rng: Rng = Math.random): Run {
   return {
     round: 1,
     lives: START_LIVES,
     record: { w: 0, l: 0, d: 0 },
     shop: startingShop(gameMode(settings.mode).startArmy),
     settings,
+    color: rollColor(settings.side, rng),
   };
 }
 
@@ -44,8 +55,9 @@ export function applyResult(run: Run, winner: Winner): Run {
   };
 }
 
-export function nextRound(run: Run): Run {
-  return { ...run, round: run.round + 1 };
+/** Moves on to the next round, picking the player's colour for it. */
+export function nextRound(run: Run, rng: Rng = Math.random): Run {
+  return { ...run, round: run.round + 1, color: rollColor(run.settings.side, rng) };
 }
 
 export function isRunOver(run: Run): boolean {

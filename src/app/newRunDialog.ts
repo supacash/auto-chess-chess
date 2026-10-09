@@ -1,8 +1,8 @@
-import { DEFAULT_SETTINGS, isDifficultyId, type RunSettings } from '../rules/difficulty';
+import { DEFAULT_SETTINGS, isDifficultyId, isSideId, type RunSettings } from '../rules/difficulty';
 import { isModeId } from '../rules/mode';
 import { $ } from './dom';
 
-/** The New run window: board (game mode), difficulty and reveal. Runs start only from here. */
+/** The New run window: board (game mode), difficulty, side and reveal. Runs start only from here. */
 export class NewRunDialog {
   private readonly dialog = $<HTMLDialogElement>('#new-run-dialog');
 
@@ -13,10 +13,12 @@ export class NewRunDialog {
       if ((e.submitter as HTMLButtonElement | null)?.value !== 'start') return;
       const mode = this.dialog.querySelector<HTMLInputElement>('input[name="nr-mode"]:checked')?.value;
       const level = $<HTMLSelectElement>('#nr-difficulty').value;
+      const side = $<HTMLSelectElement>('#nr-side').value;
       onStart({
         mode: isModeId(mode) ? mode : DEFAULT_SETTINGS.mode,
         difficulty: isDifficultyId(level) ? level : DEFAULT_SETTINGS.difficulty,
         reveal: $<HTMLInputElement>('#nr-reveal').checked,
+        side: isSideId(side) ? side : DEFAULT_SETTINGS.side,
       });
     });
   }
@@ -28,6 +30,7 @@ export class NewRunDialog {
     }
     $<HTMLSelectElement>('#nr-difficulty').value = current.difficulty;
     $<HTMLInputElement>('#nr-reveal').checked = current.reveal;
+    $<HTMLSelectElement>('#nr-side').value = current.side;
     $('#nr-warning').hidden = !warnAbandon;
     this.dialog.showModal();
   }

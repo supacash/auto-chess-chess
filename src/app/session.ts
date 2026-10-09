@@ -3,7 +3,7 @@ import { clearGame, loadBest, loadGame, SAVE_VERSION, saveBest, saveGame } from 
 import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, pickStyle, placeAiArmy } from '../rules/aiArmy';
 import type { BattleResult } from '../rules/battle';
 import { difficulty, type RunSettings } from '../rules/difficulty';
-import type { Shop } from '../rules/economy';
+import { rerollOffers, rollOffers, type Shop, type ShopResult } from '../rules/economy';
 import { gameMode } from '../rules/mode';
 import type { Piece } from '../rules/pieces';
 import { armyErrors, fitToBoard } from '../rules/placement';
@@ -73,6 +73,9 @@ export class Session {
     this.run = saved.run;
     this.aiStyle = style;
     this.aiPieces = saved.ai.pieces;
+    if (!this.run.shop.offers) {
+      this.run = { ...this.run, shop: { ...this.run.shop, offers: rollOffers(this.run.round, this.rng) } };
+    }
     this.best = this.loadBest();
     if (!saved.battleInProgress) return { notice: '', firstVisit: false };
 
@@ -81,7 +84,7 @@ export class Session {
     if (isRunOver(this.run)) {
       const score = runScore(this.run);
       const newBest = this.recordScore(score);
-      this.run = newRun(this.run.settings);
+      this.run = newRun(this.run.settings, this.rng);
       this.draftOpponent();
       this.persist();
       const rounds = `${score} round${score === 1 ? '' : 's'}`;
@@ -90,7 +93,7 @@ export class Session {
         firstVisit: false,
       };
     }
-    this.run = nextRound(this.run);
+    this.run = nextRound(this.run, this.rng);
     this.draftOpponent();
     this.persist();
     return {
@@ -102,12 +105,14 @@ export class Session {
   /** Starts over, keeping the current settings unless new ones are given. */
   startNewRun(settings: RunSettings = this.run.settings): void {
     clearGame();
-    this.run = newRun(settings);
+    this.run = newRun(settings, this.rng);
     this.best = this.loadBest();
     this.draftOpponent();
   }
 
+  /** Drafts this round's opponent and stocks the shop with fresh offers. */
   draftOpponent(): void {
+    this.run = { ...this.run, shop: { ...this.run.shop, offers: rollOffers(this.run.round, this.rng) } };
     const spec = this.board;
     const { settings } = this.run;
     const mode = gameMode(settings.mode);
@@ -120,6 +125,11 @@ export class Session {
       mode.aiBonus,
     );
     this.aiPieces = placeAiArmy(draftAiArmy(budget, this.aiStyle, this.rng, spec), this.aiStyle, this.rng, spec);
+  }
+
+  /** Pays for a fresh set of shop offers (doesn't apply it: see setShop). */
+  rerollOffers(): ShopResult {
+    return rerollOffers(this.run.shop, this.run.round, this.rng);
   }
 
   setPieces(pieces: Piece[]): void {
@@ -141,7 +151,7 @@ export class Session {
   resolveStart(): Extract<StartPosition, { ok: true }> {
     for (;;) {
       const spec = this.board;
-      const start = startPosition(this.run.shop.pieces, this.aiPieces, this.rng, spec);
+      const start = startPosition(this.run.shop.pieces, this.aiPieces, this.run.color === 'w', spec);
       if (start.ok) return start;
       this.aiPieces = placeAiArmy(
         this.aiPieces.map((p) => p.type),
@@ -166,7 +176,7 @@ export class Session {
       newBest = this.recordScore(score);
       clearGame();
     } else {
-      this.run = nextRound(this.run);
+      this.run = nextRound(this.run, this.rng);
       this.draftOpponent();
       this.persist();
     }

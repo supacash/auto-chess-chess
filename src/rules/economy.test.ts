@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buyOffer,
   buyPawn,
+  fusePieces,
+  fusionOptions,
+  fusionResult,
+  maxOfferCost,
+  OFFER_COUNT,
+  OFFER_WEIGHTS,
+  REROLL_COST,
+  rerollOffers,
+  rollOffers,
   roundIncome,
   sellPiece,
   sellValue,
@@ -10,7 +20,8 @@ import {
   upgradeCost,
   upgradePiece,
 } from './economy';
-import { makePiece, MAX_ARMY, type PieceType, PIECE_VALUE } from './pieces';
+import { makePiece, MAX_ARMY, PIECES, type PieceType, PIECE_VALUE } from './pieces';
+import { seededRng } from './rng';
 
 const ok = (r: ShopResult): Shop => {
   if (!r.ok) throw new Error(r.error);
@@ -108,5 +119,94 @@ describe('no piece-count limit', () => {
     const shop: Shop = { gold: 100, pieces: 'KPPPPPPPPBBB'.split('').map((t) => makePiece(t as PieceType)) };
     expect(buyPawn(shop).ok).toBe(true);
     expect(upgradePiece(shop, shop.pieces[1].id, 'B').ok).toBe(true);
+  });
+});
+
+describe('shop offers', () => {
+  it('rolls OFFER_COUNT affordable-tier pieces, never kings or fusion pieces', () => {
+    const rng = seededRng(7);
+    for (let round = 1; round <= 8; round++) {
+      for (let i = 0; i < 30; i++) {
+        const offers = rollOffers(round, rng);
+        expect(offers).toHaveLength(OFFER_COUNT);
+        for (const t of offers) {
+          expect(PIECE_VALUE[t]).toBeLessThanOrEqual(maxOfferCost(round));
+          expect(t).not.toBe('K');
+          expect(PIECES[t].group).not.toBe('fusion');
+        }
+      }
+    }
+    expect(Object.keys(OFFER_WEIGHTS)).not.toContain('K');
+  });
+
+  it('holds back rooks until round 2 and queens until round 4', () => {
+    const rng = seededRng(1);
+    const seen = (round: number) => new Set(Array.from({ length: 200 }, () => rollOffers(round, rng)).flat());
+    expect(seen(1).has('R')).toBe(false);
+    expect(seen(2).has('R')).toBe(true);
+    expect(seen(3).has('Q')).toBe(false);
+    expect(seen(4).has('Q')).toBe(true);
+  });
+
+  it('buys an offer onto the bench for its value and removes it from the shop', () => {
+    const shop: Shop = { gold: 5, pieces: [makePiece('K')], offers: ['X', 'F', 'E'] };
+    const next = ok(buyOffer(shop, 0));
+    expect(next.gold).toBe(1);
+    expect(next.offers).toEqual(['F', 'E']);
+    expect(next.pieces.at(-1)).toMatchObject({ type: 'X', square: null });
+    expect(buyOffer(next, 0)).toEqual({ ok: false, error: 'Not enough gold' });
+    expect(buyOffer(next, 5).ok).toBe(false);
+  });
+
+  it('refuses offers when the army is full', () => {
+    const shop: Shop = { gold: 99, pieces: Array.from({ length: MAX_ARMY }, () => makePiece('P')), offers: ['F'] };
+    expect(buyOffer(shop, 0).ok).toBe(false);
+  });
+
+  it('rerolls for REROLL_COST gold', () => {
+    const shop: Shop = { gold: REROLL_COST, pieces: [makePiece('K')], offers: [] };
+    const next = ok(rerollOffers(shop, 3, seededRng(2)));
+    expect(next.gold).toBe(0);
+    expect(next.offers).toHaveLength(OFFER_COUNT);
+    expect(rerollOffers(next, 3, seededRng(2)).ok).toBe(false);
+  });
+});
+
+describe('fusion', () => {
+  it('knows the recipes in either order', () => {
+    expect(fusionResult('N', 'B')).toBe('A');
+    expect(fusionResult('R', 'N')).toBe('C');
+    expect(fusionResult('N', 'Q')).toBe('Z');
+    expect(fusionResult('M', 'N')).toBe('T');
+    expect(fusionResult('N', 'N')).toBeNull();
+    expect(fusionResult('K', 'N')).toBeNull();
+    // Fusing then selling pays the same as selling both parts.
+    expect(sellValue('C')).toBe(sellValue('N') + sellValue('R'));
+  });
+
+  it('is free, keeps the chosen piece in place and uses up the partner', () => {
+    const knight = makePiece('N', { file: 2, rank: 0 });
+    const rook = makePiece('R', { file: 0, rank: 0 });
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), knight, rook] };
+    const next = ok(fusePieces(shop, knight.id, rook.id));
+    expect(next.gold).toBe(0);
+    expect(next.pieces).toHaveLength(2);
+    expect(next.pieces.find((p) => p.id === knight.id)).toEqual({ ...knight, type: 'C' });
+    expect(fusePieces(shop, knight.id, knight.id).ok).toBe(false);
+    expect(fusePieces(shop, rook.id, shop.pieces[0].id).ok).toBe(false);
+  });
+
+  it('lists one option per partner type, preferring benched partners', () => {
+    const knight = makePiece('N', { file: 1, rank: 0 });
+    const placedBishop = makePiece('B', { file: 2, rank: 0 });
+    const benchBishop = makePiece('B');
+    const rook = makePiece('R');
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), knight, placedBishop, benchBishop, rook, makePiece('P')] };
+    expect(fusionOptions(shop, knight.id)).toEqual([
+      { partnerId: benchBishop.id, result: 'A' },
+      { partnerId: rook.id, result: 'C' },
+    ]);
+    expect(fusionOptions(shop, rook.id)).toEqual([{ partnerId: knight.id, result: 'C' }]);
+    expect(fusionOptions(shop, shop.pieces[0].id)).toEqual([]);
   });
 });
