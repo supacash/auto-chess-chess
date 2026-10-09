@@ -9,14 +9,16 @@ import {
   upgradeCost,
   upgradePiece,
 } from '../rules/economy';
-import { MAX_ARMY, type Piece, PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
+import { isPawnLike, MAX_ARMY, type Piece, PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece } from '../ui/boardDom';
 import { $ } from './dom';
 import { renderHeader } from './header';
 import type { Session } from './session';
 
-const PIECE_ORDER: PieceType[] = ['K', 'Q', 'R', 'B', 'N', 'P'];
+/** King first, then most to least valuable. */
+const pieceOrder = (a: PieceType, b: PieceType) =>
+  Number(b === 'K') - Number(a === 'K') || PIECE_VALUE[b] - PIECE_VALUE[a];
 
 /** The placement screen: board, bench, shop, opponent preview and the Fight button. */
 export class PlacementScreen {
@@ -118,7 +120,7 @@ export class PlacementScreen {
 
   private renderOpponent(): void {
     const { aiPieces, aiStyle } = this.session;
-    const types = aiPieces.map((p) => p.type).sort((a, b) => PIECE_ORDER.indexOf(a) - PIECE_ORDER.indexOf(b));
+    const types = aiPieces.map((p) => p.type).sort(pieceOrder);
     const points = types.reduce((s, t) => s + PIECE_VALUE[t], 0);
     $('#opponent').innerHTML =
       `Opponent · <strong>${aiStyle.name}</strong>: ` +
@@ -133,7 +135,7 @@ export class PlacementScreen {
     buy.disabled = gold < PAWN_COST || pieces.length >= MAX_ARMY;
     // On a full board, more pawns only wait on the bench: point players at upgrades instead.
     const spec = this.session.board;
-    const pawns = pieces.filter((p) => p.type === 'P').length;
+    const pawns = pieces.filter((p) => isPawnLike(p.type)).length;
     const boardFull = pieces.length >= homeSquares(spec) || pawns >= pawnSquares(spec);
     buy.textContent = boardFull ? `Board full: upgrade instead (pawn ${PAWN_COST}g)` : `Buy pawn · ${PAWN_COST}g`;
     buy.classList.toggle('muted', boardFull);

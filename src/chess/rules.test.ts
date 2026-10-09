@@ -121,3 +121,50 @@ describe('board schedule', () => {
     expect(pawnSquares(BOARD_8)).toBe(16);
   });
 });
+
+describe('fairy pieces', () => {
+  const moves = (fen: string, from: string, spec = BOARD_8) => {
+    const g = new Game(spec, fen);
+    const out = g
+      .legalMoves()
+      .filter((m) => m.startsWith(from))
+      .sort();
+    g.delete();
+    return out;
+  };
+
+  it('defines every fairy piece for the engine, with the Berolina pawn promoting', () => {
+    const ini = variantsIni([BOARD_8]);
+    expect(ini).toContain('e:mfFcfWifmnF2');
+    expect(ini).toContain('x:mRcpR');
+    expect(ini).toContain('promotionPawnTypes = pe');
+  });
+
+  it('moves the Berolina pawn diagonally (two-step only from rank 2) and captures straight ahead', () => {
+    expect(moves('4k3/8/8/8/8/8/3E4/4K3 w - - 0 1', 'd2')).toEqual(['d2b4', 'd2c3', 'd2e3', 'd2f4']);
+    expect(moves('4k3/8/8/8/8/3E4/8/4K3 w - - 0 1', 'd3')).toEqual(['d3c4', 'd3e4']);
+    expect(moves('4k3/8/8/3p4/3E4/8/8/4K3 w - - 0 1', 'd4')).toEqual(['d4c5', 'd4d5', 'd4e5']);
+    expect(moves('2k2/E4/5/5/2K2 w - - 0 1', 'a4', BOARDS[0])).toContain('a4b5q');
+  });
+
+  it('moves the short-range and leaping pieces', () => {
+    expect(moves('4k3/8/8/8/3F4/8/8/4K3 w - - 0 1', 'd4')).toEqual(['d4c3', 'd4c5', 'd4e3', 'd4e5']);
+    expect(moves('4k3/8/8/8/3W4/8/8/4K3 w - - 0 1', 'd4')).toEqual(['d4c4', 'd4d3', 'd4d5', 'd4e4']);
+    expect(moves('4k3/8/8/8/3M4/8/8/4K3 w - - 0 1', 'd4')).toHaveLength(8);
+    expect(moves('4k3/8/8/8/3L4/8/8/7K w - - 0 1', 'd4')).toEqual(['d4a3', 'd4a5', 'd4c1', 'd4c7', 'd4e1', 'd4e7', 'd4g3', 'd4g5']);
+  });
+
+  it('hops the Grasshopper over a piece and captures with the Cannon only over a screen', () => {
+    expect(moves('4k3/8/8/8/2PGP3/8/8/4K3 w - - 0 1', 'd4')).toEqual(['d4b4', 'd4f4']);
+    const cannon = moves('3k4/3p4/8/8/3P4/8/8/3XK3 w - - 0 1', 'd1');
+    expect(cannon).toContain('d1d7'); // over the screen on d4
+    expect(cannon).not.toContain('d1d4');
+  });
+
+  it('combines moves for the fusion pieces', () => {
+    expect(moves('4k3/8/8/8/3T4/8/8/4K3 w - - 0 1', 'd4')).toHaveLength(16); // king 8 + knight 8
+    expect(moves('7k/8/8/8/3A4/8/8/K7 w - - 0 1', 'd4')).toHaveLength(20); // bishop 13 (a1 has its king) − 1 + knight 8
+    expect(moves('7k/8/8/8/3C4/8/8/K7 w - - 0 1', 'd4')).toHaveLength(22); // rook 14 + knight 8
+    expect(moves('7k/8/8/8/3Z4/8/8/K7 w - - 0 1', 'd4').length).toBeGreaterThan(30);
+  });
+});

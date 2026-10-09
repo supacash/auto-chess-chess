@@ -1,5 +1,5 @@
 import type { Winner } from './battle';
-import { makePiece, MAX_ARMY, type Piece, type PieceType, PIECE_NAME, PIECE_VALUE } from './pieces';
+import { makePiece, MAX_ARMY, type Piece, type PieceType, PIECE_NAME, PIECE_VALUE, PIECE_TYPES } from './pieces';
 
 export const START_ARMY: PieceType[] = ['K', 'P', 'P', 'P'];
 export const START_GOLD = 3;
@@ -8,14 +8,13 @@ export const WIN_BONUS = 2;
 export const DRAW_BONUS = 1;
 export const PAWN_COST = PIECE_VALUE.P;
 
-/** Which pieces each type can be upgraded into. */
+/** Which pieces each type can be upgraded into with gold. Fairy pieces come from the shop or fusion instead. */
 export const UPGRADES: Record<PieceType, PieceType[]> = {
+  ...(Object.fromEntries(PIECE_TYPES.map((t) => [t, []])) as unknown as Record<PieceType, PieceType[]>),
   P: ['N', 'B'],
   N: ['R'],
   B: ['R'],
   R: ['Q'],
-  Q: [],
-  K: [],
 };
 
 /** The player's persistent army and purse between rounds. */

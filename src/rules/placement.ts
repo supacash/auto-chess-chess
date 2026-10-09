@@ -1,5 +1,5 @@
 import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
-import { type Piece, type PieceType, type Square, sameSquare, squareName } from './pieces';
+import { isPawnLike, type Piece, type PieceType, type Square, sameSquare, squareName } from './pieces';
 
 export const BACK_RANK = 0;
 
@@ -14,7 +14,7 @@ export function placementError(type: PieceType, sq: Square, spec: BoardSpec = BO
     return 'Outside your home rows';
   }
   if (type === 'K' && sq.rank === frontRank(spec)) return "King can't be placed on the front row";
-  if (type === 'P' && sq.rank === BACK_RANK) return "Pawns can't be placed on the back row";
+  if (isPawnLike(type) && sq.rank === BACK_RANK) return "Pawns can't be placed on the back row";
   return null;
 }
 

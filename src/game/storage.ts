@@ -2,7 +2,7 @@ import { BOARDS } from '../chess/boardSpec';
 import { AI_STYLES } from '../rules/aiArmy';
 import { DEFAULT_SETTINGS, type DifficultyId, isDifficultyId, type RunSettings } from '../rules/difficulty';
 import { isModeId, type ModeId } from '../rules/mode';
-import type { Piece } from '../rules/pieces';
+import { isPieceType, type Piece } from '../rules/pieces';
 import type { Run } from '../rules/run';
 
 /** Saved squares may be anywhere on the biggest board; the game fits them to the current one (fitToBoard). */
@@ -155,8 +155,7 @@ function parsePieces(data: unknown): Piece[] | null {
   if (!Array.isArray(data)) return null;
   const out: Piece[] = [];
   for (const p of data) {
-    if (!isObject(p) || typeof p.id !== 'string' || !['K', 'Q', 'R', 'B', 'N', 'P'].includes(p.type as string))
-      return null;
+    if (!isObject(p) || typeof p.id !== 'string' || !isPieceType(p.type)) return null;
     let square: Piece['square'] = null;
     if (p.square !== null) {
       const sq = p.square;

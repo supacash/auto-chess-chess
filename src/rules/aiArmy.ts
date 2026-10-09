@@ -1,6 +1,6 @@
 import { BOARD_8, type BoardSpec, homeSquares, pawnSquares } from '../chess/boardSpec';
 import { UPGRADES, upgradeCost } from './economy';
-import { makePiece, MAX_ARMY, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
+import { isPawnLike, makePiece, MAX_ARMY, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
 import { BACK_RANK, canPlace, frontRank, pieceAt } from './placement';
 import { type Rng, randomInt, weightedPick } from './rng';
 
@@ -171,11 +171,11 @@ export function placeAiArmy(types: PieceType[], style: AiStyle, rng: Rng, spec: 
 
   const rest = types.filter((t) => t !== 'K').sort((a, b) => PIECE_VALUE[b] - PIECE_VALUE[a]);
   // Pawns go last and can't use the back row, so other pieces leave enough other squares for them.
-  let pawnsLeft = rest.filter((t) => t === 'P').length;
+  let pawnsLeft = rest.filter(isPawnLike).length;
   const pawnRoom = () => allSquares(spec).filter((sq) => sq.rank !== BACK_RANK && !pieceAt(placed, sq)).length;
   for (const type of rest) {
-    if (type === 'P') pawnsLeft--;
-    const crowded = type !== 'P' && pawnRoom() <= pawnsLeft;
+    if (isPawnLike(type)) pawnsLeft--;
+    const crowded = !isPawnLike(type) && pawnRoom() <= pawnsLeft;
     let best: Square | null = null;
     let bestScore = -Infinity;
     for (const sq of allSquares(spec)) {
@@ -191,6 +191,30 @@ export function placeAiArmy(types: PieceType[], style: AiStyle, rng: Rng, spec: 
   }
   return placed;
 }
+
+/**
+ * The standard piece whose placement habits a piece borrows: short-range pieces sit forward like
+ * knights, long-range ones like bishops, rooks or queens. The scoring tables only know these six.
+ */
+const PLACEMENT_ANALOG: Record<PieceType, 'K' | 'Q' | 'R' | 'B' | 'N' | 'P'> = {
+  K: 'K',
+  Q: 'Q',
+  R: 'R',
+  B: 'B',
+  N: 'N',
+  P: 'P',
+  E: 'P',
+  F: 'N',
+  W: 'N',
+  M: 'N',
+  L: 'N',
+  T: 'N',
+  G: 'B',
+  X: 'R',
+  A: 'B',
+  C: 'R',
+  Z: 'Q',
+};
 
 /** Maps a file on an 8-wide board to the nearest file on `spec`. */
 function fromFile8(file8: number, spec: BoardSpec): number {
@@ -212,10 +236,10 @@ export function squareScore(
 ): number {
   const file = Math.round((sq.file * 7) / (spec.files - 1));
   const rank = sq.rank === frontRank(spec) ? 2 : sq.rank;
-  switch (type) {
+  switch (PLACEMENT_ANALOG[type]) {
     case 'P': {
       const shields = king && Math.abs(sq.file - king.file) <= 1 && sq.rank === king.rank + 1;
-      const doubled = placed.some((p) => p.type === 'P' && p.square?.file === sq.file);
+      const doubled = placed.some((p) => isPawnLike(p.type) && p.square?.file === sq.file);
       return (
         (rank === 1 ? 2 : 1) +
         CENTER[file] * 0.5 +
