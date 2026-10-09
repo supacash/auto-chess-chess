@@ -13,7 +13,7 @@ import { availableParallelism } from 'node:os';
 import { parseArgs } from 'node:util';
 import { runBattle, SEARCH_DEPTH } from '../../src/game/runBattle';
 import { aiBudget, AI_STYLES, draftAiArmy, pickStyle, placeAiArmy } from '../../src/rules/aiArmy';
-import { type BattleResult, material, PLY_LIMIT } from '../../src/rules/battle';
+import { type BattleLimits, type BattleResult, material, PLY_LIMIT } from '../../src/rules/battle';
 import { roundIncome, START_ARMY, START_GOLD, startingShop } from '../../src/rules/economy';
 import { PIECE_VALUE } from '../../src/rules/pieces';
 import { startPosition } from '../../src/rules/position';
@@ -37,6 +37,8 @@ const { values: opts } = parseArgs({
     lead: { type: 'string', default: '5' },
     'player-points': { type: 'string', default: 'economy' },
     'ai-budget': { type: 'string' },
+    plies: { type: 'string' },
+    decisive: { type: 'string' },
     json: { type: 'boolean', default: false },
   },
 });
@@ -59,6 +61,16 @@ if (AI_BUDGET && (AI_BUDGET.length !== 2 || AI_BUDGET.some(Number.isNaN))) {
 const PLAYER = opts.player!;
 if (PLAYER !== 'redraft' && PLAYER !== 'shop') throw new Error('--player must be redraft or shop');
 if (PLAYER === 'shop' && PLAYER_POINTS !== 'economy') throw new Error('--player shop needs --player-points economy');
+/** `--plies N` replaces the 60-ply limit; `--decisive lead,plies` ends a battle once a side holds that lead that long. */
+const DECISIVE = opts.decisive?.split(',').map(Number);
+if (DECISIVE && (DECISIVE.length !== 2 || DECISIVE.some(Number.isNaN))) {
+  throw new Error('--decisive must be lead,plies (e.g. 10,6)');
+}
+const LIMITS: BattleLimits = {
+  plyLimit: opts.plies ? Number(opts.plies) : PLY_LIMIT,
+  decisive: DECISIVE && { lead: DECISIVE[0], plies: DECISIVE[1] },
+};
+if (!(LIMITS.plyLimit > 0)) throw new Error('--plies must be a positive number');
 if (PLAYER_POINTS !== 'economy' && PLAYER_POINTS !== 'ai') throw new Error('--player-points must be economy or ai');
 if (PLAYER_STYLE !== 'random' && !AI_STYLES.some((s) => s.id === PLAYER_STYLE)) {
   throw new Error(`--player-style must be random or one of: ${AI_STYLES.map((s) => s.id).join(', ')}`);
@@ -114,11 +126,13 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     } else {
       playerTypes = draftAiArmy(playerPoints, runStyle, rng);
     }
-    const player = placeAiArmy(playerTypes, runStyle, rng);
+    let player = placeAiArmy(playerTypes, runStyle, rng);
     const aiTypes = draftAiArmy(aiPoints, aiStyle, rng);
 
     let start = startPosition(player, placeAiArmy(aiTypes, aiStyle, rng), rng);
     for (let i = 0; !start.ok && i < MAX_REPLACE; i++) {
+      // Big armies can make every AI placement fail against one player placement; re-place both then.
+      if (i >= MAX_REPLACE / 2) player = placeAiArmy(playerTypes, runStyle, rng);
       start = startPosition(player, placeAiArmy(aiTypes, aiStyle, rng), rng);
     }
     if (!start.ok) throw new Error(`run ${run} round ${round}: could not place armies`);
@@ -136,7 +150,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
           peakLead = lead;
           peakLeader = m.w > m.b ? 'w' : 'b';
         }
-      });
+      }, LIMITS);
     } catch (e) {
       if (!(e instanceof EngineFailure)) throw e;
       const side = e.kind === 'hung' ? null : /WHITE/.test(e.detail) ? 'player' : 'AI';
@@ -262,7 +276,7 @@ function report(records: RunRecord[]): string {
 
   const out = [
     `Auto Chess Chess sim — ${RUNS} runs × ${ROUNDS} rounds, seed ${SEED}, depth ${DEPTH ?? SEARCH_DEPTH}, ` +
-      `ply limit ${PLY_LIMIT}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
+      `ply limit ${LIMITS.plyLimit}${DECISIVE ? `, decisive lead ${DECISIVE[0]} for ${DECISIVE[1]} plies` : ''}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
       `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round` : '6×round'} ±1`,
     'W/D/L are from the player\'s side. "lead≥N" = games where a side was ever ≥N points of material ahead;',
     '"no mate"/"no win" = share of those where that side failed to checkmate / failed to win at all.',

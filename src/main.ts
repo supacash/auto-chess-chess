@@ -40,6 +40,7 @@ const REASON_TEXT: Record<EndReason, string> = {
   insufficient: 'by insufficient material',
   'fifty-move': 'by the 50-move rule',
   'move-limit': 'on material at the move limit',
+  decisive: 'by a decisive material lead',
 };
 
 const app = document.querySelector<HTMLDivElement>('#app')!;

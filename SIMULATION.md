@@ -17,6 +17,8 @@ npm run sim -- --rounds 10 --games 100
 | `--player-style` | `random` | Stand-in player style (`balanced`, `fortress`, `heavy`, `cavalry`), or random per run |
 | `--player-points` | `economy` | `economy` = the player's army value follows DESIGN.md income. `ai` = the player gets the same budget as the AI each round, which isolates engine and style balance from the economy. |
 | `--ai-budget a,b` | — | Replaces the AI budget `6×round` with `a + b×round` (±1 noise kept). Write a negative `a` as `--ai-budget=-2,6`. The results below predate the change from `4 + 2×round`, so `--ai-budget 4,2` reproduces the old curve. |
+| `--plies` | `PLY_LIMIT` (60) | Overrides the move limit (see section 7) |
+| `--decisive lead,plies` | off | Prototype early end: a side that holds a material lead of at least `lead` for `plies` consecutive half-moves wins (`decisive` end reason) |
 | `--lead` | 5 | Material lead threshold for the "lead≥N / no mate / no win" columns |
 | `--json` | off | Dumps every game record instead of the tables |
 
@@ -80,6 +82,29 @@ Every run is still alive after round 10, with an average score of 6.3. 298 of 10
 - **Material decides almost everything, so the budget knob is very steep.** At 5×round the AI falls 1 point further behind each round, and from round 3 the player wins 95%+ either way. One point less per round (6×round − 1) moves the shop player from 38% to 63% wins and run score 3.19 → 6.11. Two points less (6×round − 2) gives 85% wins. Wins also snowball through the +2 win bonus.
 - **Recommendation: keep 6×round; don't lower the slope to 5×round.** 5×round turns a run into a near-certain 10-round survival for any player who spends their gold, which is the bar both stand-ins clear. A human will place worse than the heuristics in some ways and better in others (e.g. no fixed style, reacting to the AI's army), so playtests should decide any easing. If they show 6×round is too hard, `6×round − 1` is the next step: about two-thirds wins and 59% of runs surviving 10 rounds for the shop player. That is generous for a competent player but leaves room for human mistakes. Lower the intercept, not the slope.
 
+### 7. Move limit and an early decisive end (2026-10-09, seed 1, 100 runs × 10 rounds, redraft player, 6×round)
+
+`npm run sim -- --rounds 10 --games 100 --plies 60|90|120 [--decisive 10,6]`
+
+| Ply limit | Decisive end | W/D/L | avg ply | limit | mate | decisive | no mate (lead≥5) | Run score | Wall time |
+|---|---|---|---|---|---|---|---|---|---|
+| **60 (current)** | — | 44 / 9 / 48 | 52.9 | 68% | 29% | — | 66% | 3.64 | 51s |
+| **90** | — | 42 / 10 / 48 | 68.7 | 44% | **50%** | — | **45%** | 3.65 | 65s |
+| 120 | — | 38 / 13 / 49 | 80.2 | 30% | 60% | — | 33% | 3.17 | 114s |
+| 60 | 10 for 6 plies | 41 / 9 / 50 | 47.4 | 56% | 10% | 32% | 90% | 3.42 | 53s |
+| 90 | 10 for 6 plies | 42 / 10 / 48 | 61.3 | 39% | 16% | 40% | 84% | 3.60 | 64s |
+| 120 | 10 for 6 plies | 40 / 13 / 47 | 71.5 | 26% | 18% | 46% | 82% | 3.09 | 88s |
+
+Wall time is with 14 engines while other sims were running at times, so treat it as rough. It tracks average plies.
+
+- **90 plies is the sweet spot.** Mates go from 29% to 50% and limit endings from 68% to 44%. A side that gets 5+ points ahead now mates 55% of the time instead of 34%. W/D/L and run score don't change (the material tiebreak was already picking the right winner, "no win" stays 11–13%), so the economy and AI-budget results above still hold.
+- **120 plies gives diminishing returns and costs balance.** Mates rise only to 60%. Draws grow (13%, and 47% in round 1, where 6-point armies shuffle into repetition or bare kings). Player wins fall to 38%, the run score drops to 3.17, and battles average 80 plies.
+- **Battle length in the browser** (400 ms per move at 1×): about 21 s per battle at 60 plies, 27 s at 90 and 32 s at 120. The UI shows the move counter as `Move n/PLY_LIMIT÷2`, so a change shows up there automatically.
+- **The decisive end doesn't help.** A 10-point lead held for 6 plies almost always comes before the mate, so it mostly turns mates into "decisive" wins (mate 29% → 10% at 60 plies). Limit endings fall only 12 points, because most limit games never reach a 10-point lead. It ends games a little earlier (−5 to −9 plies) and leaves W/D/L unchanged, so it saves time but adds no drama. It is the material tiebreak applied sooner. It stays a sim flag.
+- Late rounds already mate at 60 plies (round 10: 77% mate, 22% limit). Early rounds are where the limit decides (rounds 1–7: 69–92% limit). At 90 plies rounds 1–2 still hit the limit 53–72% of the time, because small armies rarely have mating material.
+
+**Recommendation: raise `PLY_LIMIT` to 90** (45 moves each). Mates become the most common ending and the existing balance holds, for about 6 s more per battle. This needs the user's OK and a DESIGN.md update ("Move limit"). Don't adopt the decisive-material end.
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.
@@ -99,7 +124,7 @@ Every run is still alive after round 10, with an average score of 6.3. 298 of 10
    - So the limit, not search depth, is the constraint. The armies start 5 ranks apart and 30 moves each is too short to break through and mate.
    - In isolation the engine mates fine at depth 8 (KQ vs K in 15–23 plies, KR vs K in 23–60). So the reported K+Q vs K non-mate most likely came up with too few plies left.
    - The material tiebreak does pick the right winner in most of these games (only 18% of big leads fail to win).
-   - Options: a longer limit (90–120 plies), an early "decisive material" end (e.g. a lead of 10+ for N plies), or accepting that most rounds are won on material.
+   - Options: a longer limit (90–120 plies), an early "decisive material" end (e.g. a lead of 10+ for N plies), or accepting that most rounds are won on material. Section 7 measures these and recommends 90 plies.
 5. **Style balance.** At equal points, Heavy Artillery is the strongest style for either side, and Fortress is weak as a player stand-in (24% wins). Fortress's ~60% pawns rarely trade into a material lead within 60 plies. Worth re-checking once the move limit changes.
 6. **Depth 8 is cheap.** 1000 battles take about 20–70 s with 14 engines. Depth 12 is about 10× slower for no measurable change.
 

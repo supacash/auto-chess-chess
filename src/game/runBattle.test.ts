@@ -34,4 +34,18 @@ describe('runBattle', () => {
     const result = await runBattle('6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1', engine, seededRng(1), async () => {});
     expect(result).toMatchObject({ winner: 'w', reason: 'checkmate', plies: 1 });
   });
+
+  it('respects a custom ply limit', async () => {
+    const result = await runBattle('r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w - - 0 1', silentEngine, seededRng(3), async () => {}, { plyLimit: 4 });
+    expect(result).toMatchObject({ reason: 'move-limit', plies: 4 });
+  });
+
+  it('ends early on a decisive lead when enabled', async () => {
+    // White is a queen and rook up with no way for black to change that quickly; the black king just shuffles.
+    const result = await runBattle('7k/8/8/8/8/8/8/QR4K1 w - - 0 1', silentEngine, seededRng(1), async () => {}, {
+      plyLimit: 60,
+      decisive: { lead: 10, plies: 3 },
+    });
+    expect(result).toMatchObject({ winner: 'w', reason: 'decisive', plies: 3 });
+  });
 });
