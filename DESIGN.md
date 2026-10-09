@@ -12,7 +12,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - No accounts or server. The run in progress and best scores live in the browser (localStorage).
 
 ## Core loop
-1. **Shop.** Spend gold on pawns and upgrades. You see the opponent's style and piece list (and, with Reveal on, where its pieces are).
+1. **Shop.** Spend gold on pawns, upgrades and the round's shop offers, and fuse pieces. You see the opponent's style and piece list (and, with Reveal on, where its pieces are).
 2. **Place.** Arrange your army in your home rows. Extras wait on the bench.
 3. **Battle.** The engine plays both sides; you watch, with an eval bar and 1×/2×/4×/Skip playback.
 4. **Result.** Win, lose or draw. Gold is paid out; a loss costs a life.
@@ -23,6 +23,8 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **New run window** (opens from *New run*, from the game-over screen, and on a first visit) sets the run's settings, which are fixed for the whole run:
   - **Board (game mode):** *Growing board* (default; 5×5 growing to 8×8, see Board sizes) or *Classic* (8×8 throughout).
   - **Difficulty:** how fast the AI's budget grows: Easy 5×round, Normal 6×round (default), Hard 7×round.
+  - **Play as:** White (default; you move first), Black (the opponent moves first) or Random each round. Your pieces are always white to the engine; playing Black only swaps the colours on screen and who moves first.
+  - **Fairy pieces** (default on): fairy pieces in the shop and in AI armies, and fusion. Off = standard chess pieces only.
   - **Reveal opponent's placement:** an easier option that shows where the AI's pieces are during placement.
   - Starting a new run while one is in progress warns that it will be abandoned.
 - **Best score** is kept per mode and difficulty.
@@ -45,6 +47,25 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **Army cap:** 16 pieces including the king. There's no limit on the mix of pieces.
 - **Board space:** you can own more than fits; extras wait on the bench until the board grows. When your home (or pawn) squares are full, *Buy pawn* reads "Board full: upgrade instead".
 - Pieces lost in battle come back for the next round.
+- **Shop offers:** 4 random pieces each round, each priced at its value, bought onto the bench. Offers cost at most 2 + 2×round (Rooks from round 2, Queens from round 4). Reroll: 1 gold. Fusion pieces are never offered. With fairy pieces off, offers are standard pieces only.
+- **Fusion** (fairy pieces on): free. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur. The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for value − 2 (the same as selling both parts).
+
+### Fairy pieces
+Values are tuned with the simulator (SIMULATION.md section 11): at equal points, AI armies with fairy pieces do as well as standard ones.
+
+| Piece | Value | Moves |
+|---|---|---|
+| Berolina pawn | 1 | Moves diagonally forward (two squares from rank 2), captures straight ahead; promotes like a pawn |
+| Ferz | 2 | One square diagonally |
+| Wazir | 2 | One square straight |
+| Man | 3 | Like a king, but can be captured |
+| Camel | 2 | Jumps (3,1) |
+| Grasshopper | 1 | Along queen lines, hopping over a piece to land just beyond it |
+| Cannon | 3 | Moves like a rook; captures by jumping over exactly one piece (Xiangqi) |
+| Centaur | 5 | King + Knight (fusion) |
+| Archbishop | 7 | Bishop + Knight (fusion) |
+| Chancellor | 8 | Rook + Knight (fusion) |
+| Amazon | 12 | Queen + Knight (fusion) |
 
 ## Board sizes
 In Growing mode the board opens up during the run:
@@ -67,7 +88,7 @@ In Growing mode the board opens up during the run:
 - Promotion works as normal (the engine picks the piece) and lasts only for that battle.
 
 ## Battle rules
-- **First move:** random, unless a king starts in check (that side moves first). If both kings start in check, the AI re-places its army.
+- **First move:** White, i.e. the player unless they play Black (see Play as), unless a king starts in check (that side moves first). If both kings start in check, the AI re-places its army.
 - **Move limit:** 10 × board size + 10 plies.
 - **Win:** checkmate, or more material at the move limit, shown as a win/defeat **on points**.
 - **Draw:** equal material at the limit, stalemate, threefold repetition, the 50-move rule, or insufficient material.
@@ -83,6 +104,9 @@ In Growing mode the board opens up during the run:
   | Fortress | ~60% pawns, minor pieces and rooks | King tucked in a corner behind a full pawn wall |
   | Heavy Artillery | ~15% pawns, queens and rooks | Rooks on the back row, queen central |
   | Cavalry Charge | ~25% pawns, knights and bishops | Pieces pushed forward; the hardest style to beat |
+  | Menagerie (fairy only) | ~30% pawns, mostly fairy pieces, many Berolina pawns | Pieces a little forward |
+
+- **With fairy pieces on**, every style also drafts its own fairy pieces (Fortress: Ferz, Wazir, Man, Cannon; Heavy Artillery: Cannon, Chancellor, Archbishop, Amazon; Cavalry: Camel, Centaur, Archbishop; Balanced: a little of each), some of its pawns are Berolina pawns, and its leftover points can go into fusions (as if it had bought the partner). Fairy pieces are placed like the standard piece they resemble (short-range ones like knights, cannons like rooks).
 
 - **Drafting:** non-pawn pieces by the style's weights, the rest on pawns (at most 8, and only as many as fit), then leftover points into upgrades. Armies never exceed the board's home squares.
 - **Placement:** each square is scored per piece for the style (tables written for 8×8 and scaled to smaller boards), with random noise and a random left/right flip. Pieces leave room for the pawns placed after them.
@@ -104,13 +128,13 @@ In Growing mode the board opens up during the run:
 - **Phone performance** of the engine hasn't been measured on real devices.
 
 ## Roadmap
-Groundwork done: game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces.
+Done: game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as.
 
 Next candidates (not yet decided):
 1. **Fix the known issues** above (contempt; deciding insufficient-material endings on points).
 2. **Browser smoke test** (Playwright in CI): a full run including reload mid-battle.
 3. **Seeded runs:** one seed per run for reproducible bugs, and daily challenges.
-4. **Auto-chess depth:** a shop with random offers and rerolls instead of buying only pawns; synergies between pieces; fairy pieces (the engine supports them).
+4. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
 5. **Bigger boards** past 8×8, with a longer move limit.
 6. **Multiplayer:** asynchronous ghost armies first, then live 1v1.
 

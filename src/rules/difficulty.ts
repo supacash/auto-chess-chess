@@ -35,9 +35,17 @@ export interface RunSettings {
   /** Show where the opponent's pieces are during placement (an easier mode). */
   reveal: boolean;
   side: SideId;
+  /** Fairy pieces in the shop and in AI armies, and fusion. Off = standard chess pieces only. */
+  fairy: boolean;
 }
 
-export const DEFAULT_SETTINGS: RunSettings = { mode: 'growing', difficulty: 'normal', reveal: false, side: 'white' };
+export const DEFAULT_SETTINGS: RunSettings = {
+  mode: 'growing',
+  difficulty: 'normal',
+  reveal: false,
+  side: 'white',
+  fairy: true,
+};
 
 export function difficulty(id: DifficultyId): Difficulty {
   return DIFFICULTIES.find((d) => d.id === id) ?? DIFFICULTIES[1];

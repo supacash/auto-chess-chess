@@ -168,6 +168,20 @@ Board sizes shipped as a mode: **Growing board** (5×5 → 8×8, King + 4 pawns,
 - The extra pawn alone (AI +1 only in round 1) made Growing much easier (run score 4.86): the pawn is permanent, so the player stayed a point ahead every round. Giving the AI +1 every round brings the modes within about one margin of each other.
 - **The extra pawn barely reduced 5×5 round-1 draws** (40% → 38%). Small armies on a small board often trade down to bare kings or insufficient material. Deciding "insufficient material" endings on points is the remaining lever.
 
+### 11. Fairy pieces in AI armies (2026-10-09, seed 1, 60 runs × 8 rounds, Classic 8×8, `--player-points ai`)
+
+`npm run sim -- --rounds 8 --games 60 --player-points ai --board 8 --fairy none|ai`. The player stand-in drafts standard pieces at the same points as the AI, so the AI's results show whether fairy pieces are priced fairly. (`--fairy both` also gives the stand-in fairy pieces; the shop player stays standard.)
+
+| AI armies | Player win | Draw | Loss | Run score |
+|---|---|---|---|---|
+| Standard (`--fairy none`) | 39% ±4 | 17% | 45% | 2.37 |
+| Fairy, first-estimate values | 52% ±4 | 14% | 34% | 3.72 |
+| Fairy, Camel 3→2, Grasshopper 2→1, Cannon 4→3 | 40% ±4 | 16% | 44% | 2.58 |
+
+- With the first estimates, fairy armies were clearly weaker per point. Fortress (Ferz, Wazir, Man, Cannon) fell from 31% to 59% player wins and Heavy Artillery (Cannon, compounds) from 24% to 56%.
+- After lowering the Camel, Grasshopper and Cannon, fairy armies match standard ones overall. Fortress is still somewhat weak with fairy pieces (50% ±9 player wins), which points at the Ferz and Wazir (value 2) next.
+- Not yet measured: the fusion pieces on their own, and the shop player buying fairy offers.
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.

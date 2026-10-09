@@ -44,6 +44,7 @@ const { values: opts } = parseArgs({
     plies: { type: 'string' },
     board: { type: 'string', default: 'schedule' },
     decisive: { type: 'string' },
+    fairy: { type: 'string', default: 'none' },
     json: { type: 'boolean', default: false },
   },
 });
@@ -74,6 +75,11 @@ if (DECISIVE && (DECISIVE.length !== 2 || DECISIVE.some(Number.isNaN))) {
 /** `--board schedule` (default) plays the Growing mode (5×5 → 8×8); `--board 8` plays Classic (8×8 throughout). */
 const BOARD_MODE = opts.board!;
 if (BOARD_MODE !== 'schedule' && BOARD_MODE !== '8') throw new Error('--board must be schedule or 8');
+/** `--fairy ai` lets AI armies draft fairy pieces; `both` also the redraft player. The shop player stays standard. */
+const FAIRY = opts.fairy!;
+if (!['none', 'ai', 'both'].includes(FAIRY)) throw new Error('--fairy must be none, ai or both');
+const AI_FAIRY = FAIRY !== 'none';
+const PLAYER_FAIRY = FAIRY === 'both';
 const MODE = gameMode(BOARD_MODE === '8' ? 'classic' : 'growing');
 const boardFor = (round: number): BoardSpec => MODE.board(round);
 /** `--plies N` replaces the board's move limit (10 × size + 10). */
@@ -127,7 +133,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
 
   for (let round = 1; round <= ROUNDS; round++) {
     const spec = boardFor(round);
-    const aiStyle = pickStyle(rng);
+    const aiStyle = pickStyle(rng, AI_FAIRY);
     const aiPoints = AI_BUDGET
       ? Math.max(1, AI_BUDGET[0] + AI_BUDGET[1] * round + randomInt(rng, 3) - 1)
       : aiBudget(round, rng, 6, MODE.roundOneDiscount, MODE.aiBonus);
@@ -138,11 +144,11 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       playerPoints = armyValue(shop);
       playerTypes = shop.pieces.map((p) => p.type);
     } else {
-      playerTypes = draftAiArmy(playerPoints, runStyle, rng, spec);
+      playerTypes = draftAiArmy(playerPoints, runStyle, rng, spec, PLAYER_FAIRY);
     }
     // A shop army bigger than the board leaves its cheapest pieces on the bench (placement drops them).
     let player = placeAiArmy(playerTypes, runStyle, rng, spec);
-    const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec);
+    const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec, AI_FAIRY);
 
     let start = startPosition(player, placeAiArmy(aiTypes, aiStyle, rng, spec), rng() < 0.5, spec);
     for (let i = 0; !start.ok && i < MAX_REPLACE; i++) {

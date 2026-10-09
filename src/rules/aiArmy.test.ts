@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, MAX_PAWNS, pickStyle, placeAiArmy } from './aiArmy';
 import { BOARDS, homeSquares, pawnSquares } from '../chess/boardSpec';
-import { MAX_ARMY, type PieceType, PIECE_VALUE } from './pieces';
+import { MAX_ARMY, PIECES, type PieceType, PIECE_VALUE } from './pieces';
 import { armyErrors } from './placement';
 import { seededRng } from './rng';
 
@@ -26,10 +26,12 @@ describe('aiBudget', () => {
 });
 
 describe('pickStyle', () => {
-  it('eventually picks every style', () => {
+  it('eventually picks every style, fairy-only ones only with fairy pieces on', () => {
     const rng = seededRng(5);
-    const seen = new Set(Array.from({ length: 100 }, () => pickStyle(rng).id));
-    expect(seen.size).toBe(AI_STYLES.length);
+    const standard = new Set(Array.from({ length: 100 }, () => pickStyle(rng).id));
+    expect(standard).toEqual(new Set(AI_STYLES.filter((s) => !s.fairyOnly).map((s) => s.id)));
+    const fairy = new Set(Array.from({ length: 100 }, () => pickStyle(rng, true).id));
+    expect(fairy.size).toBe(AI_STYLES.length);
   });
 });
 
@@ -149,5 +151,62 @@ describe('placeAiArmy', () => {
     expect(rookRanks.every((p) => p.square!.rank === 0)).toBe(true);
     const knights = placeAiArmy(['K', 'N', 'N'], style('cavalry'), seededRng(1)).filter((p) => p.type === 'N');
     expect(knights.every((p) => p.square!.rank >= 1)).toBe(true);
+  });
+});
+
+describe('fairy pieces', () => {
+  const draftMany = (fairy: boolean) => {
+    const rng = seededRng(11);
+    const armies: PieceType[][] = [];
+    for (const style of AI_STYLES) {
+      for (const spec of BOARDS) {
+        for (const budget of [5, 10, 20, 35, 50]) {
+          for (let i = 0; i < 5; i++) armies.push(draftAiArmy(budget, style, rng, spec, fairy));
+        }
+      }
+    }
+    return armies;
+  };
+
+  it('are never drafted with the setting off', () => {
+    for (const army of draftMany(false)) {
+      for (const t of army) expect(PIECES[t].group).toBe('standard');
+    }
+  });
+
+  it('are drafted with it on: utility, chaos, fusion pieces and Berolina pawns all show up', () => {
+    const groups = new Set(
+      draftMany(true)
+        .flat()
+        .map((t) => PIECES[t].group),
+    );
+    expect(groups).toEqual(new Set(['standard', 'pawn', 'utility', 'chaos', 'fusion']));
+  });
+
+  it('keep armies within budget and legally placeable on every board', () => {
+    const rng = seededRng(3);
+    for (const style of AI_STYLES) {
+      for (const spec of BOARDS) {
+        for (const budget of [4, 12, 30, 60]) {
+          const types = draftAiArmy(budget, style, rng, spec, true);
+          expect(types.filter((t) => t === 'K')).toHaveLength(1);
+          expect(types.reduce((s, t) => s + PIECE_VALUE[t], 0)).toBeLessThanOrEqual(budget);
+          expect(types.length).toBeLessThanOrEqual(homeSquares(spec));
+          const placed = placeAiArmy(types, style, rng, spec);
+          expect(placed).toHaveLength(types.length);
+          expect(armyErrors(placed, spec)).toEqual([]);
+        }
+      }
+    }
+  });
+
+  it('spend nearly the whole budget', () => {
+    const rng = seededRng(8);
+    for (const style of AI_STYLES) {
+      for (const budget of [10, 20, 30]) {
+        const types = draftAiArmy(budget, style, rng, BOARDS[BOARDS.length - 1], true);
+        expect(types.reduce((s, t) => s + PIECE_VALUE[t], 0)).toBeGreaterThanOrEqual(budget - 1);
+      }
+    }
   });
 });

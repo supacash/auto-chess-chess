@@ -36,7 +36,8 @@ describe('migrateSave', () => {
     });
     // Saves written by the first board-size build were still v1 but had a mode.
     expect(
-      (migrateSave(v1({ mode: 'growing', difficulty: 'easy', reveal: false, side: 'white' })) as any).run.settings.mode,
+      (migrateSave(v1({ mode: 'growing', difficulty: 'easy', reveal: false, side: 'white', fairy: true })) as any).run
+        .settings.mode,
     ).toBe('growing');
   });
 
@@ -47,9 +48,15 @@ describe('migrateSave', () => {
   });
 
   it('round-trips a v1 save through parseSave', () => {
-    const parsed = parseSave(v1({ difficulty: 'hard', reveal: false, side: 'white' }));
+    const parsed = parseSave(v1({ difficulty: 'hard', reveal: false, side: 'white', fairy: true }));
     expect(parsed?.version).toBe(SAVE_VERSION);
-    expect(parsed?.run.settings).toEqual({ mode: 'classic', difficulty: 'hard', reveal: false, side: 'white' });
+    expect(parsed?.run.settings).toEqual({
+      mode: 'classic',
+      difficulty: 'hard',
+      reveal: false,
+      side: 'white',
+      fairy: true,
+    });
   });
 });
 
@@ -99,16 +106,34 @@ describe('parseSave', () => {
 
   it('keeps run settings, and upgrades v1 saves from before settings existed to Classic 8×8', () => {
     const g: any = JSON.parse(JSON.stringify(sample()));
-    g.run.settings = { mode: 'growing', difficulty: 'easy', reveal: true, side: 'white' };
-    expect(parseSave(g)?.run.settings).toEqual({ mode: 'growing', difficulty: 'easy', reveal: true, side: 'white' });
+    g.run.settings = { mode: 'growing', difficulty: 'easy', reveal: true, side: 'white', fairy: true };
+    expect(parseSave(g)?.run.settings).toEqual({
+      mode: 'growing',
+      difficulty: 'easy',
+      reveal: true,
+      side: 'white',
+      fairy: true,
+    });
     g.version = 1;
     delete g.run.settings;
-    expect(parseSave(g)?.run.settings).toEqual({ mode: 'classic', difficulty: 'normal', reveal: false, side: 'white' });
+    expect(parseSave(g)?.run.settings).toEqual({
+      mode: 'classic',
+      difficulty: 'normal',
+      reveal: false,
+      side: 'white',
+      fairy: true,
+    });
     // Saves from before modes existed were played on 8×8, so they stay Classic.
-    g.run.settings = { difficulty: 'hard', reveal: false, side: 'white' };
+    g.run.settings = { difficulty: 'hard', reveal: false, side: 'white', fairy: true };
     expect(parseSave(g)?.run.settings.mode).toBe('classic');
     g.run.settings = { mode: 'huge', difficulty: 'insane', reveal: 1 };
-    expect(parseSave(g)?.run.settings).toEqual({ mode: 'classic', difficulty: 'normal', reveal: false, side: 'white' });
+    expect(parseSave(g)?.run.settings).toEqual({
+      mode: 'classic',
+      difficulty: 'normal',
+      reveal: false,
+      side: 'white',
+      fairy: true,
+    });
   });
 
   it('keeps the battle-in-progress flag only when it is true', () => {
