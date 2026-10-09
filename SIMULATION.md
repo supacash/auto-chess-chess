@@ -207,6 +207,23 @@ Fortress only, Classic 8×8, `--rounds 8 --games 60 --player-points ai --board 8
 
 Ferz and Wazir are worth about a pawn here; they're now 1 point.
 
+### 13. Classic balance check (shop player, 200 runs × 10 rounds per row, plus 10 runs × 30 rounds)
+
+`npm run sim -- --board 8 --player shop --rounds 10 --games 200 --difficulty <d> --side <s>`
+
+| Difficulty, side | Win | Draw | Loss | Run score | Alive after round 10 |
+|---|---|---|---|---|---|
+| Easy, White | 92% | 2% | 6% | 9.11 | 98% |
+| Normal, White | 53% | 5% | 43% | 4.67 | 34% |
+| Normal, random | 44% | 6% | 50% | 3.83 | 16% |
+| Hard, White | 13% | 4% | 83% | 1.06 | 0% |
+
+- **Normal** wins 60–70% in rounds 1–5, then falls to ~35% by round 9–10 at equal points (White).
+- **First move** is worth ~18 points of win rate (White 53% vs random 44%, so Black ≈ 35%).
+- **AI styles at equal points** (Normal, White): Cavalry Charge beats the player 59% of the time, Heavy Artillery only 25%.
+- **Move limit** decides a third of Normal games (40–60% in rounds 1–3); 35% of games where a side was ≥5 ahead end without mate.
+- **30 rounds:** the player's army stops growing at ~63 points by round 12 (the 16-piece cap, and this stand-in never upgrades, fuses or sells), while the AI budget keeps rising 6 a round; from round 12 on the player loses every game, mostly in under 10 plies.
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.
