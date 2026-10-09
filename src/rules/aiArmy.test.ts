@@ -9,11 +9,11 @@ const points = (types: PieceType[]) => types.reduce((s, t) => s + PIECE_VALUE[t]
 const count = (types: PieceType[], t: PieceType) => types.filter((x) => x === t).length;
 
 describe('aiBudget', () => {
-  it('is 4 + 2×round within ±1', () => {
+  it('is 6×round within ±1', () => {
     for (let seed = 0; seed < 20; seed++) {
       const b = aiBudget(3, seededRng(seed));
-      expect(b).toBeGreaterThanOrEqual(9);
-      expect(b).toBeLessThanOrEqual(11);
+      expect(b).toBeGreaterThanOrEqual(17);
+      expect(b).toBeLessThanOrEqual(19);
     }
   });
 });

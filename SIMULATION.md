@@ -15,7 +15,7 @@ npm run sim -- --rounds 10 --games 100
 | `--workers` | CPU count − 2 | Parallel Stockfish processes |
 | `--player-style` | `random` | Stand-in player style (`balanced`, `fortress`, `heavy`, `cavalry`), or random per run |
 | `--player-points` | `economy` | `economy` = the player's army value follows DESIGN.md income. `ai` = the player gets the same budget as the AI each round, which isolates engine and style balance from the economy. |
-| `--ai-budget a,b` | — | Replaces the AI budget `4 + 2×round` with `a + b×round` (±1 noise kept) |
+| `--ai-budget a,b` | — | Replaces the AI budget `6×round` with `a + b×round` (±1 noise kept). The results below predate the change from `4 + 2×round`, so `--ai-budget 4,2` reproduces the old curve. |
 | `--lead` | 5 | Material lead threshold for the "lead≥N / no mate / no win" columns |
 | `--json` | off | Dumps every game record instead of the tables |
 

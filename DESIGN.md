@@ -55,7 +55,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 ## AI Opponent
 - **Engine:** Stockfish (WASM, in a web worker) plays both sides at the same settings. The player's skill is in drafting and placement, not in having a better engine.
 - **Speed:** a depth-8 search per move. To add variety, it picks randomly among the top 3 moves when they score within ~50 centipawns of each other.
-- **Army budget:** 4 + 2×round points, plus or minus 1 random. A new opponent is drafted each round, and its style is shown during placement.
+- **Army budget:** 6×round points, plus or minus 1 random. This roughly matches the player's army value (6 at the start, then +5 to +7 income per round). The earlier 4 + 2×round fell far behind from round 2 (see SIMULATION.md). A new opponent is drafted each round, and its style is shown during placement.
 - **Styles:** each sets the share of the budget spent on pawns, draft weights for the other pieces, preferred king files, and how far forward pieces sit.
   | Style | Draft | Layout |
   |---|---|---|

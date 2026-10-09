@@ -47,7 +47,7 @@ const LEAD = Number(opts.lead);
 const PLAYER_STYLE = opts['player-style']!;
 /** economy = start army + gold + income so far; ai = same budget as this round's AI (isolates engine/style balance). */
 const PLAYER_POINTS = opts['player-points']!;
-/** `--ai-budget base,perRound` replaces aiBudget's 4 + 2×round (the ±1 noise is kept). */
+/** `--ai-budget base,perRound` replaces aiBudget's 6×round (the ±1 noise is kept). */
 const AI_BUDGET = opts['ai-budget']?.split(',').map(Number);
 if (AI_BUDGET && (AI_BUDGET.length !== 2 || AI_BUDGET.some(Number.isNaN))) {
   throw new Error('--ai-budget must be base,perRound (e.g. 0,6)');
@@ -245,7 +245,7 @@ function report(records: RunRecord[]): string {
   const out = [
     `Auto Chess Chess sim — ${RUNS} runs × ${ROUNDS} rounds, seed ${SEED}, depth ${DEPTH ?? SEARCH_DEPTH}, ` +
       `ply limit ${PLY_LIMIT}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
-      `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round` : '4 + 2×round'} ±1`,
+      `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round` : '6×round'} ±1`,
     'W/D/L are from the player\'s side. "lead≥N" = games where a side was ever ≥N points of material ahead;',
     '"no mate"/"no win" = share of those where that side failed to checkmate / failed to win at all.',
     table('By round', [...byRound.entries()].sort(([a], [b]) => a - b).map(([r, b]) => [`round ${r}`, b])),

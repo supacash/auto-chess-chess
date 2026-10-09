@@ -79,9 +79,9 @@ const CENTER = [0, 0.3, 0.7, 1, 1, 0.7, 0.3, 0];
 /** Penalty for stacking a pawn on a file that already has one. */
 const DOUBLED_PAWN = 2;
 
-/** AI army point budget for a round: 4 + 2×round, ±1 random. */
+/** AI army point budget for a round: 6×round, ±1 random (tracks the player's income; see SIMULATION.md). */
 export function aiBudget(round: number, rng: Rng): number {
-  return 4 + 2 * round + randomInt(rng, 3) - 1;
+  return 6 * round + randomInt(rng, 3) - 1;
 }
 
 export function pickStyle(rng: Rng): AiStyle {
