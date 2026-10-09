@@ -1,5 +1,16 @@
 import { BOARD_8 } from '../chess/boardSpec';
-import { type MatchPlayer, type MatchSettings, MATCH_SIZE, newPlayers, shopSeconds } from '../multi/match';
+import {
+  applyRound,
+  type MatchPlayer,
+  type MatchSettings,
+  MATCH_SIZE,
+  newPlayers,
+  type Pairing,
+  type PairingResult,
+  pairRound,
+  shopSeconds,
+} from '../multi/match';
+import type { Winner } from '../rules/battle';
 import { isPieceType, makePiece, type Piece, type PieceType } from '../rules/pieces';
 import { armyErrors } from '../rules/placement';
 import { type Rng, randomInt } from '../rules/rng';
@@ -44,6 +55,21 @@ export interface Room {
   done: Record<string, number>;
   /** Each person's placed piece types during the shop (no squares), so opponents can see what's coming. */
   preview: Record<string, PieceType[]>;
+  /**
+   * Battle results reported by the players who computed them, keyed by resultKey(round, index of the
+   * pairing). Each phone computes only its own battle; bot-vs-bot battles are computed by one person.
+   */
+  results: Record<string, ReportedResult>;
+}
+
+/** A battle's outcome as reported to the room. */
+export interface ReportedResult {
+  winner: Winner;
+  material: { w: number; b: number };
+}
+
+export function resultKey(round: number, index: number): string {
+  return `${round}_${index}`;
 }
 
 export function isRoomCode(code: string): boolean {
@@ -79,6 +105,7 @@ export function newRoom(code: string, host: string, hostName: string, settings: 
     ready: {},
     done: {},
     preview: {},
+    results: {},
   };
 }
 
@@ -121,6 +148,7 @@ export function startRoom(room: Room, seed: number, botNames: string[]): Room {
     ready: {},
     done: {},
     preview: {},
+    results: {},
   };
 }
 
@@ -142,11 +170,40 @@ export function canStartBattle(room: Room, now: number): boolean {
   return deadline !== null && now >= deadline + SHOP_GRACE_MS;
 }
 
-/** The round may end once every person still in has finished it, or after BATTLE_TIMEOUT_MS. */
+/** This round's pairings: the same on every client (from the match seed and who's still in). */
+export function roomPairings(room: Room): Pairing[] {
+  return pairRound(room.players, room.seed, room.round);
+}
+
+/** The round's results so far, by pairing (null where nothing has been reported yet). */
+export function roundResults(room: Room, round = room.round, pairings = roomPairings(room)): (PairingResult | null)[] {
+  return pairings.map((pairing, i) => {
+    const r = room.results[resultKey(round, i)];
+    return r ? { pairing, winner: r.winner, material: r.material } : null;
+  });
+}
+
+/** The person who computes the round's bot-vs-bot battles: the first seated person still in. */
+export function botBattleComputer(room: Room): string | null {
+  return humansIn(room)[0] ?? null;
+}
+
+/**
+ * The round may end once every person still in has finished it and every battle's result is in, or
+ * after BATTLE_TIMEOUT_MS (a battle nobody reported then counts as a draw).
+ */
 export function canFinishRound(room: Room, now: number): boolean {
   if (room.status !== 'playing' || room.phase !== 'battle') return false;
-  if (humansIn(room).every((id) => room.done[id] === room.round)) return true;
+  const allDone = humansIn(room).every((id) => room.done[id] === room.round);
+  if (allDone && roundResults(room).every((r) => r !== null)) return true;
   return room.phaseStartedAt !== null && now >= room.phaseStartedAt + BATTLE_TIMEOUT_MS;
+}
+
+/** The round's results with any missing one (nobody reported it) counted as a draw. */
+export function completeResults(room: Room): PairingResult[] {
+  return roundResults(room).map(
+    (r, i) => r ?? { pairing: roomPairings(room)[i], winner: 'draw' as const, material: { w: 0, b: 0 } },
+  );
 }
 
 /** Closes the shop: the round's armies are now locked and visible to everyone. */
@@ -154,8 +211,12 @@ export function startBattle(room: Room): Room {
   return { ...room, phase: 'battle', phaseStartedAt: null };
 }
 
-/** Applies the round (players already updated by applyRound) and opens the next shop, or ends the match. */
-export function finishRound(room: Room, players: MatchPlayer[]): Room {
+/**
+ * Applies the round from the reported results (health, knockouts) and opens the next shop, or ends
+ * the match. Worked out from the room alone, so it's the same whoever writes it.
+ */
+export function finishRound(room: Room): Room {
+  const players = applyRound(room.players, room.round, completeResults(room));
   const over = players.filter((p) => p.place === null).length <= 1;
   return {
     ...room,

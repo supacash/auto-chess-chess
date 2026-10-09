@@ -63,6 +63,7 @@ const match = new MatchController({
   placement,
   battle,
   ensureEngine,
+  backgroundEngine,
   records,
   onExit: () => {
     placement.use(session, { header: () => renderHeader(session) });
@@ -193,6 +194,20 @@ function startNewRun(settings: RunSettings): void {
   session.startNewRun(settings);
   placement.resetForNewRun();
   showPlacement();
+}
+
+let background: Promise<Engine> | null = null;
+
+/**
+ * A second engine for battles the player doesn't watch (multiplayer), so they run alongside the one
+ * on screen instead of after it.
+ */
+function backgroundEngine(): Promise<Engine> {
+  background ??= ensureEngine().then(() => Engine.create());
+  background.catch(() => {
+    background = null;
+  });
+  return background;
 }
 
 /** Loads the engine and rules on first use. */

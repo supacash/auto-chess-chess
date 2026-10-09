@@ -13,7 +13,7 @@ import {
   Timestamp,
   updateDoc,
 } from 'firebase/firestore';
-import type { MatchPlayer, MatchSettings } from '../multi/match';
+import type { MatchSettings } from '../multi/match';
 import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
 import { type Rng, randomSeed } from '../rules/rng';
 import {
@@ -27,6 +27,8 @@ import {
   loneKing,
   newRoom,
   parseArmy,
+  type ReportedResult,
+  resultKey,
   type Room,
   roomCode,
   startBattle,
@@ -196,18 +198,23 @@ export class RoomClient {
     await updateDoc(doc(this.db, 'rooms', code), { [`done.${this.uid}`]: round });
   }
 
+  /** Reports a battle's result (the player's own, or a bot-vs-bot battle they computed). */
+  async reportResult(code: string, round: number, index: number, result: ReportedResult): Promise<void> {
+    await updateDoc(doc(this.db, 'rooms', code), { [`results.${resultKey(round, index)}`]: result });
+  }
+
   /**
-   * Ends the round with `players` (the health after it, which every client computes the same) if it's
-   * time; the first client to get here writes it.
+   * Ends the round from the reported results if it's time; the first client to get here writes it.
+   * The new health list is worked out from the room alone, so it's the same whoever writes it.
    */
-  async tryFinishRound(code: string, round: number, players: MatchPlayer[]): Promise<void> {
+  async tryFinishRound(code: string, round: number): Promise<void> {
     const ref = doc(this.db, 'rooms', code);
     await runTransaction(this.db, async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists()) return;
       const room = fromStored(snap.data());
       if (room.round !== round || !canFinishRound(room, this.serverNow())) return;
-      tx.update(ref, { ...toStored(finishRound(room, players)), phaseStartedAt: serverTimestamp() });
+      tx.update(ref, { ...toStored(finishRound(room)), phaseStartedAt: serverTimestamp() });
     });
   }
 }
@@ -225,7 +232,23 @@ function fromStored(data: Record<string, unknown>): Room {
     ready: (data.ready as Record<string, number>) ?? {},
     done: (data.done as Record<string, number>) ?? {},
     preview: parsePreviews(data.preview),
+    results: parseResults(data.results),
   };
+}
+
+/** Reported battle results, kept only if well-formed. */
+function parseResults(data: unknown): Record<string, ReportedResult> {
+  const out: Record<string, ReportedResult> = {};
+  if (typeof data !== 'object' || data === null) return out;
+  for (const [key, r] of Object.entries(data)) {
+    if (typeof r !== 'object' || r === null) continue;
+    const { winner, material } = r as Record<string, unknown>;
+    if (winner !== 'w' && winner !== 'b' && winner !== 'draw') continue;
+    if (typeof material !== 'object' || material === null) continue;
+    const { w, b } = material as Record<string, unknown>;
+    if (Number.isInteger(w) && Number.isInteger(b)) out[key] = { winner, material: { w: w as number, b: b as number } };
+  }
+  return out;
 }
 
 /** Other players' previews: kept only if they're lists of known piece types (at most a full army). */

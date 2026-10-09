@@ -5,6 +5,7 @@ import {
   armyDoc,
   armyId,
   BATTLE_TIMEOUT_MS,
+  botBattleComputer,
   canFinishRound,
   canStartBattle,
   finishRound,
@@ -15,6 +16,9 @@ import {
   newRoom,
   normalizeCode,
   parseArmy,
+  resultKey,
+  roomPairings,
+  roundResults,
   type Room,
   roomCode,
   SHOP_GRACE_MS,
@@ -91,21 +95,49 @@ describe('phases', () => {
     expect(canStartBattle({ ...playing(), phaseStartedAt: null }, Number.MAX_SAFE_INTEGER)).toBe(false);
   });
 
-  it('ends the round when everyone is done, or after the timeout', () => {
+  it('ends the round when everyone is done and every result is in, or after the timeout', () => {
     const room = { ...startBattle(playing()), phaseStartedAt: 5_000 };
+    const all = Object.fromEntries(
+      roomPairings(room).map((_, i) => [resultKey(1, i), { winner: 'draw' as const, material: { w: 0, b: 0 } }]),
+    );
     expect(canStartBattle(room, 0)).toBe(false);
     expect(canFinishRound(room, 5_000)).toBe(false);
-    expect(canFinishRound({ ...room, done: { host: 1, p2: 1 } }, 5_000)).toBe(true);
+    // Everyone done but results missing: wait.
+    expect(canFinishRound({ ...room, done: { host: 1, p2: 1 } }, 5_000)).toBe(false);
+    expect(canFinishRound({ ...room, done: { host: 1, p2: 1 }, results: all }, 5_000)).toBe(true);
     expect(canFinishRound(room, 5_000 + BATTLE_TIMEOUT_MS)).toBe(true);
   });
 
-  it('moves to the next round, or ends when one player is left', () => {
+  it('applies the round from the reported results, the same for whoever writes it', () => {
     const room = startBattle(playing());
-    const next = finishRound(room, room.players);
+    const pairings = roomPairings(room);
+    // The first battle's white wins with 10 points left; the rest go unreported (draws).
+    const results = { [resultKey(1, 0)]: { winner: 'w' as const, material: { w: 10, b: 0 } } };
+    const next = finishRound({ ...room, results });
     expect([next.round, next.phase, next.status]).toEqual([2, 'shop', 'playing']);
-    const players = room.players.map((p, i) => ({ ...p, place: i === 0 ? 1 : 5 - i }));
-    const over = finishRound(room, players);
+    expect(next.players.find((p) => p.id === pairings[0].black)!.hp).toBe(20 - 3);
+    expect(next.players.find((p) => p.id === pairings[0].white)!.hp).toBe(20);
+    expect(roundResults({ ...room, results })[1]).toBeNull();
+  });
+
+  it('ends the match when one player is left', () => {
+    const room = startBattle(playing());
+    const almost = { ...room, players: room.players.map((p, i) => (i < 2 ? p : { ...p, hp: 0, place: 5 - i })) };
+    const [pairing] = roomPairings(almost);
+    const loserIsWhite = pairing.white === almost.players[1].id;
+    const over = finishRound({
+      ...almost,
+      players: almost.players.map((p, i) => (i === 1 ? { ...p, hp: 1 } : p)),
+      results: { [resultKey(1, 0)]: { winner: loserIsWhite ? 'b' : 'w', material: { w: 5, b: 5 } } },
+    });
     expect([over.round, over.phase, over.status]).toEqual([1, 'over', 'over']);
+  });
+
+  it('gives the bot-vs-bot battles to the first person still in', () => {
+    const room = playing();
+    expect(botBattleComputer(room)).toBe('host');
+    const hostOut = { ...room, players: room.players.map((p) => (p.id === 'host' ? { ...p, place: 4 } : p)) };
+    expect(botBattleComputer(hostOut)).toBe('p2');
   });
 
   it('ignores people who are out when waiting for ready', () => {

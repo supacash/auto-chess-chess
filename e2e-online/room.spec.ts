@@ -65,7 +65,7 @@ test('two players create and join a room, play a round together, and move on to 
   }
   for (const page of [host, guest]) {
     await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
-    await expect(page.locator('#next')).toHaveText('Round 2');
+    await expect(page.locator('#next')).toHaveText('Continue');
   }
 
   // Both continue; once both have, the next shop opens for everyone with the same health list.
@@ -74,6 +74,10 @@ test('two players create and join a room, play a round together, and move on to 
   await guest.locator('#next').click();
   for (const page of [host, guest]) {
     await expect(page.locator('#match-round')).toContainText('Round 2 · Shop', { timeout: 60_000 });
+    // Both shops open together: each player starts with (nearly) the whole 45 seconds.
+    await expect(page.locator('#match-timer')).toHaveText(/\d+s/);
+    const left = Number((await page.locator('#match-timer').textContent())!.replace('s', ''));
+    expect(left).toBeGreaterThanOrEqual(40);
   }
   const health = async (page: Page) =>
     (await page.locator('#match-players .player').allTextContents()).map((t) => t.replace(/\s+/g, ' ').trim());

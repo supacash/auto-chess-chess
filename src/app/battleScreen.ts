@@ -484,6 +484,22 @@ export class BattleScreen {
     this.nextOverride = card.onButton;
   }
 
+  /** True while the result card is on screen. */
+  cardShowing(): boolean {
+    return !this.section.hidden && !this.result.hidden;
+  }
+
+  /** Updates the result card's text (e.g. as other battles' results come in). */
+  setCardDetail(text: string): void {
+    $('#result-detail').textContent = text;
+  }
+
+  /** Changes what the result card's main button says and does. */
+  setCardButton(label: string, onButton: () => void): void {
+    $('#next').textContent = label;
+    this.nextOverride = onButton;
+  }
+
   /** Shows how the battle ended and what it did to the run. `spec` is the board it was played on. */
   showResult(result: BattleResult, outcome: BattleOutcome, spec: BoardSpec, lives: number, best: number): void {
     const { winner, reason, material } = result;

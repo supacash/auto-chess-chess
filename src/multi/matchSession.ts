@@ -166,8 +166,34 @@ export class MatchSession implements PlacementSession {
   }
 
   battle(pairing: Pairing): MatchBattle {
+    return this.battleBetween(pairing, this.army(pairing.white), this.army(pairing.black));
+  }
+
+  /** True when nobody but bots is in this battle (a copy of a person's army doesn't count as them). */
+  isBotsOnly(pairing: Pairing): boolean {
+    const person = (id: string, side: 'w' | 'b') => !this.player(id).bot && pairing.copy !== side;
+    return !person(pairing.white, 'w') && !person(pairing.black, 'b');
+  }
+
+  /** True when both armies are bots' (and so known before the shop closes). */
+  armiesKnownEarly(pairing: Pairing): boolean {
+    return this.player(pairing.white).bot && this.player(pairing.black).bot;
+  }
+
+  /** A battle between two bots' armies, before the round's armies are locked (see armiesKnownEarly). */
+  earlyBattle(pairing: Pairing): MatchBattle {
+    const army = (id: string) => botArmy(this.seed, this.round, id, this.board);
+    return this.battleBetween(pairing, army(pairing.white), army(pairing.black));
+  }
+
+  /** This round's pairings, known from the seed as soon as the shop opens. */
+  upcomingPairings(): Pairing[] {
+    return pairRound(this.players, this.seed, this.round);
+  }
+
+  private battleBetween(pairing: Pairing, white: Piece[], black: Piece[]): MatchBattle {
     // White moves first, as in chess (a king that starts in check still moves first).
-    const start = startPosition(this.army(pairing.white), this.army(pairing.black), true, this.board);
+    const start = startPosition(white, black, true, this.board);
     return { pairing, start: start.ok ? { fen: start.fen, firstMover: start.firstMover } : null };
   }
 
