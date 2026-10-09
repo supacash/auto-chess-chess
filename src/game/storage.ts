@@ -2,7 +2,8 @@ import { BOARDS } from '../chess/boardSpec';
 import { AI_STYLES } from '../rules/aiArmy';
 import { DEFAULT_SETTINGS, type DifficultyId, isDifficultyId, isSideId, type RunSettings } from '../rules/difficulty';
 import { isModeId, type ModeId } from '../rules/mode';
-import { isPieceType, type Piece } from '../rules/pieces';
+import { OFFER_COUNT } from '../rules/economy';
+import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
 import type { Run } from '../rules/run';
 
 /** Saved squares may be anywhere on the biggest board; the game fits them to the current one (fitToBoard). */
@@ -150,13 +151,19 @@ export function parseSave(raw: unknown): SavedGame | null {
       round: run.round,
       lives: run.lives,
       record: { w: record.w, l: record.l, d: record.d },
-      shop: { gold: run.shop.gold, pieces },
+      shop: { gold: run.shop.gold, pieces, ...parseOffers(run.shop.offers) },
       settings,
       color: run.color === 'b' ? 'b' : 'w',
     },
     ai: { styleId: ai.styleId, pieces: aiPieces },
     ...(data.battleInProgress === true ? { battleInProgress: true } : {}),
   };
+}
+
+/** Offers are optional (saves from before the shop had them have none; the session rolls new ones). */
+function parseOffers(data: unknown): { offers?: PieceType[] } {
+  if (!Array.isArray(data) || data.length > OFFER_COUNT || !data.every(isPieceType)) return {};
+  return { offers: data };
 }
 
 function parsePieces(data: unknown): Piece[] | null {

@@ -1,5 +1,5 @@
 import { DIFFICULTIES, SIDES } from '../rules/difficulty';
-import { PAWN_COST } from '../rules/economy';
+import { PAWN_COST, REROLL_COST } from '../rules/economy';
 import { MODES } from '../rules/mode';
 
 /** Playback speeds offered during a battle. */
@@ -32,6 +32,12 @@ export function renderLayout(root: HTMLElement): void {
         <span class="gold" id="gold" aria-label="Gold"></span>
         <button id="buy-pawn" type="button">Buy pawn · ${PAWN_COST}g</button>
       </div>
+      <div class="offers-head">
+        <span class="offers-label">For sale</span>
+        <button id="reroll" type="button">Reroll · ${REROLL_COST}g</button>
+      </div>
+      <div class="offers" id="offers"></div>
+      <div class="offer-detail" id="offer-detail" hidden></div>
       <div class="piece-actions" id="piece-actions"></div>
     </div>
     <p id="message" role="status" aria-live="polite"></p>

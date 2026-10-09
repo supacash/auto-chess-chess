@@ -3,7 +3,7 @@ import { clearGame, loadBest, loadGame, SAVE_VERSION, saveBest, saveGame } from 
 import { AI_STYLES, type AiStyle, aiBudget, draftAiArmy, pickStyle, placeAiArmy } from '../rules/aiArmy';
 import type { BattleResult } from '../rules/battle';
 import { difficulty, type RunSettings } from '../rules/difficulty';
-import type { Shop } from '../rules/economy';
+import { rerollOffers, rollOffers, type Shop, type ShopResult } from '../rules/economy';
 import { gameMode } from '../rules/mode';
 import type { Piece } from '../rules/pieces';
 import { armyErrors, fitToBoard } from '../rules/placement';
@@ -73,6 +73,9 @@ export class Session {
     this.run = saved.run;
     this.aiStyle = style;
     this.aiPieces = saved.ai.pieces;
+    if (!this.run.shop.offers) {
+      this.run = { ...this.run, shop: { ...this.run.shop, offers: rollOffers(this.run.round, this.rng) } };
+    }
     this.best = this.loadBest();
     if (!saved.battleInProgress) return { notice: '', firstVisit: false };
 
@@ -107,7 +110,9 @@ export class Session {
     this.draftOpponent();
   }
 
+  /** Drafts this round's opponent and stocks the shop with fresh offers. */
   draftOpponent(): void {
+    this.run = { ...this.run, shop: { ...this.run.shop, offers: rollOffers(this.run.round, this.rng) } };
     const spec = this.board;
     const { settings } = this.run;
     const mode = gameMode(settings.mode);
@@ -120,6 +125,11 @@ export class Session {
       mode.aiBonus,
     );
     this.aiPieces = placeAiArmy(draftAiArmy(budget, this.aiStyle, this.rng, spec), this.aiStyle, this.rng, spec);
+  }
+
+  /** Pays for a fresh set of shop offers (doesn't apply it: see setShop). */
+  rerollOffers(): ShopResult {
+    return rerollOffers(this.run.shop, this.run.round, this.rng);
   }
 
   setPieces(pieces: Piece[]): void {
