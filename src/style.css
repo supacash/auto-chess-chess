@@ -50,8 +50,8 @@ h1 {
 
 .board {
   display: grid;
-  grid-template-columns: repeat(8, var(--sq));
-  grid-template-rows: repeat(8, var(--sq));
+  grid-template-columns: repeat(var(--files, 8), var(--sq));
+  grid-template-rows: repeat(var(--ranks, 8), var(--sq));
   border-radius: 4px;
   overflow: hidden;
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.4);

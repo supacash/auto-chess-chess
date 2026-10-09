@@ -1,5 +1,7 @@
-import type { Chess, Color } from 'chess.js';
-import { PIECE_VALUE, type PieceType } from './pieces';
+import { type Color, material } from '../chess/fen';
+import type { Terminal } from '../chess/rules';
+
+export { material };
 
 /** Total half-moves before the round ends on material. */
 export const PLY_LIMIT = 90;
@@ -39,14 +41,11 @@ export interface LeadStreak {
 
 export const NO_STREAK: LeadStreak = { side: null, plies: 0 };
 
-export function material(chess: Chess): Record<Color, number> {
-  const out: Record<Color, number> = { w: 0, b: 0 };
-  for (const row of chess.board()) {
-    for (const cell of row) {
-      if (cell) out[cell.color] += PIECE_VALUE[cell.type.toUpperCase() as PieceType];
-    }
-  }
-  return out;
+/** What battleResult needs to know about a position (implemented by chess/rules Game). */
+export interface BattleState {
+  fen(): string;
+  turn(): Color;
+  terminal(): Terminal | null;
 }
 
 /** The streak after one more half-move that left material at `mat`. */
@@ -61,19 +60,17 @@ export function nextLeadStreak(prev: LeadStreak, mat: Record<Color, number>, min
  * `streak` is only read when `limits.decisive` is set.
  */
 export function battleResult(
-  chess: Chess,
+  state: BattleState,
   plies: number,
   limits: BattleLimits = DEFAULT_LIMITS,
   streak: LeadStreak = NO_STREAK,
 ): BattleResult | null {
-  const mat = material(chess);
+  const mat = material(state.fen());
   const end = (winner: Winner, reason: EndReason): BattleResult => ({ winner, reason, material: mat, plies });
 
-  if (chess.isCheckmate()) return end(chess.turn() === 'w' ? 'b' : 'w', 'checkmate');
-  if (chess.isStalemate()) return end('draw', 'stalemate');
-  if (chess.isInsufficientMaterial()) return end('draw', 'insufficient');
-  if (chess.isThreefoldRepetition()) return end('draw', 'repetition');
-  if (chess.isDrawByFiftyMoves()) return end('draw', 'fifty-move');
+  const terminal = state.terminal();
+  if (terminal === 'checkmate') return end(state.turn() === 'w' ? 'b' : 'w', 'checkmate');
+  if (terminal) return end('draw', terminal);
   if (limits.decisive && streak.side && streak.plies >= limits.decisive.plies) return end(streak.side, 'decisive');
   if (plies >= limits.plyLimit) {
     return end(mat.w > mat.b ? 'w' : mat.b > mat.w ? 'b' : 'draw', 'move-limit');

@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { loadRulesForNode } from '../chess/testRules';
 import { makePiece, type PieceType, type Square } from './pieces';
 import { mirror, placementFen, startPosition } from './position';
 import { seededRng } from './rng';
+
+beforeAll(loadRulesForNode);
 
 const sq = (file: number, rank: number): Square => ({ file, rank });
 const piece = (type: PieceType, file: number, rank: number) => makePiece(type, sq(file, rank));

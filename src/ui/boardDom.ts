@@ -1,3 +1,4 @@
+import { fileLetter } from '../chess/boardSpec';
 import type { PieceType } from '../rules/pieces';
 
 // Each piece is a solid glyph (fill colour) with the outline glyph layered on top.
@@ -34,6 +35,6 @@ export function squareEl(file: number, rank: number): HTMLElement {
   cell.dataset.file = String(file);
   cell.dataset.rank = String(rank);
   if (file === 0) cell.appendChild(label('rank-label', String(rank + 1)));
-  if (rank === 0) cell.appendChild(label('file-label', 'abcdefgh'[file]));
+  if (rank === 0) cell.appendChild(label('file-label', fileLetter(file)));
   return cell;
 }

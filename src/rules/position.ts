@@ -1,43 +1,26 @@
-import { Chess, type Color, type Square as ChessSquare } from 'chess.js';
+import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
+import { type Color, type FenPiece, placementField } from '../chess/fen';
+import { kingInCheck } from '../chess/rules';
 import type { Piece, Square } from './pieces';
 import { type Rng } from './rng';
 
-export function toChessSquare(sq: Square): ChessSquare {
-  return ('abcdefgh'[sq.file] + (sq.rank + 1)) as ChessSquare;
-}
-
-/** Maps an AI-local square (its home rows are ranks 0-2) onto the board (ranks 7-5). */
-export function mirror(sq: Square): Square {
-  return { file: sq.file, rank: 7 - sq.rank };
+/** Maps an AI-local square (its home rows start at rank 0) onto the board (counted from the top). */
+export function mirror(sq: Square, spec: BoardSpec = BOARD_8): Square {
+  return { file: sq.file, rank: spec.ranks - 1 - sq.rank };
 }
 
 /** FEN piece-placement field: player pieces as white, AI pieces (mirrored) as black. Benched pieces are skipped. */
-export function placementFen(player: Piece[], ai: Piece[]): string {
-  const grid: (string | null)[][] = Array.from({ length: 8 }, () => Array<string | null>(8).fill(null));
-  for (const p of player) if (p.square) grid[p.square.rank][p.square.file] = p.type;
+export function placementFen(player: Piece[], ai: Piece[], spec: BoardSpec = BOARD_8): string {
+  const grid: (FenPiece | null)[][] = Array.from({ length: spec.ranks }, () =>
+    Array<FenPiece | null>(spec.files).fill(null),
+  );
+  for (const p of player) if (p.square) grid[p.square.rank][p.square.file] = { type: p.type, color: 'w' };
   for (const p of ai) {
     if (!p.square) continue;
-    const sq = mirror(p.square);
-    grid[sq.rank][sq.file] = p.type.toLowerCase();
+    const sq = mirror(p.square, spec);
+    grid[sq.rank][sq.file] = { type: p.type, color: 'b' };
   }
-
-  const rows: string[] = [];
-  for (let rank = 7; rank >= 0; rank--) {
-    let row = '';
-    let empty = 0;
-    for (const cell of grid[rank]) {
-      if (!cell) {
-        empty++;
-        continue;
-      }
-      if (empty) row += empty;
-      row += cell;
-      empty = 0;
-    }
-    if (empty) row += empty;
-    rows.push(row);
-  }
-  return rows.join('/');
+  return placementField(grid);
 }
 
 export type StartPosition = { ok: true; fen: string; firstMover: Color } | { ok: false; reason: 'both-in-check' };
@@ -45,19 +28,14 @@ export type StartPosition = { ok: true; fen: string; firstMover: Color } | { ok:
 /**
  * Builds the battle's starting FEN (no castling, no en passant) and picks who moves first:
  * random, unless a king starts in check — then that side moves. Both kings in check is unplayable.
+ * Needs the chess rules loaded (setRules).
  */
-export function startPosition(player: Piece[], ai: Piece[], rng: Rng): StartPosition {
-  const placement = placementFen(player, ai);
-  const probe = new Chess(`${placement} w - - 0 1`, { skipValidation: true });
-  const whiteInCheck = kingAttacked(probe, 'w');
-  const blackInCheck = kingAttacked(probe, 'b');
+export function startPosition(player: Piece[], ai: Piece[], rng: Rng, spec: BoardSpec = BOARD_8): StartPosition {
+  const placement = placementFen(player, ai, spec);
+  const whiteInCheck = kingInCheck(spec, placement, 'w');
+  const blackInCheck = kingInCheck(spec, placement, 'b');
 
   if (whiteInCheck && blackInCheck) return { ok: false, reason: 'both-in-check' };
   const firstMover: Color = whiteInCheck ? 'w' : blackInCheck ? 'b' : rng() < 0.5 ? 'w' : 'b';
   return { ok: true, fen: `${placement} ${firstMover} - - 0 1`, firstMover };
-}
-
-function kingAttacked(chess: Chess, color: Color): boolean {
-  const [king] = chess.findPiece({ type: 'k', color });
-  return king !== undefined && chess.isAttacked(king, color === 'w' ? 'b' : 'w');
 }

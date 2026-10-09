@@ -19,6 +19,7 @@ import { PIECE_VALUE } from '../../src/rules/pieces';
 import { startPosition } from '../../src/rules/position';
 import { randomInt, seededRng } from '../../src/rules/rng';
 import { formatMargin, meanMargin } from './stats';
+import { loadRulesForNode } from '../../src/chess/testRules';
 import { EngineFailure, NodeEngine } from './nodeEngine';
 import { armyValue, spendGold } from './shopPlayer';
 
@@ -143,9 +144,9 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     let plies = 0;
     let result: BattleResult;
     try {
-      result = await runBattle(start.fen, engine, rng, async (_move, chess, ply) => {
+      result = await runBattle(start.fen, engine, rng, async (_move, game, ply) => {
         plies = ply;
-        const m = material(chess);
+        const m = material(game.fen());
         const lead = Math.abs(m.w - m.b);
         if (lead > peakLead) {
           peakLead = lead;
@@ -319,6 +320,7 @@ function report(records: RunRecord[]): string {
 
 async function main(): Promise<void> {
   const t0 = Date.now();
+  await loadRulesForNode();
   const engines = await Promise.all(Array.from({ length: WORKERS }, () => NodeEngine.create(DEPTH)));
   const results: RunRecord[] = new Array(RUNS);
   let next = 0;

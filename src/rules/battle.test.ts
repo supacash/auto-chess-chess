@@ -1,12 +1,16 @@
-import { Chess } from 'chess.js';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { BOARD_8 } from '../chess/boardSpec';
+import { Game } from '../chess/rules';
+import { loadRulesForNode } from '../chess/testRules';
 import { battleResult, material, nextLeadStreak, NO_STREAK, PLY_LIMIT } from './battle';
 
-const load = (fen: string) => new Chess(fen, { skipValidation: true });
+beforeAll(loadRulesForNode);
+
+const load = (fen: string) => new Game(BOARD_8, fen);
 
 describe('material', () => {
   it('counts piece values per side, king excluded', () => {
-    expect(material(load('4k3/pppp4/8/8/8/8/8/QR2K3 w - - 0 1'))).toEqual({ w: 14, b: 4 });
+    expect(material('4k3/pppp4/8/8/8/8/8/QR2K3 w - - 0 1')).toEqual({ w: 14, b: 4 });
   });
 });
 

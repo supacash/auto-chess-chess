@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { BOARDS } from '../chess/boardSpec';
+import { loadRulesForNode } from '../chess/testRules';
 import { PLY_LIMIT } from '../rules/battle';
 import { seededRng } from '../rules/rng';
 import { type MoveSource, runBattle } from './runBattle';
@@ -9,7 +11,17 @@ const silentEngine: MoveSource = {
   candidates: async () => [],
 };
 
+beforeAll(loadRulesForNode);
+
 describe('runBattle', () => {
+  it('plays on a small board and tells the engine which variant', async () => {
+    const variants: string[] = [];
+    const engine: MoveSource = { newGame: async (v) => void variants.push(v), candidates: async () => [] };
+    const result = await runBattle('2k2/1ppp1/5/1PPP1/2K2 w - - 0 1', engine, seededRng(2), async () => {}, { plyLimit: 20 }, BOARDS[0]);
+    expect(variants).toEqual(['acc5']);
+    expect(result.plies).toBeLessThanOrEqual(20);
+  });
+
   it('ends immediately when the side to move starts checkmated', async () => {
     let moves = 0;
     const result = await runBattle('R5k1/5ppp/8/8/8/8/8/6K1 b - - 0 1', silentEngine, seededRng(1), async () => {

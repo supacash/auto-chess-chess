@@ -1,5 +1,6 @@
 import './style.css';
-import { Chess } from 'chess.js';
+import { BOARD_8 } from './chess/boardSpec';
+import { loadRules } from './chess/loadRules';
 import { checkmateEval, evalShare, formatEval } from './engine/pick';
 import { Engine } from './engine/stockfish';
 import { runBattle } from './game/runBattle';
@@ -108,10 +109,10 @@ app.innerHTML = `
   </section>
 
   <footer class="credits">
-    Chess engine: <a href="https://stockfishchess.org" target="_blank" rel="noopener">Stockfish</a> 19 via
-    <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>, licensed under the
-    <a href="engine/STOCKFISH-LICENSE.txt" target="_blank" rel="noopener">GPLv3</a>
-    (<a href="https://github.com/nmrugg/stockfish.js/tree/v19.0.0" target="_blank" rel="noopener">source</a>).
+    Chess engine: <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener">Fairy-Stockfish</a>
+    via <a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener">fairy-stockfish.wasm</a>
+    and <a href="https://github.com/fairy-stockfish/Fairy-Stockfish/tree/master/src/ffishjs" target="_blank" rel="noopener">ffish.js</a>,
+    licensed under the <a href="fairy/GPL-3.0.txt" target="_blank" rel="noopener">GPLv3</a> (source at those links).
     Game code: <a href="https://github.com/supacash/auto-chess-chess" target="_blank" rel="noopener">MIT</a>.
   </footer>`;
 
@@ -399,7 +400,8 @@ async function fight(): Promise<void> {
   try {
     if (!state.engine) {
       messageEl.textContent = 'Loading engine…';
-      state.engine = await Engine.create();
+      const [engine] = await Promise.all([Engine.create(), loadRules()]);
+      state.engine = engine;
       messageEl.textContent = '';
     }
     const start = resolveStart();
@@ -439,16 +441,16 @@ async function playBattle(fen: string, firstMover: 'w' | 'b'): Promise<void> {
   resultEl.hidden = true;
   $('#playback').hidden = false;
 
-  battleView.render(new Chess(fen, { skipValidation: true }));
+  battleView.render(fen, BOARD_8);
   showEval(0);
   battleStatusEl.textContent = firstMover === 'w' ? 'You move first' : 'Opponent moves first';
   await sleep(700);
 
-  const result = await runBattle(fen, state.engine!, rng, async (move, chess, plies, evalScore) => {
+  const result = await runBattle(fen, state.engine!, rng, async (move, game, plies, evalScore) => {
     const ms = state.skipping ? 0 : MOVE_MS / state.speed;
-    battleView.render(chess, move, reduceMotion ? 0 : ms * 0.8);
+    battleView.render(game.fen(), game.spec, { last: move, animateMs: reduceMotion ? 0 : ms * 0.8, check: game.isCheck() });
     if (evalScore !== null) showEval(evalScore);
-    const mat = material(chess);
+    const mat = material(game.fen());
     battleStatusEl.textContent = state.skipping
       ? 'Skipping…'
       : `Move ${Math.ceil(plies / 2)}/${PLY_LIMIT / 2} · Material ${mat.w}–${mat.b}`;

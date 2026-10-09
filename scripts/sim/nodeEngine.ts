@@ -1,11 +1,18 @@
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
-import { createRequire } from 'node:module';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createInterface } from 'node:readline';
+import { fileURLToPath } from 'node:url';
+import { variantsIni } from '../../src/chess/boardSpec';
 import { type Candidate, parseInfo } from '../../src/engine/pick';
 import type { MoveSource } from '../../src/game/runBattle';
 
-const require = createRequire(import.meta.url);
-const ENGINE_PATH = require.resolve('stockfish/bin/stockfish-19-lite-single.js');
+/** Runs Fairy-Stockfish WASM as a UCI process (same engine as the browser). */
+const ENGINE_PATH = fileURLToPath(new URL('./fairyProcess.cjs', import.meta.url));
+/** The game's variants, written once to a temp file that every engine process loads. */
+const VARIANTS_PATH = join(mkdtempSync(join(tmpdir(), 'acc-sim-')), 'variants.ini');
+writeFileSync(VARIANTS_PATH, variantsIni());
 /** Same as src/engine/stockfish.ts. */
 const MULTI_PV = 3;
 /** A search or handshake that takes longer than this is treated as a hung engine. */
@@ -31,7 +38,7 @@ export class EngineFailure extends Error {
 }
 
 /**
- * Node counterpart of src/engine/stockfish.ts: the same UCI flow, but the Stockfish lite build
+ * Node counterpart of src/engine/stockfish.ts: the same UCI flow, but Fairy-Stockfish
  * runs as a child process talking over stdin/stdout instead of a web worker.
  * `depthOverride` replaces the depth runBattle asks for (for tuning experiments).
  * The WASM engine occasionally stalls mid-search; a search that times out restarts the process and retries once.
@@ -43,6 +50,7 @@ export class NodeEngine implements MoveSource {
   private readonly recent: string[] = [];
   private proc!: ChildProcessWithoutNullStreams;
   private exited: Error | null = null;
+  private variant = '';
   /** How many times a stalled search restarted the engine. */
   restarts = 0;
 
@@ -54,7 +62,11 @@ export class NodeEngine implements MoveSource {
     return engine;
   }
 
-  async newGame(): Promise<void> {
+  async newGame(variant: string): Promise<void> {
+    if (variant !== this.variant) {
+      this.send(`setoption name UCI_Variant value ${variant}`);
+      this.variant = variant;
+    }
     this.send('ucinewgame');
     await this.sync();
   }
@@ -89,7 +101,7 @@ export class NodeEngine implements MoveSource {
   }
 
   private async start(): Promise<void> {
-    const proc = spawn(process.execPath, [ENGINE_PATH], { stdio: 'pipe' });
+    const proc = spawn(process.execPath, [ENGINE_PATH, VARIANTS_PATH], { stdio: 'pipe' });
     this.proc = proc;
     this.exited = null;
     createInterface({ input: proc.stdout }).on('line', (raw) => {
@@ -109,7 +121,9 @@ export class NodeEngine implements MoveSource {
     const ready = this.waitFor((l) => l === 'uciok');
     this.send('uci');
     await ready;
+    this.send('setoption name VariantPath value /variants.ini');
     this.send(`setoption name MultiPV value ${MULTI_PV}`);
+    if (this.variant) this.send(`setoption name UCI_Variant value ${this.variant}`);
     await this.sync();
   }
 

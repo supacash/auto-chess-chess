@@ -1,6 +1,6 @@
 # Auto Chess Chess
 
-An auto-battler built on chess. Draft an army, place it in your three home rows, and press **Fight**: Stockfish plays the round for both sides. Survive as many rounds as you can against stronger and stronger AI armies.
+An auto-battler built on chess. Draft an army, place it in your three home rows, and press **Fight**: a chess engine plays the round for both sides. Survive as many rounds as you can against stronger and stronger AI armies.
 
 Runs in the browser and is built for phones first. **[Play it here](https://supacash.github.io/auto-chess-chess/).**
 
@@ -34,24 +34,25 @@ npm run dev
 | `npm run build` | Typecheck + production build in `dist/` |
 | `npm run sim` | Headless balance simulator (see [SIMULATION.md](SIMULATION.md)) |
 
-`dev` and `build` first copy the Stockfish WASM engine from `node_modules` into `public/engine/`.
+`dev` and `build` first copy the chess engine (Fairy-Stockfish), the rules library (ffish) and a small service worker from `node_modules` into `public/`.
 
 ## Project layout
 
 ```
 src/
   rules/    pure game logic: placement, economy, AI drafting, battle results, run state (unit tested)
-  engine/   Stockfish web-worker wrapper and move picking
+  chess/    board sizes, FEN helpers and the rules wrapper (ffish)
+  engine/   Fairy-Stockfish wrapper and move picking
   game/     battle loop and save/load
   ui/       placement board and battle view (vanilla TS, Pointer Events)
   main.ts   app wiring and screen flow
 scripts/    engine copy step and the balance simulator
 ```
 
-Built with [Vite](https://vite.dev), TypeScript, [chess.js](https://github.com/jhlywa/chess.js) and [Stockfish.js](https://github.com/nmrugg/stockfish.js) (Stockfish 19, lite single-threaded WASM).
+Built with [Vite](https://vite.dev), TypeScript, [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish) ([WASM build](https://github.com/fairy-stockfish/fairy-stockfish.wasm)) and [ffish.js](https://github.com/fairy-stockfish/Fairy-Stockfish/tree/master/src/ffishjs). The engine is multithreaded, so the page has to be cross-origin isolated; [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) handles that on GitHub Pages.
 
 ## License
 
 This project's code is released under the [MIT License](LICENSE).
 
-Stockfish is licensed under the GPLv3 and is not covered by the MIT License. It isn't stored in this repo and is installed from npm. Any build you distribute that includes it must comply with the GPLv3, including crediting Stockfish and offering its source.
+Fairy-Stockfish and ffish are licensed under the GPLv3 and are not covered by the MIT License. They aren't stored in this repo and are installed from npm. Any build you distribute that includes them must comply with the GPLv3, including crediting them and offering their source (the game's footer does this).

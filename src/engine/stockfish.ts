@@ -1,34 +1,69 @@
+import { variantsIni } from '../chess/boardSpec';
 import { type Candidate, parseInfo } from './pick';
 
-const ENGINE_URL = `${import.meta.env.BASE_URL}engine/stockfish-19-lite-single.js`;
+/**
+ * Fairy-Stockfish (WASM, multithreaded build) running in the page. It needs SharedArrayBuffer, so the
+ * page must be cross-origin isolated: coi-serviceworker (index.html) arranges that on hosts like GitHub
+ * Pages that can't send COOP/COEP headers. Files are copied to public/fairy/ at build time.
+ */
+const ENGINE_DIR = `${import.meta.env.BASE_URL}fairy/`;
 /** Lines of analysis per search; pickMove chooses among the close ones. */
 const MULTI_PV = 3;
 /** A search or handshake that takes longer than this is treated as a hung engine. */
 const TIMEOUT_MS = 10_000;
-/**
- * Stockfish 17+ rejects positions it considers impossible (e.g. more than 8 pawns plus
- * "promoted" pieces) with this line, and then never sends bestmove.
- */
-const UNSUPPORTED = /CRITICAL ERROR.*Unsupported position/;
+
+interface FairyInstance {
+  postMessage(cmd: string): void;
+  addMessageListener(fn: (line: string) => void): void;
+  FS: { writeFile(path: string, data: string): void };
+}
+
+declare global {
+  interface Window {
+    Stockfish?: (opts?: { locateFile?: (file: string) => string }) => Promise<FairyInstance>;
+  }
+}
+
+let scriptLoaded: Promise<void> | null = null;
+
+function loadScript(): Promise<void> {
+  scriptLoaded ??= new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = `${ENGINE_DIR}stockfish.js`;
+    el.onload = () => resolve();
+    el.onerror = () => reject(new Error('Could not load the chess engine'));
+    document.head.appendChild(el);
+  });
+  return scriptLoaded;
+}
 
 /**
- * Minimal UCI wrapper around the Stockfish WASM web worker. One search at a time.
- * A search that is refused or hangs (seen with two same-coloured bishops) returns no candidates,
- * so the battle falls back to a random legal move; a hung worker is replaced with a fresh one.
+ * Minimal UCI wrapper around Fairy-Stockfish. One search at a time.
+ * A search that hangs returns no candidates, so the battle falls back to a random legal move,
+ * and a fresh engine instance replaces the stuck one.
  */
 export class Engine {
   private readonly listeners = new Set<(line: string) => void>();
-  private worker!: Worker;
+  private instance!: FairyInstance;
+  private variant = '';
 
-  private constructor(private readonly url: string) {}
+  private constructor() {}
 
-  static async create(url = ENGINE_URL): Promise<Engine> {
-    const engine = new Engine(url);
+  static async create(): Promise<Engine> {
+    if (!crossOriginIsolated) {
+      throw new Error('This browser blocked the engine (the page is not cross-origin isolated). Try reloading.');
+    }
+    await loadScript();
+    const engine = new Engine();
     await engine.start();
     return engine;
   }
 
-  async newGame(): Promise<void> {
+  async newGame(variant: string): Promise<void> {
+    if (variant !== this.variant) {
+      this.send(`setoption name UCI_Variant value ${variant}`);
+      this.variant = variant;
+    }
     this.send('ucinewgame');
     if (!(await this.sync())) await this.restart();
   }
@@ -41,53 +76,45 @@ export class Engine {
       if (info) lines.set(info.multipv, info.candidate);
     };
     this.listeners.add(onLine);
-    const done = this.waitFor((l) => l.startsWith('bestmove') || UNSUPPORTED.test(l));
+    const done = this.waitFor((l) => l.startsWith('bestmove'));
     this.send(`position fen ${fen}`);
     this.send(`go depth ${depth}`);
     const reply = await done;
     this.listeners.delete(onLine);
 
     if (reply === null) {
-      console.warn(`Stockfish hung on ${fen}; restarting it`);
+      console.warn(`Chess engine hung on ${fen}; restarting it`);
       await this.restart();
-      return [];
-    }
-    if (UNSUPPORTED.test(reply)) {
-      console.warn(`Stockfish refused ${fen}: ${reply}`);
-      this.send('stop');
-      if (!(await this.sync())) await this.restart();
       return [];
     }
     return [...lines.entries()].sort(([a], [b]) => a - b).map(([, c]) => c);
   }
 
-  terminate(): void {
-    this.worker.terminate();
-  }
-
   private async start(): Promise<void> {
-    const worker = new Worker(this.url);
-    this.worker = worker;
-    worker.onmessage = (e: MessageEvent) => {
-      if (worker !== this.worker) return;
-      const line = String(e.data);
+    const instance = await window.Stockfish!({ locateFile: (file) => `${ENGINE_DIR}${file}` });
+    this.instance = instance;
+    instance.addMessageListener((line) => {
+      if (instance !== this.instance) return;
       for (const fn of [...this.listeners]) fn(line);
-    };
+    });
     const ready = this.waitFor((l) => l === 'uciok');
     this.send('uci');
-    if ((await ready) === null) throw new Error('Stockfish did not start');
+    if ((await ready) === null) throw new Error('The chess engine did not start');
+    instance.FS.writeFile('/variants.ini', variantsIni());
+    this.send('setoption name VariantPath value /variants.ini');
     this.send(`setoption name MultiPV value ${MULTI_PV}`);
-    if (!(await this.sync())) throw new Error('Stockfish did not start');
+    if (this.variant) this.send(`setoption name UCI_Variant value ${this.variant}`);
+    if (!(await this.sync())) throw new Error('The chess engine did not start');
   }
 
   private async restart(): Promise<void> {
-    this.worker.terminate();
+    this.send('quit');
     this.listeners.clear();
     await this.start();
   }
 
   private send(cmd: string): void {
-    this.worker.postMessage(cmd);
+    this.instance.postMessage(cmd);
   }
 
   /** True once the engine answers `isready`, false if it stays silent. */

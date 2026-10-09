@@ -58,9 +58,9 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **Draw:** equal material at the limit, stalemate, threefold repetition or insufficient material.
 
 ## AI Opponent
-- **Engine:** Stockfish (WASM, in a web worker) plays both sides at the same settings. The player's skill is in drafting and placement, not in having a better engine.
+- **Engine:** Fairy-Stockfish (WASM; a Stockfish variant engine that supports any board size up to 12×10) plays both sides at the same settings. The player's skill is in drafting and placement, not in having a better engine.
 - **Speed:** a depth-8 search per move. To add variety, it picks randomly among the top 3 moves when they score within ~50 centipawns of each other.
-- **Engine failures:** if Stockfish refuses a position or a search takes over 10 seconds (Stockfish lite can hang on some positions with two same-coloured bishops), that move is a random legal move instead, and a hung engine is restarted.
+- **Engine failures:** if a search takes over 10 seconds, that move is a random legal move instead and the engine is restarted. (The old Stockfish build hung about once per 1000 battles; Fairy-Stockfish had no hangs in testing, so this is a safety net.)
 - **Army budget:** 6×round points on Normal (5× Easy, 7× Hard), plus or minus 1 random, and 1 point less in round 1 so the first battle isn't a coin flip. This roughly matches the player's army value (6 at the start, then +5 to +7 income per round). The earlier 4 + 2×round fell far behind from round 2 (see SIMULATION.md). A new opponent is drafted each round, and its style is shown during placement.
 - **Styles:** each sets the share of the budget spent on pawns, draft weights for the other pieces, preferred king files, and how far forward pieces sit.
   | Style | Draft | Layout |
@@ -79,8 +79,8 @@ Draft and place a chess army, then watch an engine play the round for both sides
 
 ## Tech Stack
 - Vite + TypeScript, no framework (or Preact if the UI grows)
-- **chess.js** for rules, legal moves and FEN
-- **stockfish.js** (WASM) running in a web worker
+- **ffish.js** (Fairy-Stockfish's move generator) for rules, legal moves and FEN on any board size
+- **Fairy-Stockfish** (WASM, multithreaded; coi-serviceworker makes the page cross-origin isolated on GitHub Pages)
 - Custom touch-friendly board component using Pointer Events
 
 ## Milestones

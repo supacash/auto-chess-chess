@@ -39,7 +39,7 @@ export function sameSquare(a: Square | null, b: Square | null): boolean {
 }
 
 export function squareName(sq: Square): string {
-  return 'abcdefgh'[sq.file] + (sq.rank + 1);
+  return String.fromCharCode(97 + sq.file) + (sq.rank + 1);
 }
 
 // Per-page-load prefix keeps ids unique against pieces restored from a saved run.
