@@ -1,7 +1,7 @@
 import { type BoardSpec, plyLimit } from '../chess/boardSpec';
 import type { Color } from '../chess/fen';
 import { Game, type Move } from '../chess/rules';
-import { mirrorFen, mirrorSquare } from '../chess/fen';
+import { mirrorFen, mirrorSquare, parsePlacement } from '../chess/fen';
 import { checkmateEval, evalShare, formatEval, whiteEval } from '../engine/pick';
 import type { ManualBattle, ManualState } from '../game/manualBattle';
 import { type BattleRecord, recordBoard } from '../game/record';
@@ -9,7 +9,7 @@ import { type MoveSource, runBattle, SEARCH_DEPTH } from '../game/runBattle';
 import { type BattleResult, type EndReason, material, wonOnPoints } from '../rules/battle';
 import { roundIncome } from '../rules/economy';
 import type { Rng } from '../rules/rng';
-import { PIECE_NAME, type PieceType } from '../rules/pieces';
+import { PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
 import { BattleView } from '../ui/battleView';
 import { displayColor, inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { $, sleep } from './dom';
@@ -138,6 +138,7 @@ export class BattleScreen {
     this.result.hidden = true;
     this.playback.hidden = false;
     this.manual.hidden = true;
+    this.showSides(false);
     $('#eval').hidden = false;
 
     const limit = plyLimit(spec);
@@ -264,12 +265,15 @@ export class BattleScreen {
     $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
     await engine.newGame(game.spec.variant);
 
-    const draw = (last?: Move) =>
+    const draw = (last?: Move) => {
       this.view.render(game.fen, game.spec, {
         last,
         animateMs: last && !this.reduceMotion ? 150 : 0,
         check: game.isCheck(),
       });
+      this.renderSides(game.fen, game.spec.files);
+    };
+    this.showSides(true);
     draw();
 
     let result = game.result();
@@ -302,11 +306,46 @@ export class BattleScreen {
 
     this.manual.hidden = true;
     this.promo.hidden = true;
+    this.showSides(false);
     // The game's over: show the eval now.
     $('#eval').hidden = false;
     if (result.reason === 'checkmate' && result.winner !== 'draw') this.showEval(checkmateEval(result.winner));
     else this.showEval(whiteEval(await engine.candidates(game.fen, SEARCH_DEPTH, game.state), 'w') ?? 0);
     return result;
+  }
+
+  /** Shows or hides the piece lists above (opponent) and below (player) the board. */
+  private showSides(shown: boolean): void {
+    $('#side-them').hidden = !shown;
+    $('#side-you').hidden = !shown;
+  }
+
+  /**
+   * Each side's remaining pieces, grouped by type (most valuable first) with a count, and its total
+   * points: the opponent's above the board, the player's below. The player is white in the FEN.
+   */
+  private renderSides(fen: string, files: number): void {
+    const counts: Record<Color, Map<PieceType, number>> = { w: new Map(), b: new Map() };
+    for (const row of parsePlacement(fen, files)) {
+      for (const cell of row) if (cell) counts[cell.color].set(cell.type, (counts[cell.color].get(cell.type) ?? 0) + 1);
+    }
+    const mat = material(fen);
+    const line = (side: Color, label: string) => {
+      const types = [...counts[side].keys()].sort(
+        (a, b) => Number(b === 'K') - Number(a === 'K') || PIECE_VALUE[b] - PIECE_VALUE[a],
+      );
+      const pieces = types
+        .map((t) => {
+          const n = counts[side].get(t)!;
+          return `<span class="side-piece" title="${PIECE_NAME[t]}">${inlinePiece(t, side)}${n > 1 ? `<small>×${n}</small>` : ''}</span>`;
+        })
+        .join('');
+      const lead = mat[side] - mat[side === 'w' ? 'b' : 'w'];
+      const leadText = lead > 0 ? ` <span class="side-lead">+${lead}</span>` : '';
+      return `<span class="side-label">${label}</span><span class="side-list">${pieces}</span><span class="side-points">${mat[side]} pts${leadText}</span>`;
+    };
+    $('#side-them').innerHTML = line('b', 'Opponent');
+    $('#side-you').innerHTML = line('w', 'You');
   }
 
   /** Waits for the player's move (picking a promotion if there's a choice), Undo or Resign. */

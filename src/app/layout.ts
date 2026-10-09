@@ -96,7 +96,9 @@ export function renderLayout(root: HTMLElement): void {
       </div>
       <span class="eval-label" id="eval-label"></span>
     </div>
+    <div class="side-pieces" id="side-them" hidden></div>
     <div id="battle-root"></div>
+    <div class="side-pieces" id="side-you" hidden></div>
     <div class="actions" id="playback">
       ${SPEEDS.map((s) => `<button type="button" class="speed" data-speed="${s}">${s}×</button>`).join('')}
       <button type="button" id="skip">Skip</button>

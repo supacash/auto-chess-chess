@@ -1283,3 +1283,60 @@ body.in-menu header {
 body.in-menu .credits {
   display: block;
 }
+
+/* ---- Play it: each side's pieces ---- */
+
+.side-pieces {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  margin: 4px 0;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.side-label {
+  flex: none;
+  width: 4.6em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.side-list {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1;
+  gap: 2px 6px;
+  min-width: 0;
+}
+
+.side-piece {
+  display: inline-flex;
+  align-items: center;
+}
+
+.side-piece .inline-piece {
+  width: 1.5rem;
+  height: 1.5rem;
+  vertical-align: 0;
+}
+
+.side-piece small {
+  margin-left: 1px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.side-points {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.side-lead {
+  color: var(--accent);
+}
