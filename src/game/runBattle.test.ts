@@ -35,6 +35,19 @@ describe('runBattle', () => {
     expect(result).toMatchObject({ winner: 'w', reason: 'checkmate', plies: 1 });
   });
 
+  it('reports the engine eval from white’s point of view', async () => {
+    const evals: (number | null)[] = [];
+    const engine: MoveSource = {
+      newGame: async () => {},
+      // Black to move, black sees itself +2.5: white's view is -2.5. Then white is silent.
+      candidates: async (fen) => (fen.includes(' b ') ? [{ move: 'h7h6', score: 250 }] : []),
+    };
+    await runBattle('4k3/7p/8/8/8/8/8/4K3 b - - 0 1', engine, seededRng(1), async (_m, _c, _p, e) => {
+      evals.push(e);
+    }, { plyLimit: 2 });
+    expect(evals).toEqual([-250, null]);
+  });
+
   it('respects a custom ply limit', async () => {
     const result = await runBattle('r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w - - 0 1', silentEngine, seededRng(3), async () => {}, { plyLimit: 4 });
     expect(result).toMatchObject({ reason: 'move-limit', plies: 4 });

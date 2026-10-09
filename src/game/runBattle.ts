@@ -1,6 +1,6 @@
 import { Chess, type Move } from 'chess.js';
 import type { Candidate } from '../engine/pick';
-import { pickMove } from '../engine/pick';
+import { pickMove, whiteEval } from '../engine/pick';
 import {
   type BattleLimits,
   type BattleResult,
@@ -24,12 +24,13 @@ export interface MoveSource {
 /**
  * Plays a battle from `fen` to completion. `onMove` runs after each move (e.g. to animate);
  * the engine searches the next move while it runs. `limits` defaults to the game's rules.
+ * `evalScore` is the engine's score for white from the search that chose the move (null if the engine gave none).
  */
 export async function runBattle(
   fen: string,
   engine: MoveSource,
   rng: Rng,
-  onMove: (move: Move, chess: Chess, plies: number) => Promise<void>,
+  onMove: (move: Move, chess: Chess, plies: number, evalScore: number | null) => Promise<void>,
   limits: BattleLimits = DEFAULT_LIMITS,
 ): Promise<BattleResult> {
   const chess = new Chess(fen, { skipValidation: true });
@@ -41,12 +42,14 @@ export async function runBattle(
   let search = result ? null : engine.candidates(chess.fen(), SEARCH_DEPTH);
 
   while (!result && search) {
-    const move = playMove(chess, await search, rng);
+    const candidates = await search;
+    const evalScore = whiteEval(candidates, chess.turn());
+    const move = playMove(chess, candidates, rng);
     plies++;
     if (limits.decisive) streak = nextLeadStreak(streak, material(chess), limits.decisive.lead);
     result = battleResult(chess, plies, limits, streak);
     search = result ? null : engine.candidates(chess.fen(), SEARCH_DEPTH);
-    await onMove(move, chess, plies);
+    await onMove(move, chess, plies, evalScore);
   }
   return result!;
 }

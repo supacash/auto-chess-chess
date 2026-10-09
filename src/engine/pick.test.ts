@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { seededRng } from '../rules/rng';
-import { parseInfo, pickMove } from './pick';
+import { checkmateEval, evalShare, formatEval, mateIn, parseInfo, pickMove, whiteEval } from './pick';
 
 describe('parseInfo', () => {
   it('parses centipawn lines', () => {
@@ -38,5 +38,44 @@ describe('pickMove', () => {
     const rng = seededRng(7);
     for (let i = 0; i < 50; i++) picked.add(pickMove(cands, rng)!);
     expect(picked).toEqual(new Set(['a', 'b']));
+  });
+});
+
+describe('evaluation display', () => {
+  it('reports the best line from white’s point of view', () => {
+    const cands = [
+      { move: 'a', score: 40 },
+      { move: 'b', score: 120 },
+    ];
+    expect(whiteEval(cands, 'w')).toBe(120);
+    expect(whiteEval(cands, 'b')).toBe(-120);
+    expect(whiteEval([], 'w')).toBeNull();
+  });
+
+  it('decodes mates on either side after flipping perspective', () => {
+    const blackToMoveMates = parseInfo('info depth 8 multipv 1 score mate 2 pv d8h4')!.candidate;
+    const s = whiteEval([blackToMoveMates], 'b')!;
+    expect(mateIn(s)).toBe(-2);
+    expect(formatEval(s)).toBe('−M2');
+    const whiteMated = parseInfo('info depth 8 multipv 1 score mate -3 pv h2h3')!.candidate;
+    expect(mateIn(whiteEval([whiteMated], 'w')!)).toBe(-3);
+    expect(mateIn(checkmateEval('w'))).toBe(0);
+    expect(formatEval(checkmateEval('b'))).toBe('#');
+    expect(mateIn(250)).toBeNull();
+  });
+
+  it('formats centipawns as pawns', () => {
+    expect(formatEval(134)).toBe('+1.3');
+    expect(formatEval(-42)).toBe('−0.4');
+    expect(formatEval(3)).toBe('0.0');
+  });
+
+  it('maps scores onto a 0..1 bar share', () => {
+    expect(evalShare(0)).toBeCloseTo(0.5);
+    expect(evalShare(300)).toBeGreaterThan(0.7);
+    expect(evalShare(300)).toBeLessThan(0.9);
+    expect(evalShare(-300)).toBeCloseTo(1 - evalShare(300));
+    expect(evalShare(checkmateEval('w'))).toBe(1);
+    expect(evalShare(checkmateEval('b'))).toBe(0);
   });
 });

@@ -1,5 +1,6 @@
 import './style.css';
 import { Chess } from 'chess.js';
+import { checkmateEval, evalShare, formatEval } from './engine/pick';
 import { Engine } from './engine/stockfish';
 import { runBattle } from './game/runBattle';
 import { clearGame, loadBest, loadGame, saveBest, saveGame } from './game/storage';
@@ -88,6 +89,12 @@ app.innerHTML = `
 
   <section id="battle" hidden>
     <p class="battle-status" id="battle-status" aria-live="polite"></p>
+    <div class="eval">
+      <div class="eval-bar" id="eval-bar" role="meter" aria-label="Engine evaluation" aria-valuemin="0" aria-valuemax="100">
+        <div class="eval-fill" id="eval-fill"></div>
+      </div>
+      <span class="eval-label" id="eval-label"></span>
+    </div>
     <div id="battle-root"></div>
     <div class="actions" id="playback">
       ${SPEEDS.map((s) => `<button type="button" class="speed" data-speed="${s}">${s}×</button>`).join('')}
@@ -114,6 +121,9 @@ const battleEl = $('#battle');
 const messageEl = $('#message');
 const fightBtn = $<HTMLButtonElement>('#fight');
 const battleStatusEl = $('#battle-status');
+const evalBarEl = $('#eval-bar');
+const evalFillEl = $('#eval-fill');
+const evalLabelEl = $('#eval-label');
 const resultEl = $('#result');
 
 const state = {
@@ -428,12 +438,14 @@ async function playBattle(fen: string, firstMover: 'w' | 'b'): Promise<void> {
   $('#playback').hidden = false;
 
   battleView.render(new Chess(fen, { skipValidation: true }));
+  showEval(0);
   battleStatusEl.textContent = firstMover === 'w' ? 'You move first' : 'Opponent moves first';
   await sleep(700);
 
-  const result = await runBattle(fen, state.engine!, rng, async (move, chess, plies) => {
+  const result = await runBattle(fen, state.engine!, rng, async (move, chess, plies, evalScore) => {
     const ms = state.skipping ? 0 : MOVE_MS / state.speed;
     battleView.render(chess, move, reduceMotion ? 0 : ms * 0.8);
+    if (evalScore !== null) showEval(evalScore);
     const mat = material(chess);
     battleStatusEl.textContent = state.skipping
       ? 'Skipping…'
@@ -441,7 +453,19 @@ async function playBattle(fen: string, firstMover: 'w' | 'b'): Promise<void> {
     if (ms) await sleep(ms);
   });
 
+  if (result.reason === 'checkmate' && result.winner !== 'draw') showEval(checkmateEval(result.winner));
   showResult(result);
+}
+
+/** Updates the eval bar. Scores are from the player's (white's) side: positive = you're ahead. */
+function showEval(score: number): void {
+  const share = evalShare(score);
+  evalFillEl.style.width = `${share * 100}%`;
+  const label = formatEval(score);
+  evalLabelEl.textContent = label;
+  evalLabelEl.dataset.side = share > 0.5 ? 'you' : share < 0.5 ? 'them' : 'even';
+  evalBarEl.setAttribute('aria-valuenow', String(Math.round(share * 100)));
+  evalBarEl.setAttribute('aria-valuetext', `${label} (${share >= 0.5 ? 'you' : 'opponent'} ahead)`);
 }
 
 /**
