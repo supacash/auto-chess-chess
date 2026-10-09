@@ -19,7 +19,12 @@ describe('migrateSave', () => {
   };
 
   it('upgrades a v1 save from before settings to Classic, Normal, no reveal', () => {
-    expect((migrateSave(v1()) as any).run.settings).toEqual({ mode: 'classic', difficulty: 'normal', reveal: false });
+    expect((migrateSave(v1()) as any).run.settings).toEqual({
+      mode: 'classic',
+      difficulty: 'normal',
+      reveal: false,
+      side: 'white',
+    });
   });
 
   it('keeps settings a v1 save already had, filling in only the mode', () => {
@@ -27,11 +32,12 @@ describe('migrateSave', () => {
       mode: 'classic',
       difficulty: 'hard',
       reveal: true,
+      side: 'white',
     });
     // Saves written by the first board-size build were still v1 but had a mode.
-    expect((migrateSave(v1({ mode: 'growing', difficulty: 'easy', reveal: false })) as any).run.settings.mode).toBe(
-      'growing',
-    );
+    expect(
+      (migrateSave(v1({ mode: 'growing', difficulty: 'easy', reveal: false, side: 'white' })) as any).run.settings.mode,
+    ).toBe('growing');
   });
 
   it('upgrades every v1 save to the current version and leaves current saves alone', () => {
@@ -41,9 +47,21 @@ describe('migrateSave', () => {
   });
 
   it('round-trips a v1 save through parseSave', () => {
-    const parsed = parseSave(v1({ difficulty: 'hard', reveal: false }));
+    const parsed = parseSave(v1({ difficulty: 'hard', reveal: false, side: 'white' }));
     expect(parsed?.version).toBe(SAVE_VERSION);
-    expect(parsed?.run.settings).toEqual({ mode: 'classic', difficulty: 'hard', reveal: false });
+    expect(parsed?.run.settings).toEqual({ mode: 'classic', difficulty: 'hard', reveal: false, side: 'white' });
+  });
+});
+
+describe('v2 → v3', () => {
+  it('gives v2 saves the White side', () => {
+    const g: any = JSON.parse(JSON.stringify(sample()));
+    g.version = 2;
+    delete g.run.settings.side;
+    delete g.run.color;
+    const parsed = parseSave(g);
+    expect(parsed?.run.settings.side).toBe('white');
+    expect(parsed?.run.color).toBe('w');
   });
 });
 
@@ -81,16 +99,16 @@ describe('parseSave', () => {
 
   it('keeps run settings, and upgrades v1 saves from before settings existed to Classic 8×8', () => {
     const g: any = JSON.parse(JSON.stringify(sample()));
-    g.run.settings = { mode: 'growing', difficulty: 'easy', reveal: true };
-    expect(parseSave(g)?.run.settings).toEqual({ mode: 'growing', difficulty: 'easy', reveal: true });
+    g.run.settings = { mode: 'growing', difficulty: 'easy', reveal: true, side: 'white' };
+    expect(parseSave(g)?.run.settings).toEqual({ mode: 'growing', difficulty: 'easy', reveal: true, side: 'white' });
     g.version = 1;
     delete g.run.settings;
-    expect(parseSave(g)?.run.settings).toEqual({ mode: 'classic', difficulty: 'normal', reveal: false });
+    expect(parseSave(g)?.run.settings).toEqual({ mode: 'classic', difficulty: 'normal', reveal: false, side: 'white' });
     // Saves from before modes existed were played on 8×8, so they stay Classic.
-    g.run.settings = { difficulty: 'hard', reveal: false };
+    g.run.settings = { difficulty: 'hard', reveal: false, side: 'white' };
     expect(parseSave(g)?.run.settings.mode).toBe('classic');
     g.run.settings = { mode: 'huge', difficulty: 'insane', reveal: 1 };
-    expect(parseSave(g)?.run.settings).toEqual({ mode: 'classic', difficulty: 'normal', reveal: false });
+    expect(parseSave(g)?.run.settings).toEqual({ mode: 'classic', difficulty: 'normal', reveal: false, side: 'white' });
   });
 
   it('keeps the battle-in-progress flag only when it is true', () => {

@@ -1,6 +1,6 @@
 import { BOARDS } from '../chess/boardSpec';
 import { AI_STYLES } from '../rules/aiArmy';
-import { DEFAULT_SETTINGS, type DifficultyId, isDifficultyId, type RunSettings } from '../rules/difficulty';
+import { DEFAULT_SETTINGS, type DifficultyId, isDifficultyId, isSideId, type RunSettings } from '../rules/difficulty';
 import { isModeId, type ModeId } from '../rules/mode';
 import { isPieceType, type Piece } from '../rules/pieces';
 import type { Run } from '../rules/run';
@@ -15,7 +15,7 @@ const RUN_KEY = 'acc.run.v1';
 const BEST_KEY = 'acc.best.v1';
 
 /** Current save format. Bump it and add a MIGRATIONS step whenever SavedGame changes shape. */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 /** A run in progress, including the opponent already drafted for the current round. */
 export interface SavedGame {
@@ -98,6 +98,12 @@ const MIGRATIONS: Record<number, (save: RawSave) => RawSave> = {
       run: { ...run, settings: { mode: 'classic', difficulty: 'normal', reveal: false, ...settings } },
     };
   },
+  // v2 → v3: the player picks a side. Before, who moved first was a coin flip; runs carry on as White.
+  2: (save) => {
+    const run = isObject(save.run) ? save.run : {};
+    const settings = isObject(run.settings) ? run.settings : {};
+    return { ...save, version: 3, run: { ...run, settings: { side: 'white', ...settings }, color: 'w' } };
+  },
 };
 
 /** Brings saved data up to SAVE_VERSION; null if it isn't a save, or comes from a newer build. */
@@ -136,6 +142,7 @@ export function parseSave(raw: unknown): SavedGame | null {
     mode: isModeId(s.mode) ? s.mode : 'classic',
     difficulty: isDifficultyId(s.difficulty) ? s.difficulty : DEFAULT_SETTINGS.difficulty,
     reveal: typeof s.reveal === 'boolean' ? s.reveal : DEFAULT_SETTINGS.reveal,
+    side: isSideId(s.side) ? s.side : DEFAULT_SETTINGS.side,
   };
   return {
     version: SAVE_VERSION,
@@ -145,6 +152,7 @@ export function parseSave(raw: unknown): SavedGame | null {
       record: { w: record.w, l: record.l, d: record.d },
       shop: { gold: run.shop.gold, pieces },
       settings,
+      color: run.color === 'b' ? 'b' : 'w',
     },
     ai: { styleId: ai.styleId, pieces: aiPieces },
     ...(data.battleInProgress === true ? { battleInProgress: true } : {}),

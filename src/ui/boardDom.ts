@@ -6,8 +6,24 @@ import { PIECE_NAME, type PieceType } from '../rules/pieces';
 // bundled by Vite with hashed file names. Keys look like "../assets/pieces/wK.svg".
 const ART = import.meta.glob<string>('../assets/pieces/*.svg', { eager: true, query: '?url', import: 'default' });
 
+/**
+ * Colours passed in here are sides in the game's FEN: 'w' is always the player, 'b' the opponent.
+ * When the player plays Black this round, the art is swapped so their pieces look black.
+ */
+let playerColor: Color = 'w';
+
+export function setPlayerColor(color: Color): void {
+  playerColor = color;
+}
+
+/** The colour a side's pieces are drawn in. */
+export function displayColor(side: Color): Color {
+  if (playerColor === 'w') return side;
+  return side === 'w' ? 'b' : 'w';
+}
+
 export function pieceUrl(type: PieceType, color: Color = 'w'): string {
-  return ART[`../assets/pieces/${color}${type}.svg`];
+  return ART[`../assets/pieces/${displayColor(color)}${type}.svg`];
 }
 
 /** Puts the piece's image inside `el` (a board square's piece element, or the drag ghost). */

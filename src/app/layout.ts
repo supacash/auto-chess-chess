@@ -1,4 +1,4 @@
-import { DIFFICULTIES } from '../rules/difficulty';
+import { DIFFICULTIES, SIDES } from '../rules/difficulty';
 import { PAWN_COST } from '../rules/economy';
 import { MODES } from '../rules/mode';
 
@@ -77,6 +77,11 @@ export function renderLayout(root: HTMLElement): void {
       <label class="field">Difficulty
         <select id="nr-difficulty">
           ${DIFFICULTIES.map((d) => `<option value="${d.id}">${d.name} (+${d.perRound} AI pts/round)</option>`).join('')}
+        </select>
+      </label>
+      <label class="field">Play as
+        <select id="nr-side">
+          ${SIDES.map((s) => `<option value="${s.id}">${s.name}</option>`).join('')}
         </select>
       </label>
       <label class="check"><input type="checkbox" id="nr-reveal" /> Reveal the opponent's placement (easier)</label>

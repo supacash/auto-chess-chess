@@ -6,10 +6,11 @@ import type { Session } from './session';
 const HEART = '♥︎';
 
 /** Round, board size, lives, record and best score. `round` lets the result screen keep showing the round just played. */
-export function renderHeader(session: Session, round = session.run.round): void {
+/** `color` is the player's colour in that round (the run may already have picked the next round's). */
+export function renderHeader(session: Session, round = session.run.round, color = session.run.color): void {
   const { lives, record, settings } = session.run;
   const spec = session.boardOf(round);
-  $('#round').textContent = `Round ${round} · ${spec.files}×${spec.ranks}`;
+  $('#round').textContent = `Round ${round} · ${spec.files}×${spec.ranks} · ${color === 'w' ? 'White' : 'Black'}`;
   const livesEl = $('#lives');
   livesEl.innerHTML = Array.from(
     { length: START_LIVES },

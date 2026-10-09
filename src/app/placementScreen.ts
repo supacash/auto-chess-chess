@@ -11,7 +11,7 @@ import {
 } from '../rules/economy';
 import { isPawnLike, MAX_ARMY, type Piece, PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
 import { PlacementBoard } from '../ui/board';
-import { inlinePiece } from '../ui/boardDom';
+import { inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { $ } from './dom';
 import { renderHeader } from './header';
 import type { Session } from './session';
@@ -73,6 +73,7 @@ export class PlacementScreen {
     notice.textContent = grew ? `The board grew to ${spec.files}×${spec.ranks}: more room for your army!` : '';
 
     this.session.fitPiecesToBoard();
+    setPlayerColor(this.session.run.color);
     this.board.setSpec(spec);
     this.board.setPieces(this.session.run.shop.pieces);
     this.board.setEnemy(this.session.run.settings.reveal ? this.session.aiPieces : null);

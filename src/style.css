@@ -577,7 +577,7 @@ dialog#new-run-dialog::backdrop {
 
 /* ---- eval bar ---- */
 
-/* Your (white's) share fills from the left; the dark remainder is the opponent's. */
+/* Your share fills from the left in your colour; the remainder is the opponent's. */
 .eval {
   display: flex;
   align-items: center;
@@ -600,6 +600,14 @@ dialog#new-run-dialog::backdrop {
   height: 100%;
   background: #f0f0f0;
   transition: width 0.35s ease-out;
+}
+
+/* Playing Black: your share is the dark part. */
+.eval-bar.as-black {
+  background: #f0f0f0;
+}
+.eval-bar.as-black .eval-fill {
+  background: #2b2b2b;
 }
 
 /* Centre tick marks equality. */

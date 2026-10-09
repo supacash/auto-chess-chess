@@ -81,7 +81,7 @@ export class Session {
     if (isRunOver(this.run)) {
       const score = runScore(this.run);
       const newBest = this.recordScore(score);
-      this.run = newRun(this.run.settings);
+      this.run = newRun(this.run.settings, this.rng);
       this.draftOpponent();
       this.persist();
       const rounds = `${score} round${score === 1 ? '' : 's'}`;
@@ -90,7 +90,7 @@ export class Session {
         firstVisit: false,
       };
     }
-    this.run = nextRound(this.run);
+    this.run = nextRound(this.run, this.rng);
     this.draftOpponent();
     this.persist();
     return {
@@ -102,7 +102,7 @@ export class Session {
   /** Starts over, keeping the current settings unless new ones are given. */
   startNewRun(settings: RunSettings = this.run.settings): void {
     clearGame();
-    this.run = newRun(settings);
+    this.run = newRun(settings, this.rng);
     this.best = this.loadBest();
     this.draftOpponent();
   }
@@ -141,7 +141,7 @@ export class Session {
   resolveStart(): Extract<StartPosition, { ok: true }> {
     for (;;) {
       const spec = this.board;
-      const start = startPosition(this.run.shop.pieces, this.aiPieces, this.rng, spec);
+      const start = startPosition(this.run.shop.pieces, this.aiPieces, this.run.color === 'w', spec);
       if (start.ok) return start;
       this.aiPieces = placeAiArmy(
         this.aiPieces.map((p) => p.type),
@@ -166,7 +166,7 @@ export class Session {
       newBest = this.recordScore(score);
       clearGame();
     } else {
-      this.run = nextRound(this.run);
+      this.run = nextRound(this.run, this.rng);
       this.draftOpponent();
       this.persist();
     }

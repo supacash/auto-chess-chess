@@ -94,10 +94,10 @@ describe('Session', () => {
   it('starts a new run with the chosen mode, board and starting army', () => {
     const s = ready();
     s.finishBattle(result('w'));
-    s.startNewRun({ mode: 'classic', difficulty: 'hard', reveal: true });
+    s.startNewRun({ mode: 'classic', difficulty: 'hard', reveal: true, side: 'white' });
     expect(s.run.round).toBe(1);
     expect(s.board.files).toBe(8);
     expect(s.run.shop.pieces.map((p) => p.type)).toEqual(['K', 'P', 'P', 'P']);
-    expect(s.run.settings).toEqual({ mode: 'classic', difficulty: 'hard', reveal: true });
+    expect(s.run.settings).toEqual({ mode: 'classic', difficulty: 'hard', reveal: true, side: 'white' });
   });
 });
