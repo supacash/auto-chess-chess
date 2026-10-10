@@ -146,6 +146,7 @@ export const OFFER_WEIGHTS: Partial<Record<Offer, number>> = {
   W: 2,
   M: 1.2,
   L: 1.2,
+  X: 1.5,
   N: 0.5,
   B: 0.5,
   R: 0.3,
