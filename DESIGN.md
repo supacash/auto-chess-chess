@@ -23,7 +23,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **Main menu** (the landing screen, and *Menu* in the header): *Resume game* (shown while a run or a Play it game is in progress, with its round and lives), *New game*, *Multiplayer*, and *Watch your last battle*. A battle interrupted by a reload is reported here.
 - **New run window** (opens from *New game*) sets the run's settings, which are fixed for the whole run:
   - **Board (game mode):** *Growing board* (default; 5×5 growing to 8×8, see Board sizes) or *Classic* (8×8 throughout).
-  - **Difficulty:** how fast the AI's budget grows: Easy 5.5×round, Normal 6×round (default), Hard 6.75×round (tuned with the simulator for about 78% / 60% / 35% wins: SIMULATION.md §14).
+  - **Difficulty:** how fast the AI's budget grows: Easy 5.5×round, Normal 6×round (default), Hard 6.5×round (tuned with the simulator for about 78% / 60% / 31% wins: SIMULATION.md §14).
   - **Play as:** White (default; you move first), Black (the opponent moves first, but its army is 2% smaller: moving second costs a few points of win rate) or Random each round. Your pieces are always white to the engine; playing Black only swaps the colours on screen and who moves first.
   - **Fairy pieces** (default on): fairy pieces in the shop and in AI armies, and fusion. Off = standard chess pieces only.
   - **Reveal opponent's placement:** an easier option that shows where the AI's pieces are during placement.
