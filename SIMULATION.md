@@ -242,6 +242,21 @@ Ferz and Wazir are worth about a pawn here; they're now 1 point.
 - **Easy, random side:** 76%.
 - **Open problem: the ramp runs backwards.** Every difficulty is hardest in rounds 3–5 and gets easier later (merged rooks and queens beat the AI's drafted armies at equal points). Runs end after 3 losses, so the early rounds decide them: Hard averages about one win.
 
+### 15. Budget ramp and merge-or-shop rooks and queens (shop player, 200 runs × 10 rounds per row)
+
+- **Ramp:** the AI budget is perRound × round × RAMP[round] (aiArmy.ts): 1, 0.93, 0.92, 0.94, 1, 1.06, 1.10, 1.08, 1.04, then 1. Without it every difficulty was hardest in rounds 3–5 (Hard won 8–12% there, about one win a run). Holding the peak (1.10) from round 8 on made the AI outgrow the player and the late game a wall (Normal: 0% from round 15), so it comes back down to 1 by round 10.
+- **No gold upgrades to rooks or queens:** only Pawn → minor (3 gold). The stand-in now rerolls (up to 6 a round, keeping 3 gold) and buys merge parts onto the bench when the board is full.
+
+| Difficulty (as White) | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | All | Run score |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Easy (5.5) | 57% | 73% | 77% | 85% | 85% | 90% | 93% | 96% | 97% | 98% | 85% | 7.85 |
+| Normal (6) | 57% | 55% | 59% | 61% | 61% | 66% | 76% | 80% | 88% | 77% | 68% | 5.70 |
+| Hard (6.5) | 35% | 28% | 24% | 30% | 18% | 27% | 32% | 51% | 46% | 38% | 33% | 2.21 |
+
+- **Normal, random side:** 64% (Black handicap 2%).
+- **25 rounds (Normal, random side, 20 runs):** 65–70% through round 12, then 50% (13), 25% (14), 20% (15) and about 5% after: late on the player adds 4–5 points a round to the AI's 6, so runs end gradually around rounds 13–16 (8.2 wins on average).
+- **Left as is:** Normal rounds 7–9 run a little easy (76–88%) and Hard dips in round 5 (18%).
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.
