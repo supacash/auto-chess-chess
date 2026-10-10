@@ -12,7 +12,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - No accounts or server. The run in progress and best scores live in the browser (localStorage).
 
 ## Core loop
-1. **Shop.** Spend gold on the round's shop offers and upgrades, and fuse pieces. You see the opponent's style and piece list (and, with Reveal on, where its pieces are).
+1. **Shop.** Spend gold on the round's shop offers, merge pieces into stronger ones, and upgrade with gold when you lack the parts. You see the opponent's style and piece list (and, with Reveal on, where its pieces are).
 2. **Place.** Arrange your army in your home rows. Extras wait on the bench.
 3. **Battle.** Each round, pick **Auto fight** (the engine plays both sides; you watch, with an eval bar and 1×/2×/4×/Skip playback) or **Play it** (you move your own pieces; the engine plays the opponent exactly as in auto battles).
 4. **Result.** Win, lose or draw. Gold is paid out; a loss costs a life.
@@ -40,26 +40,31 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **No replays:** when a battle ends, the game moves straight to the next round and drafts its opponent, so reloading on the result screen can't replay a round. Leaving or reloading *during* a battle counts as a loss on the next load (with a notice). A battle that fails with an error doesn't count.
 
 ## Pieces and economy
-| Piece | Value | Cost |
-|---|---|---|
-| Pawn | 1 | From shop offers (1 gold) |
-| Knight / Bishop | 3 | Pawn + 2 gold |
-| Rook | 5 | Knight/Bishop + 2 gold |
-| Queen | 9 | Rook + 4 gold |
+| Piece | Value | Merge | Or gold upgrade |
+|---|---|---|---|
+| Pawn | 1 | (shop offers, 1 gold) | |
+| Knight / Bishop | 3 | 3 pawns | Pawn + 3 gold |
+| Rook | 5 | Minor + 2 pawns, or 2 minors | Knight/Bishop + 3 gold |
+| Queen | 9 | 2 Rooks | Rook + 6 gold |
 | King | — | Free, always owned, can't be sold |
 
-- An upgrade costs the difference in value, so gold spent always equals army points.
+- **Gold upgrades** are the fallback when you don't have the parts to merge, and cost more than the value they add: Pawn → Knight/Bishop 3, Knight/Bishop → Rook 3, Rook → Queen 6.
 - **Start:** 3 gold plus King + 4 pawns (Growing) or King + 3 pawns (Classic).
 - **Income:** 5 gold per round, +2 for a win, +1 for a draw.
 - **Selling** refunds value minus 1 (minimum 0).
 - **Army size:** only pieces on the board count: at most two per file, a chess side's worth (16 on 8×8; on the smaller boards that's every home square: 10 / 12 / 14), so it grows with the board in Growing mode. AI armies follow the same limit. No limit on the mix of pieces.
 - **Bench:** up to 8 pieces wait off the board, to mix and match. Bought pieces arrive there, so buying needs a free bench slot. A bench piece can go onto a full board by swapping with a placed one.
 - Pieces lost in battle come back for the next round.
-- **Shop offers:** 4 random pieces each round, each priced at its value, bought onto the bench. Offers cost at most 2 + 2×round (Rooks from round 2, Queens from round 4). Reroll: 1 gold. Fusion pieces are never offered, nor are the Grasshopper and Cannon (players didn't find them worth buying; they stay in the rules for old saves and replays). With fairy pieces off, offers are standard pieces only.
+- **Shop offers:** 4 random pieces each round, each priced at its value, bought onto the bench. Offers cost at most 2 + 2×round (Rooks from round 2, Queens from round 6). Rooks and Queens are rare offers: merging is the main way to get them. Reroll: 1 gold. Fusion pieces are never offered, nor are the Grasshopper and Cannon (players didn't find them worth buying; they stay in the rules for old saves and replays). With fairy pieces off, offers are standard pieces only.
 - **Piece info:** tapping any piece (yours, a shop offer, or the opponent's in its list or on the revealed board) shows its value and how it moves.
 - **No single-pawn purchases:** pawns come from shop offers (Pawn and Berolina pawn are the most common offers).
-- **Pawn fusion:** three pawns (Berolina pawns count) fuse into a Knight or Bishop, or a Man with fairy pieces on. Free and points-neutral: it frees two board squares. *Fuse 3 pawns…* opens a picker: the tapped pawn and two more of the same kind (benched first) are circled, and tapping pawns on the board or bench circles or un-circles them, so a Berolina pawn is never used up by accident. The result takes the square of the first picked pawn that's on the board.
-- **Fusion** (fairy pieces on): free. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Ferz + Wazir → Man (two 1-gold pieces make a 3-point piece: the reason to buy them over pawns, besides standing on the back row and not counting toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for value − 2 (the same as selling both parts).
+- **Merging** (the main way to upgrade; free, every mode):
+  - Three pawns (Berolina pawns count) → Knight or Bishop (or a Man with fairy pieces on). Points-neutral, frees two squares.
+  - Knight or Bishop + two pawns → Rook. Points-neutral, frees two squares.
+  - Two minor pieces (two Knights, two Bishops, or one of each) → Rook. Loses a point, frees a square.
+  - Two Rooks → Queen. Loses a point, frees a square.
+  - Three-piece merges open a picker (*Merge 3 pawns…* / *Merge with 2 pawns…*): the tapped piece and default partners are circled (pawns of the same kind, benched first, so a Berolina pawn is never used up by accident), and tapping pieces on the board or bench circles or un-circles them. The result takes the minor piece's square if it's on the board, else the first picked piece's on the board. Two-piece merges are buttons on the selected piece, which becomes the result where it stands.
+- **Fusion** (fairy pieces on): free, like merging. With fairy pieces on, Knight + Bishop offers both a Rook and an Archbishop. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Ferz + Wazir → Man (two 1-gold pieces make a 3-point piece: the reason to buy them over pawns, besides standing on the back row and not counting toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for value − 2 (the same as selling both parts).
 
 ### Fairy pieces
 Values are tuned with the simulator (SIMULATION.md section 11): at equal points, AI armies with fairy pieces do as well as standard ones.
@@ -122,7 +127,7 @@ In Growing mode the board opens up during the run:
 
 - **With fairy pieces on**, every style also drafts its own fairy pieces (Fortress: Ferz, Wazir, Man; Heavy Artillery: Chancellor, Archbishop, Amazon; Cavalry: Camel, Centaur, Archbishop; Balanced: a little of each), some of its pawns are Berolina pawns, and its leftover points can go into fusions (as if it had bought the partner). Fairy pieces are placed like the standard piece they resemble (short-range ones like knights).
 
-- **Drafting:** non-pawn pieces by the style's weights, the rest on pawns (at most 8, and only as many as fit), then more of the style's pieces while squares are free, then leftover points into upgrades (pawns last, so pawn-heavy styles keep their pawns). Armies never exceed the board's home squares.
+- **Drafting:** non-pawn pieces by the style's weights, the rest on pawns (at most 8, and only as many as fit), then more of the style's pieces while squares are free, then leftover points into upgrades at their value difference, as if merged (pawns last, so pawn-heavy styles keep their pawns). Armies never exceed the board's home squares.
 - **Placement:** each square is scored per piece for the style (tables written for 8×8 and scaled to smaller boards), with random noise and a random left/right flip. Pieces leave room for the pawns placed after them.
 - **Engine safety net:** a search over 10 seconds plays a random legal move instead and restarts the engine.
 
@@ -162,8 +167,7 @@ Done: reproducible seeded battles, RULES_VERSION, army snapshots, replays, brows
 Next candidates (not yet decided):
 1. **Multiplayer:** quick play for more modes, and balance runs for 4-player matches (see Multiplayer).
 2. **Daily challenges:** one seed for everyone (battles are already seeded and reproducible).
-3. **Merge-first upgrades (to do):** make merging the main way to upgrade, with gold as the fallback. New recipes: Knight/Bishop + 2 pawns → Rook (points-neutral), 2 minor pieces → Rook (−1 point), 2 Rooks → Queen (−1 point). Gold upgrades become Pawn → minor 3, minor → Rook 3, Rook → Queen 6. Rooks and Queens become rarer offers (half the odds; Queens from round 6). With fairy pieces on, Knight + Bishop asks Rook or Archbishop. The sim's shop player learns the recipes; then re-tune the AI budget.
-4. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
+3. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
 4. **Bigger boards** past 8×8, with a longer move limit.
 
 ## Open questions
