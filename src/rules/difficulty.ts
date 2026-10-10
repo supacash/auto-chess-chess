@@ -5,13 +5,15 @@ export interface Difficulty {
   name: string;
   /** AI army points per round (the budget is perRound × round rounded, ±1). */
   perRound: number;
+  /** A few words for the New game window. */
+  blurb: string;
 }
 
 export const DIFFICULTIES: Difficulty[] = [
   // Tuned with the simulator for affinity pawns (SIMULATION.md §16), aiming at about 78% / 60% / 33% wins.
-  { id: 'easy', name: 'Easy', perRound: 5 },
-  { id: 'normal', name: 'Normal', perRound: 5.35 },
-  { id: 'hard', name: 'Hard', perRound: 5.65 },
+  { id: 'easy', name: 'Easy', perRound: 5, blurb: 'a gentle start' },
+  { id: 'normal', name: 'Normal', perRound: 5.35, blurb: 'a fair fight' },
+  { id: 'hard', name: 'Hard', perRound: 5.65, blurb: 'a real challenge' },
 ];
 
 import type { ModeId } from './mode';

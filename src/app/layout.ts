@@ -70,12 +70,14 @@ export function renderLayout(root: HTMLElement): void {
       <div class="piece-actions" id="piece-actions"></div>
     </div>
     <p id="message" role="status" aria-live="polite"></p>
-    <div class="actions">
-      <button id="clear" type="button">Clear</button>
-      <button id="play" type="button" disabled>Play it</button>
-      <button id="fight" type="button" class="primary" disabled>Auto fight</button>
+    <div class="fight-bar">
+      <div class="actions">
+        <button id="clear" type="button">Clear</button>
+        <button id="play" type="button" disabled>Play it</button>
+        <button id="fight" type="button" class="primary" disabled>Auto fight</button>
+      </div>
+      <p class="fight-hint" id="fight-hint" hidden></p>
     </div>
-    <p class="fight-hint" id="fight-hint" hidden></p>
     <p class="hint" id="points"></p>
     <button type="button" id="last-replay" class="link-button" hidden>Watch your last battle</button>
   </section>
@@ -151,19 +153,24 @@ export function renderLayout(root: HTMLElement): void {
     <form method="dialog" class="new-run-form">
       <h2 id="match-title">Multiplayer</h2>
       <p class="dialog-text">
-        Four players with 20 HP each. Everyone shops and places at the same time; when the timer runs out
-        (or everyone is ready) you're paired off and the engine plays the battles. Losing costs HP: the round
-        number plus 1 per 5 points the winner has left. Last one standing wins.
+        Four players, 20 HP each. Everyone shops at the same time, then the engine plays the battles. Last one
+        standing wins.
       </p>
-      <p class="dialog-text muted">
-        Classic 8×8, standard pieces, auto battles. Quick play matches you with anyone looking for a game in the
-        same mode; empty seats get bots after 30 seconds.
-      </p>
-      <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 20-second shop instead of 45</label>
+      <details class="rules">
+        <summary>How it works</summary>
+        <p class="dialog-text muted">
+          Classic 8×8 with standard pieces and auto battles. The shop lasts 45 seconds (or until everyone is
+          ready). Losing a battle costs the round number plus 1 HP per 5 points the winner has left. Quick play
+          matches you with anyone looking for a game in the same mode; empty seats get bots after 30 seconds.
+        </p>
+      </details>
+      <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 20-second shop</label>
+      <button type="submit" value="quick" class="primary big-choice">
+        Quick play<small>Play with anyone looking for a game</small>
+      </button>
       <div class="actions">
-        <button type="submit" value="quick" class="primary">Quick play</button>
         <button type="submit" value="create">Create room</button>
-        <button type="submit" value="bots">Play vs 3 bots</button>
+        <button type="submit" value="bots">Play vs bots</button>
       </div>
       <div class="join-row">
         <input id="mp-code" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="4"
@@ -171,15 +178,13 @@ export function renderLayout(root: HTMLElement): void {
         <button type="submit" value="join">Join room</button>
       </div>
       <p class="dialog-text error" id="mp-error"></p>
-      <div class="actions">
-        <button type="submit" value="cancel" formnovalidate>Cancel</button>
-      </div>
+      <button type="submit" value="cancel" class="link-button" formnovalidate>Cancel</button>
     </form>
   </dialog>
 
   <dialog id="new-run-dialog" aria-labelledby="new-run-title">
     <form method="dialog" class="new-run-form">
-      <h2 id="new-run-title">New run</h2>
+      <h2 id="new-run-title">New game</h2>
       <fieldset>
         <legend>Board</legend>
         ${MODES.map(
@@ -191,7 +196,7 @@ export function renderLayout(root: HTMLElement): void {
       </fieldset>
       <label class="field">Difficulty
         <select id="nr-difficulty">
-          ${DIFFICULTIES.map((d) => `<option value="${d.id}">${d.name} (+${d.perRound} AI pts/round)</option>`).join('')}
+          ${DIFFICULTIES.map((d) => `<option value="${d.id}">${d.name}: ${d.blurb}</option>`).join('')}
         </select>
       </label>
       <label class="field">Play as
@@ -201,10 +206,10 @@ export function renderLayout(root: HTMLElement): void {
       </label>
       <label class="check"><input type="checkbox" id="nr-fairy" /> Fairy pieces: new pieces and fusion in the shop and in opponents' armies</label>
       <label class="check"><input type="checkbox" id="nr-reveal" /> Reveal the opponent's placement (easier)</label>
-      <p class="warning" id="nr-warning" hidden>Starting a new run abandons the one in progress.</p>
+      <p class="warning" id="nr-warning" hidden>Starting a new game abandons the one in progress.</p>
       <div class="actions">
         <button type="submit" value="cancel" formnovalidate>Cancel</button>
-        <button type="submit" value="start" class="primary">Start run</button>
+        <button type="submit" value="start" class="primary">Start game</button>
       </div>
     </form>
   </dialog>

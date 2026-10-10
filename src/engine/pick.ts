@@ -94,5 +94,6 @@ export function formatEval(score: number): string {
   }
   const pawns = score / 100;
   if (Math.abs(pawns) < 0.05) return '0.0';
+  if (Math.abs(pawns) >= 20) return `${pawns > 0 ? '+' : '−'}20+`;
   return `${pawns > 0 ? '+' : '−'}${Math.abs(pawns).toFixed(1)}`;
 }

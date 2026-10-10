@@ -64,6 +64,12 @@ describe('evaluation display', () => {
     expect(mateIn(250)).toBeNull();
   });
 
+  it('caps big evals at ±20 pawns', () => {
+    expect(formatEval(250)).toBe('+2.5');
+    expect(formatEval(-6320)).toBe('−20+');
+    expect(formatEval(2000)).toBe('+20+');
+  });
+
   it('formats centipawns as pawns', () => {
     expect(formatEval(134)).toBe('+1.3');
     expect(formatEval(-42)).toBe('−0.4');

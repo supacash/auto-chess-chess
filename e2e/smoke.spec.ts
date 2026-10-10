@@ -10,7 +10,7 @@ async function startRun(page: Page): Promise<void> {
   await page.locator('#menu-new').click();
   const dialog = page.locator('#new-run-dialog');
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: 'Start run' }).click();
+  await dialog.getByRole('button', { name: 'Start game' }).click();
   await expect(dialog).toBeHidden();
 }
 
@@ -126,7 +126,7 @@ test('a multiplayer match against bots plays a round with health and moves on', 
   await page.locator('#menu-button').click();
   await page.locator('#menu-multiplayer').click();
   const dialog = page.locator('#match-dialog');
-  await dialog.getByRole('button', { name: 'Play vs 3 bots' }).click();
+  await dialog.getByRole('button', { name: 'Play vs bots' }).click();
 
   const hud = page.locator('#match-hud');
   await expect(hud).toBeVisible();
@@ -144,7 +144,7 @@ test('a multiplayer match against bots plays a round with health and moves on', 
   await page.locator('#skip').click();
   await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
   await expect(page.locator('#result-title')).toHaveText(/Victory|Defeat|Draw/);
-  await expect(page.locator('#next')).toHaveText('Round 2');
+  await expect(page.locator('#next')).toHaveText('On to round 2');
   await page.locator('#next').click();
   await expect(page.locator('#match-round')).toContainText('Round 2 · Shop');
   await expect(page.locator('#match-timer')).toHaveText(/\d+s/);

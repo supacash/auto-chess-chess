@@ -486,7 +486,7 @@ export class MatchController {
       return;
     }
     if (this.deps.battle.isWaiting() || !this.deps.battle.cardShowing()) this.enterShop();
-    else this.deps.battle.setCardButton(`Round ${m.round}`, () => this.enterShop());
+    else this.deps.battle.setCardButton(`On to round ${m.round}`, () => this.enterShop());
   }
 
   // ---- round card ----
@@ -532,7 +532,7 @@ export class MatchController {
       title: outcome === 'w' ? 'Victory' : outcome === 'b' ? 'Defeat' : 'Draw',
       detail: detail(),
       tone: outcome,
-      button: final ? `Round ${m.round}` : 'Continue',
+      button: final ? `On to round ${m.round}` : 'Continue',
       onButton: () => this.continueToShop(),
     });
   }

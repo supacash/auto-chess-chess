@@ -155,9 +155,9 @@ h1 .logo {
 .rank-label,
 .file-label {
   position: absolute;
-  font-size: 10px;
-  font-weight: 600;
-  color: rgb(0 0 0 / 0.45);
+  font-size: 11px;
+  font-weight: 700;
+  color: rgb(0 0 0 / 0.6);
   pointer-events: none;
 }
 .rank-label {
@@ -223,19 +223,6 @@ h1 .logo {
   border-radius: 50%;
   background: rgb(20 22 26 / 0.8);
   box-shadow: 0 0 0 1px var(--gold);
-}
-
-/* Pick mode (choosing pawns to fuse): candidates get a dashed ring, picked ones a solid gold circle. */
-.piece.pickable {
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 2px rgb(242 201 76 / 0.45);
-  cursor: pointer;
-}
-
-.piece.picked {
-  border-radius: 50%;
-  background: rgb(242 201 76 / 0.25);
-  box-shadow: inset 0 0 0 3px var(--gold);
 }
 
 .piece.drag-source {
@@ -851,7 +838,7 @@ dialog#match-dialog::backdrop {
 .new-run-form .warning {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--danger);
+  color: #f0907f;
 }
 
 .new-run-form .actions {
@@ -1062,6 +1049,7 @@ body.in-match #menu-button {
 }
 
 .match-players small {
+  font-size: 0.75rem;
   color: var(--muted);
   font-weight: 400;
 }
@@ -1135,6 +1123,31 @@ body.in-match #menu-button {
 
 .join-row button {
   flex: 0 0 auto;
+}
+
+/* The multiplayer window's main choice: a full-width button with a line of explanation. */
+button.big-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+}
+
+button.big-choice small {
+  font-size: 0.8rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+details.rules summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+details.rules[open] summary {
+  margin-bottom: 6px;
 }
 
 .dialog-text.error {
@@ -1474,13 +1487,15 @@ body.in-menu .credits {
 }
 
 .stat-value {
+  color: var(--text);
   font-size: 1.15rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
+  line-height: 1.25;
   color: var(--muted);
 }
 
@@ -1570,4 +1585,15 @@ body.in-menu .credits {
   margin: 20px 0;
   color: var(--muted);
   text-align: center;
+}
+
+/* The placement screen's buttons (and the hint under them) stay pinned to the bottom of the screen
+   while the board and shop scroll, so Auto fight / Ready is always in reach. */
+#placement > .fight-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin: 0 -16px;
+  padding: 2px 16px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bg) 70%, rgb(29 31 36 / 0));
 }

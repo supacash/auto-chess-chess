@@ -59,12 +59,12 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **Shop offers:** 4 random offers each round, bought onto the bench: mostly affinity pawns, with finished pieces (priced at their value) rare. Offers cost at most 2 + 2×round (Rooks from round 2; Queens and queen-pawns from round 6). Plain pawns aren't offered. Reroll: 1 gold. Fusion pieces are never offered, nor is the Grasshopper (players didn't find it worth buying; it stays in the rules for old saves and replays). With fairy pieces off, offers are standard pieces only.
 - **Piece info:** tapping any piece (yours, a shop offer, or the opponent's in its list or on the revealed board) shows its value and how it moves.
 - **No single-pawn purchases:** pawns come from shop offers (Pawn and Berolina pawn are the most common offers).
-- **Merging** (free, every mode, by hand: there's no automatic merging yet):
+- **Merging** (free, every mode; one tap, but not automatic: completing a set doesn't merge it by itself):
   - Three affinity pawns with the same affinity → that piece.
   - Three plain pawns (the starting pawns, or three Berolina pawns) → Knight or Bishop.
   - Two Rooks → Queen.
   - Three Knights → Queen, or three Bishops → Queen (no mixing knights and bishops).
-  - Three-piece merges open a picker (*Merge 3 rook-pawns…*, *Merge 3 knights…*): the tapped piece and two more of the same kind (benched first) are circled, and tapping pieces on the board or bench circles or un-circles them. The result takes the square of the first picked piece on the board. Two-piece merges are buttons on the selected piece, which becomes the result where it stands.
+  - Three of a kind merge in one tap: the selected piece shows *Merge 3 → Rook* (three plain pawns show a button each for Knight and Bishop), using it and two more of the same kind, benched ones first. The result takes the square of the first of them on the board. Two-piece merges are buttons on the selected piece, which becomes the result where it stands.
 - **Fusion** (fairy pieces on): free, like merging. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Ferz + Wazir → Man (two 1-gold pieces make a 3-point piece: the reason to buy them over pawns, besides standing on the back row and not counting toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for value − 2 (the same as selling both parts).
 
 ### Fairy pieces
