@@ -1,5 +1,5 @@
 import { BOARD_8, type BoardSpec, pawnSquares } from '../chess/boardSpec';
-import { UPGRADES, upgradeCost } from './economy';
+import { UPGRADES } from './economy';
 import { isPawnLike, makePiece, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
 import { armyCap, BACK_RANK, canPlace, frontRank, pieceAt } from './placement';
 import { type StartPosition, startPosition } from './position';
@@ -133,10 +133,10 @@ export function aiBudget(
 }
 
 /**
- * Moving second is a real handicap (Black won ~35% of Normal games to White's ~53%, and the gap grows
- * with the armies: SIMULATION.md §13), so when the player is Black the AI's army is this much smaller.
+ * Moving second is a handicap (Black won ~60% of Normal games to White's ~72%: SIMULATION.md §14), so
+ * when the player is Black the AI's army is this much smaller. 10% overshot (Black then won 90%).
  */
-export const BLACK_DISCOUNT = 0.1;
+export const BLACK_DISCOUNT = 0.04;
 
 /** The AI's budget once the player's side is known: smaller when the player moves second. */
 export function budgetForSide(budget: number, playerFirst: boolean, discount = BLACK_DISCOUNT): number {
@@ -163,6 +163,14 @@ const FAIRY_UPGRADES: Partial<Record<PieceType, PieceType[]>> = {
   R: ['C'],
   Q: ['Z'],
 };
+
+/**
+ * What an upgrade costs the AI: the difference in value. Players pay a premium for gold upgrades, but
+ * the AI stands for an army built mostly by merging, which keeps (or nearly keeps) the points.
+ */
+function valueGain(from: PieceType, to: PieceType): number {
+  return PIECE_VALUE[to] - PIECE_VALUE[from];
+}
 
 function upgradesFor(type: PieceType, fairy: boolean): PieceType[] {
   return fairy ? [...UPGRADES[type], ...(FAIRY_UPGRADES[type] ?? [])] : UPGRADES[type];
@@ -228,12 +236,12 @@ export function draftAiArmy(
     const found = order
       .map(([from, i]) => ({
         i,
-        to: upgradesFor(from, fairy).filter((to) => upgradeCost(from, to) <= left),
+        to: upgradesFor(from, fairy).filter((to) => valueGain(from, to) <= left),
       }))
       .find((o) => o.to.length > 0);
     if (!found) break;
     const to = weightedPick(found.to, (t) => weights[t] ?? 0.1, rng);
-    left -= upgradeCost(types[found.i], to);
+    left -= valueGain(types[found.i], to);
     types[found.i] = to;
   }
   return types;

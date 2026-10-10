@@ -1,12 +1,12 @@
 import {
   buyOffer,
-  fusePawnSet,
+  canSetMerge,
   fusePieces,
+  fuseSet,
   fusionOptions,
   PAWN_FUSION_COUNT,
-  pawnFusionOptions,
-  pawnFusionResults,
-  pawnPartners,
+  setMergePartners,
+  setMergeResults,
   REROLL_COST,
   type ShopResult,
   sellPiece,
@@ -91,7 +91,7 @@ export class PlacementScreen {
           const to = btn.dataset.fuseTo as PieceType;
           const picked = this.fusing;
           this.stopFusing();
-          this.applyShop(fusePawnSet(shop, picked, to, this.session.run.settings.fairy), to);
+          this.applyShop(fuseSet(shop, picked, to, this.session.run.settings.fairy), to);
         }
         return;
       }
@@ -99,10 +99,9 @@ export class PlacementScreen {
       if (btn.dataset.upgrade) {
         const to = btn.dataset.upgrade as PieceType;
         this.applyShop(upgradePiece(shop, this.selected, to), to);
-      } else if (btn.dataset.fuse) {
-        const result = fusePieces(shop, this.selected, btn.dataset.fuse);
-        const id = this.selected;
-        this.applyShop(result, result.ok ? result.shop.pieces.find((p) => p.id === id)?.type : undefined);
+      } else if (btn.dataset.fuse && btn.dataset.result) {
+        const to = btn.dataset.result as PieceType;
+        this.applyShop(fusePieces(shop, this.selected, btn.dataset.fuse, to, this.session.run.settings.fairy), to);
       } else if (btn.hasAttribute('data-fuse-pawns')) {
         this.startFusing(this.selected);
       } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
@@ -184,11 +183,11 @@ export class PlacementScreen {
     this.stopFusing();
   }
 
-  // ---- picking pawns to fuse ----
+  // ---- picking the pieces for a three-piece merge ----
 
-  /** Starts picking pawns to fuse, with `pieceId` and its default partners (same kind first) circled. */
+  /** Starts picking pieces to merge, with `pieceId` and its default partners circled (see setMergePartners). */
   private startFusing(pieceId: string): void {
-    const partners = pawnPartners(this.session.run.shop, pieceId) ?? [];
+    const partners = setMergePartners(this.session.run.shop, pieceId) ?? [];
     this.fusing = [pieceId, ...partners.map((p) => p.id)];
     this.selected = null;
     this.selectedOffer = null;
@@ -202,37 +201,40 @@ export class PlacementScreen {
     this.renderShop();
   }
 
-  /** Circles or un-circles a pawn (at most PAWN_FUSION_COUNT). */
+  /** Circles or un-circles a piece (at most PAWN_FUSION_COUNT). */
   private togglePick(id: string): void {
     if (!this.fusing) return;
     if (this.fusing.includes(id)) this.fusing = this.fusing.filter((x) => x !== id);
     else if (this.fusing.length < PAWN_FUSION_COUNT) this.fusing = [...this.fusing, id];
-    else this.setMessage(`${PAWN_FUSION_COUNT} pawns are picked: tap one to swap it out.`);
+    else this.setMessage(`${PAWN_FUSION_COUNT} pieces are picked: tap one to swap it out.`);
     this.syncPicking();
   }
 
   private syncPicking(): void {
     if (!this.fusing) return;
-    const pawns = this.session.run.shop.pieces.filter((p) => isPawnLike(p.type));
-    this.board.setPicking({ pickable: new Set(pawns.map((p) => p.id)), picked: new Set(this.fusing) });
+    const parts = this.session.run.shop.pieces.filter((p) => canSetMerge(p.type));
+    this.board.setPicking({ pickable: new Set(parts.map((p) => p.id)), picked: new Set(this.fusing) });
     this.renderShop();
   }
 
-  /** The fuse panel: which pawns are picked, the results, and Cancel. */
+  /** The merge panel: what's picked, what it can become, and Cancel. */
   private renderFusing(picked: string[]): string {
     const { pieces } = this.session.run.shop;
     const types = picked.map((id) => pieces.find((p) => p.id === id)!.type);
-    const ready = picked.length === PAWN_FUSION_COUNT;
     const chosen = types.length ? types.map((t) => inlinePiece(t)).join('') : 'none yet';
-    const results = pawnFusionResults(this.session.run.settings.fairy)
-      .map(
-        (to) =>
-          `<button type="button" class="fuse" data-fuse-to="${to}" ${ready ? '' : 'disabled'}>→ ${inlinePiece(to)} ${PIECE_NAME[to]}</button>`,
-      )
-      .join('');
+    const results = setMergeResults(types, this.session.run.settings.fairy);
+    const missing = PAWN_FUSION_COUNT - types.length;
+    const buttons = results.length
+      ? results
+          .map(
+            (to) =>
+              `<button type="button" class="fuse" data-fuse-to="${to}">→ ${inlinePiece(to)} ${PIECE_NAME[to]}</button>`,
+          )
+          .join('')
+      : `<span class="hint">${missing > 0 ? `Pick ${missing} more.` : 'These don’t merge: pick 3 pawns, or a knight or bishop and 2 pawns.'}</span>`;
     return (
-      `<p class="piece-info"><strong>Fuse ${PAWN_FUSION_COUNT} pawns</strong> · tap pawns on the board or bench to pick them (${picked.length}/${PAWN_FUSION_COUNT}): ${chosen}</p>` +
-      `${results}<button type="button" data-cancel-fuse>Cancel</button>`
+      `<p class="piece-info"><strong>Merge ${PAWN_FUSION_COUNT} pieces</strong> · tap pieces on the board or bench to pick them (${picked.length}/${PAWN_FUSION_COUNT}): ${chosen}</p>` +
+      `${buttons}<button type="button" data-cancel-fuse>Cancel</button>`
     );
   }
 
@@ -369,7 +371,7 @@ export class PlacementScreen {
     }
     const piece = pieces.find((p) => p.id === this.selected);
     if (!piece) {
-      actions.innerHTML = `<span class="hint">Tap a piece to upgrade, fuse or sell it.</span>`;
+      actions.innerHTML = `<span class="hint">Tap a piece to merge, upgrade or sell it.</span>`;
       return;
     }
     const upgrades = UPGRADES[piece.type]
@@ -383,21 +385,25 @@ export class PlacementScreen {
       piece.type === 'K'
         ? ''
         : `<button type="button" class="sell" data-sell>Sell · +${sellValue(piece.type)}g</button>`;
-    // Fusion is free: the selected piece becomes the compound where it stands, and the partner is used up.
-    const fusions = (this.session.run.settings.fairy ? fusionOptions(this.session.run.shop, piece.id) : [])
+    // Merging is free: the selected piece becomes the result where it stands, and the partner is used up.
+    const fusions = fusionOptions(this.session.run.shop, piece.id, this.session.run.settings.fairy)
       .map(({ partnerId, result }) => {
         const partner = pieces.find((p) => p.id === partnerId)!;
-        return `<button type="button" class="fuse" data-fuse="${partnerId}" title="Uses up a ${PIECE_NAME[partner.type]}">+ ${inlinePiece(partner.type)} → ${inlinePiece(result)} ${PIECE_NAME[result]}</button>`;
+        return `<button type="button" class="fuse" data-fuse="${partnerId}" data-result="${result}" title="Uses up a ${PIECE_NAME[partner.type]}">+ ${inlinePiece(partner.type)} → ${inlinePiece(result)} ${PIECE_NAME[result]}</button>`;
       })
       .join('');
-    // Three pawns → one piece: same points, two squares freed. Opens the picker to choose which pawns.
-    const pawnResults = pawnFusionOptions(this.session.run.shop, piece.id, this.session.run.settings.fairy);
-    const pawnFusions = pawnResults.length
-      ? `<button type="button" class="fuse" data-fuse-pawns title="Choose the ${PAWN_FUSION_COUNT} pawns to fuse">Fuse ${PAWN_FUSION_COUNT} pawns… → ${pawnResults.map((t) => inlinePiece(t)).join(' ')}</button>`
+    // Three-piece merges (3 pawns, or a minor piece + 2 pawns): open the picker to choose which pieces.
+    const partners = setMergePartners(this.session.run.shop, piece.id);
+    const setResults = partners
+      ? setMergeResults([piece.type, ...partners.map((p) => p.type)], this.session.run.settings.fairy)
+      : [];
+    const setLabel = isPawnLike(piece.type) ? `${PAWN_FUSION_COUNT} pawns` : 'with 2 pawns';
+    const pawnFusions = setResults.length
+      ? `<button type="button" class="fuse" data-fuse-pawns title="Choose the pieces to merge">Merge ${setLabel}… → ${setResults.map((t) => inlinePiece(t)).join(' ')}</button>`
       : '';
     actions.innerHTML =
       `<p class="piece-info"><strong>${PIECE_NAME[piece.type]}</strong> · ${PIECE_VALUE[piece.type]} pts. ${PIECES[piece.type].description}</p>` +
-      `${upgrades}${fusions}${pawnFusions}${sell}`;
+      `${fusions}${pawnFusions}${upgrades}${sell}`;
   }
 
   /** Applies a shop action, or shows why it failed. */

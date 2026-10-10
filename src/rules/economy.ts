@@ -18,7 +18,10 @@ export const BASE_INCOME = 5;
 export const WIN_BONUS = 2;
 export const DRAW_BONUS = 1;
 
-/** Which pieces each type can be upgraded into with gold. Fairy pieces come from the shop or fusion instead. */
+/**
+ * Which pieces each type can be upgraded into with gold: the fallback when you don't have the parts
+ * to merge. Fairy pieces come from the shop or fusion instead.
+ */
 export const UPGRADES: Record<PieceType, PieceType[]> = {
   ...(Object.fromEntries(PIECE_TYPES.map((t) => [t, []])) as unknown as Record<PieceType, PieceType[]>),
   P: ['N', 'B'],
@@ -41,9 +44,14 @@ export function startingShop(army: PieceType[] = START_ARMY): Shop {
   return { gold: START_GOLD, pieces: army.map((t) => makePiece(t)) };
 }
 
-/** An upgrade costs the difference in value, so gold spent always equals army points. */
+/**
+ * Gold upgrades cost more than the value they add (1 more for a pawn or minor piece, 2 more for a
+ * queen), so merging is the main way up and gold the fallback. See MERGES.
+ */
+const UPGRADE_PREMIUM: Partial<Record<PieceType, number>> = { N: 1, B: 1, R: 1, Q: 2 };
+
 export function upgradeCost(from: PieceType, to: PieceType): number {
-  return PIECE_VALUE[to] - PIECE_VALUE[from];
+  return PIECE_VALUE[to] - PIECE_VALUE[from] + (UPGRADE_PREMIUM[to] ?? 0);
 }
 
 /** Value − 1; fused pieces lose 1 per part, so fusing then selling pays the same as selling both parts. */
@@ -98,9 +106,13 @@ export const OFFER_WEIGHTS: Partial<Record<PieceType, number>> = {
   W: 2,
   M: 1.5,
   L: 1.5,
-  R: 1.5,
-  Q: 0.75,
+  // Rooks and queens are rare: merging is the main way to get them.
+  R: 0.75,
+  Q: 0.375,
 };
+
+/** Queens are offered from this round on (they'd otherwise fit the price cap from round 4). */
+export const QUEEN_OFFER_ROUND = 6;
 
 /** The most an offer can cost in `round`: cheap pieces first, a Rook from round 2, a Queen from round 4. */
 export function maxOfferCost(round: number): number {
@@ -110,7 +122,10 @@ export function maxOfferCost(round: number): number {
 /** A fresh set of offers for `round`. Prices are the pieces' values. Without `fairy`, standard pieces only. */
 export function rollOffers(round: number, rng: Rng, fairy = true): PieceType[] {
   const pool = (Object.keys(OFFER_WEIGHTS) as PieceType[]).filter(
-    (t) => PIECE_VALUE[t] <= maxOfferCost(round) && (fairy || PIECES[t].group === 'standard'),
+    (t) =>
+      PIECE_VALUE[t] <= maxOfferCost(round) &&
+      (t !== 'Q' || round >= QUEEN_OFFER_ROUND) &&
+      (fairy || PIECES[t].group === 'standard'),
   );
   return Array.from({ length: OFFER_COUNT }, () => weightedPick(pool, (t) => OFFER_WEIGHTS[t] ?? 0, rng));
 }
@@ -149,6 +164,18 @@ export interface FusionRecipe {
   result: PieceType;
 }
 
+/**
+ * Merges: the main way to upgrade, in every mode. Two minor pieces make a rook and two rooks a queen
+ * (each loses a point but frees a square). Three-piece merges (pawns) are in SET_MERGES.
+ */
+export const MERGES: FusionRecipe[] = [
+  { parts: ['N', 'N'], result: 'R' },
+  { parts: ['B', 'B'], result: 'R' },
+  { parts: ['N', 'B'], result: 'R' },
+  { parts: ['R', 'R'], result: 'Q' },
+];
+
+/** Fusions into fairy compounds (fairy pieces on only). */
 export const FUSIONS: FusionRecipe[] = [
   { parts: ['N', 'B'], result: 'A' }, // Archbishop
   { parts: ['N', 'R'], result: 'C' }, // Chancellor
@@ -157,16 +184,16 @@ export const FUSIONS: FusionRecipe[] = [
   { parts: ['F', 'W'], result: 'M' }, // Man: diagonal and straight steps together (worth 3 from 1 + 1)
 ];
 
-/** What `a` and `b` fuse into, or null. Order doesn't matter. */
-export function fusionResult(a: PieceType, b: PieceType): PieceType | null {
-  return (
-    FUSIONS.find((f) => (f.parts[0] === a && f.parts[1] === b) || (f.parts[0] === b && f.parts[1] === a))?.result ??
-    null
-  );
+/** What `a` and `b` can merge or fuse into (Knight + Bishop: a Rook, or an Archbishop with fairy pieces on). */
+export function fusionResults(a: PieceType, b: PieceType, fairy: boolean): PieceType[] {
+  const recipes = fairy ? [...MERGES, ...FUSIONS] : MERGES;
+  return recipes
+    .filter((f) => (f.parts[0] === a && f.parts[1] === b) || (f.parts[0] === b && f.parts[1] === a))
+    .map((f) => f.result);
 }
 
-/** Fusions the piece `pieceId` can make with another piece in the army: one entry per partner type. */
-export function fusionOptions(shop: Shop, pieceId: string): { partnerId: string; result: PieceType }[] {
+/** Merges and fusions the piece `pieceId` can make with another piece in the army: one entry per partner type and result. */
+export function fusionOptions(shop: Shop, pieceId: string, fairy: boolean): { partnerId: string; result: PieceType }[] {
   const piece = shop.pieces.find((p) => p.id === pieceId);
   if (!piece) return [];
   const seen = new Set<PieceType>();
@@ -175,22 +202,30 @@ export function fusionOptions(shop: Shop, pieceId: string): { partnerId: string;
   const partners = [...shop.pieces].sort((x, y) => Number(x.square !== null) - Number(y.square !== null));
   for (const other of partners) {
     if (other.id === pieceId || seen.has(other.type)) continue;
-    const result = fusionResult(piece.type, other.type);
-    if (!result) continue;
+    const results = fusionResults(piece.type, other.type, fairy);
+    if (results.length === 0) continue;
     seen.add(other.type);
-    out.push({ partnerId: other.id, result });
+    for (const result of results) out.push({ partnerId: other.id, result });
   }
   return out;
 }
 
-/** Fuses `pieceId` with `partnerId`: the result takes `pieceId`'s place (square and id); the partner is used up. */
-export function fusePieces(shop: Shop, pieceId: string, partnerId: string): ShopResult {
+/** Merges `pieceId` with `partnerId` into `result`: it takes `pieceId`'s place (square and id); the partner is used up. */
+export function fusePieces(
+  shop: Shop,
+  pieceId: string,
+  partnerId: string,
+  result: PieceType,
+  fairy: boolean,
+): ShopResult {
   const piece = shop.pieces.find((p) => p.id === pieceId);
   const partner = shop.pieces.find((p) => p.id === partnerId);
   if (!piece || !partner || piece.id === partner.id) return { ok: false, error: 'No such piece' };
-  const result = fusionResult(piece.type, partner.type);
-  if (!result) {
-    return { ok: false, error: `${PIECE_NAME[piece.type]} and ${PIECE_NAME[partner.type]} don't fuse` };
+  if (!fusionResults(piece.type, partner.type, fairy).includes(result)) {
+    return {
+      ok: false,
+      error: `${PIECE_NAME[piece.type]} and ${PIECE_NAME[partner.type]} don't make a ${PIECE_NAME[result]}`,
+    };
   }
   return {
     ok: true,
@@ -201,10 +236,48 @@ export function fusePieces(shop: Shop, pieceId: string, partnerId: string): Shop
   };
 }
 
-// ---- pawn fusion: three pawns into one piece ----
+// ---- three-piece merges: three pawns, or a minor piece and two pawns ----
 
-/** Pawns (and Berolina pawns) fuse in threes, free: points stay the same, two board squares are freed. */
+/**
+ * Pawns (and Berolina pawns) merge in threes into a minor piece, and a Knight or Bishop with two
+ * pawns into a Rook. Free and points-neutral: two board squares are freed.
+ */
 export const PAWN_FUSION_COUNT = 3;
+
+const isMinor = (t: PieceType) => t === 'N' || t === 'B';
+
+/** What three pieces of these types can merge into (empty if they can't). */
+export function setMergeResults(types: PieceType[], fairy: boolean): PieceType[] {
+  if (types.length !== PAWN_FUSION_COUNT) return [];
+  const pawns = types.filter(isPawnLike).length;
+  if (pawns === 3) return pawnFusionResults(fairy);
+  if (pawns === 2 && types.some(isMinor)) return ['R'];
+  return [];
+}
+
+/** Pieces that can take part in a three-piece merge (what the picker lets you circle). */
+export function canSetMerge(type: PieceType): boolean {
+  return isPawnLike(type) || isMinor(type);
+}
+
+/**
+ * The pieces circled when a three-piece merge starts from `pieceId`: for a pawn, two more pawns
+ * (see pawnPartners); for a Knight or Bishop, two pawns (plain ones, then benched ones, first).
+ * Null if there aren't enough.
+ */
+export function setMergePartners(shop: Shop, pieceId: string): Piece[] | null {
+  const piece = shop.pieces.find((p) => p.id === pieceId);
+  if (!piece) return null;
+  if (isPawnLike(piece.type)) return pawnPartners(shop, pieceId);
+  if (!isMinor(piece.type)) return null;
+  const pawns = shop.pieces
+    .filter((p) => isPawnLike(p.type))
+    .sort(
+      (x, y) =>
+        Number(x.type !== 'P') - Number(y.type !== 'P') || Number(x.square !== null) - Number(y.square !== null),
+    );
+  return pawns.length >= 2 ? pawns.slice(0, 2) : null;
+}
 
 /** What three pawns can become. The Man needs fairy pieces on. */
 export function pawnFusionResults(fairy: boolean): PieceType[] {
@@ -233,24 +306,30 @@ export function pawnFusionOptions(shop: Shop, pieceId: string, fairy: boolean): 
   return pawnPartners(shop, pieceId) ? pawnFusionResults(fairy) : [];
 }
 
-/** Fuses the pawn `pieceId` and its default partners (see pawnPartners) into `result`. */
+/** Merges `pieceId` and its default partners (see setMergePartners) into `result`. */
 export function fusePawns(shop: Shop, pieceId: string, result: PieceType, fairy: boolean): ShopResult {
-  const partners = pawnPartners(shop, pieceId);
-  if (!partners) return { ok: false, error: `Fusing needs ${PAWN_FUSION_COUNT} pawns` };
-  return fusePawnSet(shop, [pieceId, ...partners.map((p) => p.id)], result, fairy);
+  const partners = setMergePartners(shop, pieceId);
+  if (!partners) return { ok: false, error: `Merging needs ${PAWN_FUSION_COUNT} pieces` };
+  return fuseSet(shop, [pieceId, ...partners.map((p) => p.id)], result, fairy);
 }
 
 /**
- * Fuses exactly the pawns `ids` (the player's pick) into `result`. It takes the place of the first
- * of them that's on the board (or the first one, if all are benched).
+ * Merges exactly the pieces `ids` (the player's pick) into `result`. It takes the place of the
+ * minor piece if one is on the board, else of the first picked piece on the board (or the first one).
  */
-export function fusePawnSet(shop: Shop, ids: string[], result: PieceType, fairy: boolean): ShopResult {
-  if (!pawnFusionResults(fairy).includes(result))
-    return { ok: false, error: `Pawns can't become a ${PIECE_NAME[result]}` };
+export function fuseSet(shop: Shop, ids: string[], result: PieceType, fairy: boolean): ShopResult {
   const chosen = ids.map((id) => shop.pieces.find((p) => p.id === id));
-  if (new Set(ids).size !== PAWN_FUSION_COUNT || chosen.some((p) => !p || !isPawnLike(p.type)))
-    return { ok: false, error: `Pick ${PAWN_FUSION_COUNT} pawns to fuse` };
-  const pieceId = (chosen.find((p) => p!.square) ?? chosen[0])!.id;
+  if (new Set(ids).size !== PAWN_FUSION_COUNT || chosen.some((p) => !p))
+    return { ok: false, error: `Pick ${PAWN_FUSION_COUNT} pieces to merge` };
+  const pieces = chosen as Piece[];
+  if (
+    !setMergeResults(
+      pieces.map((p) => p.type),
+      fairy,
+    ).includes(result)
+  )
+    return { ok: false, error: `Those pieces can't become a ${PIECE_NAME[result]}` };
+  const pieceId = (pieces.find((p) => isMinor(p.type) && p.square) ?? pieces.find((p) => p.square) ?? pieces[0]).id;
   const used = new Set(ids.filter((id) => id !== pieceId));
   return {
     ok: true,

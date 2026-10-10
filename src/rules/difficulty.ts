@@ -8,9 +8,9 @@ export interface Difficulty {
 }
 
 export const DIFFICULTIES: Difficulty[] = [
-  // 5 and 7 were too far apart (Easy won 92% of games, Hard 13%: SIMULATION.md §13).
-  { id: 'easy', name: 'Easy', perRound: 5.5 },
-  { id: 'normal', name: 'Normal', perRound: 6 },
+  // Tuned with the simulator (SIMULATION.md §13–14); retuned after merge-first upgrades.
+  { id: 'easy', name: 'Easy', perRound: 5.75 },
+  { id: 'normal', name: 'Normal', perRound: 6.25 },
   { id: 'hard', name: 'Hard', perRound: 6.5 },
 ];
 
@@ -21,7 +21,7 @@ export type SideId = 'white' | 'black' | 'random';
 
 export const SIDES: { id: SideId; name: string }[] = [
   { id: 'white', name: 'White (you move first)' },
-  { id: 'black', name: 'Black (opponent moves first; their army is 10% smaller)' },
+  { id: 'black', name: 'Black (opponent moves first; their army is a little smaller)' },
   { id: 'random', name: 'Random each round' },
 ];
 
