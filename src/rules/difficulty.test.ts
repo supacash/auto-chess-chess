@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { aiBudget } from './aiArmy';
+import { aiBudget, rampFactor } from './aiArmy';
 import { DEFAULT_SETTINGS, difficulty, isDifficultyId } from './difficulty';
 import { seededRng } from './rng';
 
 describe('difficulty', () => {
-  it('scales the AI budget by 5.5, 6 or 6.5 points per round (rounded)', () => {
+  it('scales the AI budget by 5.5, 6 or 6.5 points per round (rounded, times the ramp)', () => {
     for (const [id, per] of [
       ['easy', 5.5],
       ['normal', 6],
@@ -12,8 +12,9 @@ describe('difficulty', () => {
     ] as const) {
       for (let seed = 0; seed < 20; seed++) {
         const b = aiBudget(6, seededRng(seed), difficulty(id).perRound);
-        expect(b).toBeGreaterThanOrEqual(Math.round(6 * per) - 1);
-        expect(b).toBeLessThanOrEqual(Math.round(6 * per) + 1);
+        const mid = Math.round(6 * per * rampFactor(6));
+        expect(b).toBeGreaterThanOrEqual(mid - 1);
+        expect(b).toBeLessThanOrEqual(mid + 1);
       }
     }
   });

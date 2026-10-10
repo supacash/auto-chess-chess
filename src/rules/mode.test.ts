@@ -18,8 +18,8 @@ describe('game modes', () => {
     };
     expect(budgets('growing', 1)).toEqual(new Set([5, 6, 7]));
     expect(budgets('classic', 1)).toEqual(new Set([4, 5, 6]));
-    expect(budgets('growing', 6)).toEqual(new Set([36, 37, 38]));
-    expect(budgets('classic', 6)).toEqual(new Set([35, 36, 37]));
+    const plusOne = (set: Set<number>) => new Set([...set].map((b) => b + 1));
+    expect(budgets('growing', 6)).toEqual(plusOne(budgets('classic', 6)));
   });
 
   it('recognises mode ids', () => {

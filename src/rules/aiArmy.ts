@@ -1,5 +1,4 @@
 import { BOARD_8, type BoardSpec, pawnSquares } from '../chess/boardSpec';
-import { UPGRADES } from './economy';
 import { isPawnLike, makePiece, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
 import { armyCap, BACK_RANK, canPlace, frontRank, pieceAt } from './placement';
 import { type StartPosition, startPosition } from './position';
@@ -144,7 +143,7 @@ export function aiBudget(
  * round 7 (merged rooks and queens beat drafted armies at equal points). Per round, the factor that
  * gave the target win rate (SIMULATION.md §15); the last one holds from then on.
  */
-export const RAMP = [1, 0.93, 0.92, 0.94, 0.97, 1, 1.03, 1.05];
+export const RAMP = [1, 0.93, 0.92, 0.94, 0.97, 1.03, 1.08, 1.1];
 
 export function rampFactor(round: number): number {
   return RAMP[Math.min(round, RAMP.length) - 1] ?? 1;
@@ -172,7 +171,13 @@ export function pickStyle(rng: Rng, fairy = false): AiStyle {
   return styles[randomInt(rng, styles.length)];
 }
 
-/** Gold upgrades plus, with fairy pieces on, the fusions an AI could have made (its partner bought outright). */
+/**
+ * The upgrades an AI army is drafted as if it had made: merges up the standard ladder (it stands for a
+ * player who merged), plus, with fairy pieces on, the fusions it could have made (partner bought outright).
+ */
+const LADDER: Partial<Record<PieceType, PieceType[]>> = { P: ['N', 'B'], N: ['R'], B: ['R'], R: ['Q'] };
+
+/** Fusions, with fairy pieces on. */
 const FAIRY_UPGRADES: Partial<Record<PieceType, PieceType[]>> = {
   F: ['M'],
   W: ['M'],
@@ -191,7 +196,8 @@ function valueGain(from: PieceType, to: PieceType): number {
 }
 
 function upgradesFor(type: PieceType, fairy: boolean): PieceType[] {
-  return fairy ? [...UPGRADES[type], ...(FAIRY_UPGRADES[type] ?? [])] : UPGRADES[type];
+  const ladder = LADDER[type] ?? [];
+  return fairy ? [...ladder, ...(FAIRY_UPGRADES[type] ?? [])] : ladder;
 }
 
 /**

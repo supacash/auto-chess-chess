@@ -1,13 +1,16 @@
 /**
  * The `--player shop` stand-in: keeps one persistent Shop for the whole run and spends its gold
- * each round with a simple greedy plan, like a player who never rerolls.
+ * each round with a simple greedy plan.
  *
  * Per step: buy a pawn offer while pawns are below the style's pawn share of the army's total
  * value (army + gold); otherwise buy the affordable offer the style likes best (pawns only if they
  * fit). Once the army fills the board, it merges to free squares: three pawns into a minor piece, a
  * minor piece and two pawns into a rook (both points-neutral), then two rooks into a queen and two
- * minor pieces into a rook (each loses a point). Gold upgrades (which cost more than they add) come
- * after that, and when nothing else is left it sells its cheapest piece for a more valuable offer.
+ * minor pieces into a rook (each loses a point); with a full board it also buys offers that complete
+ * a merge (a rook to pair with a rook, a minor piece with a minor) onto the bench. Gold upgrades
+ * (pawn → minor piece, which costs more than it adds) come after that; then it sells its cheapest
+ * piece for a more valuable offer, and rerolls the shop (up to MAX_REROLLS a round) while it has gold
+ * and something to gain.
  * Gold that fits nothing carries over. Like a sensible player, it only buys pawns that fit the
  * current board's home rows. Every action goes through the real shop functions, so the caps apply
  * exactly as in the game. The caller stocks `shop.offers` each round.
@@ -17,6 +20,8 @@ import type { AiStyle } from '../../src/rules/aiArmy';
 import {
   buyOffer,
   fusePieces,
+  REROLL_COST,
+  rerollOffers,
   fuseSet,
   pawnFusionResults,
   type Shop,
@@ -60,8 +65,14 @@ function bestMerge(shop: Shop, style: AiStyle, fairy: boolean): Shop | null {
 
 const ids = (pieces: Piece[]) => pieces.map((p) => p.id);
 
-export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec, fairy = false): Shop {
+/** Rerolls a round at most, so a stand-in with spare gold looks for parts without spending it all. */
+const MAX_REROLLS = 6;
+/** Gold kept back when rerolling: enough to buy a minor piece from the new offers. */
+const REROLL_RESERVE = 3;
+
+export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec, fairy = false, round = 1): Shop {
   let shop = start;
+  let rerolls = 0;
   for (;;) {
     const offers = shop.offers ?? [];
     const pawns = shop.pieces.filter((p) => isPawnLike(p.type)).length;
@@ -93,8 +104,19 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
       }
     }
 
-    // A full board: merge to free squares for more pieces.
+    // A full board: buy an offer that completes a merge (it waits on the bench), then merge.
     if (full) {
+      const has = (pred: (t: PieceType) => boolean) => shop.pieces.some((p) => pred(p.type));
+      const part = offers.findIndex(
+        (t) => PIECE_VALUE[t] <= shop.gold && ((t === 'R' && has((x) => x === 'R')) || (isMinor(t) && has(isMinor))),
+      );
+      if (part >= 0) {
+        const r = buyOffer(shop, part);
+        if (r.ok) {
+          shop = r.shop;
+          continue;
+        }
+      }
       const merged = bestMerge(shop, style, fairy);
       if (merged) {
         shop = merged;
@@ -141,6 +163,16 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
             continue;
           }
         }
+      }
+    }
+    // Spare gold: reroll for new offers while there's something to gain (room, or merge parts to pair).
+    const useful = !full || shop.pieces.some((p) => p.type === 'R' || isMinor(p.type) || isPawnLike(p.type));
+    if (useful && rerolls < MAX_REROLLS && shop.gold >= REROLL_COST + REROLL_RESERVE) {
+      const r = rerollOffers(shop, round, rng, fairy);
+      if (r.ok) {
+        rerolls++;
+        shop = r.shop;
+        continue;
       }
     }
     return shop;

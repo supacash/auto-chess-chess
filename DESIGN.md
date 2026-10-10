@@ -12,7 +12,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - No accounts or server. The run in progress and best scores live in the browser (localStorage).
 
 ## Core loop
-1. **Shop.** Spend gold on the round's shop offers, merge pieces into stronger ones, and upgrade with gold when you lack the parts. You see the opponent's style and piece list (and, with Reveal on, where its pieces are).
+1. **Shop.** Spend gold on the round's shop offers and rerolls, and merge pieces into stronger ones. You see the opponent's style and piece list (and, with Reveal on, where its pieces are).
 2. **Place.** Arrange your army in your home rows. Extras wait on the bench.
 3. **Battle.** Each round, pick **Auto fight** (the engine plays both sides; you watch, with an eval bar and 1×/2×/4×/Skip playback) or **Play it** (you move your own pieces; the engine plays the opponent exactly as in auto battles).
 4. **Result.** Win, lose or draw. Gold is paid out; a loss costs a life.
@@ -44,11 +44,11 @@ Draft and place a chess army, then watch an engine play the round for both sides
 |---|---|---|---|
 | Pawn | 1 | (shop offers, 1 gold) | |
 | Knight / Bishop | 3 | 3 pawns | Pawn + 3 gold |
-| Rook | 5 | Minor + 2 pawns, or 2 minors | Knight/Bishop + 3 gold |
-| Queen | 9 | 2 Rooks | Rook + 6 gold |
+| Rook | 5 | Minor + 2 pawns, or 2 minors | No: merge, or a rare shop offer |
+| Queen | 9 | 2 Rooks | No: merge, or a rare shop offer |
 | King | — | Free, always owned, can't be sold |
 
-- **Gold upgrades** are the fallback when you don't have the parts to merge, and cost more than the value they add: Pawn → Knight/Bishop 3, Knight/Bishop → Rook 3, Rook → Queen 6.
+- **Gold upgrades:** only Pawn → Knight/Bishop, for 3 gold (1 more than it adds, so merging three pawns is the better deal). Rooks and Queens come only from merging or the shop; spare gold goes into rerolls.
 - **Start:** 3 gold plus King + 4 pawns (Growing) or King + 3 pawns (Classic).
 - **Income:** 5 gold per round, +2 for a win, +1 for a draw.
 - **Selling** refunds value minus 1 (minimum 0).

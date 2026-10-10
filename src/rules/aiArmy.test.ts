@@ -24,20 +24,23 @@ const points = (types: PieceType[]) => types.reduce((s, t) => s + PIECE_VALUE[t]
 const count = (types: PieceType[], t: PieceType) => types.filter((x) => x === t).length;
 
 describe('aiBudget', () => {
-  it('is 6×round within ±1 where the ramp is neutral (round 6)', () => {
-    for (let seed = 0; seed < 20; seed++) {
-      const b = aiBudget(6, seededRng(seed));
-      expect(b).toBeGreaterThanOrEqual(35);
-      expect(b).toBeLessThanOrEqual(37);
+  it('is 6×round × the ramp, within ±1', () => {
+    for (const round of [3, 6, 9]) {
+      const mid = Math.round(6 * round * rampFactor(round));
+      for (let seed = 0; seed < 20; seed++) {
+        const b = aiBudget(round, seededRng(seed));
+        expect(b).toBeGreaterThanOrEqual(mid - 1);
+        expect(b).toBeLessThanOrEqual(mid + 1);
+      }
     }
   });
 
   it('ramps: smaller in the early rounds, bigger later', () => {
     const mid = (round: number) => aiBudget(round, () => 0.5); // randomInt(…, 3) = 1: no jitter
     expect(mid(3)).toBe(Math.round(18 * 0.92));
-    expect(mid(10)).toBe(Math.round(60 * 1.05));
+    expect(mid(10)).toBe(Math.round(60 * RAMP.at(-1)!));
     expect(rampFactor(3)).toBeLessThan(1);
-    expect(rampFactor(6)).toBe(1);
+    expect(rampFactor(8)).toBeGreaterThan(1);
     expect(rampFactor(20)).toBe(RAMP.at(-1));
   });
 

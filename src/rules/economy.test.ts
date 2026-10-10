@@ -43,14 +43,15 @@ describe('startingShop', () => {
 });
 
 describe('upgradePiece', () => {
-  it('follows the upgrade path and keeps the square', () => {
+  it('turns a pawn into a minor piece in place, and nothing into a rook or queen', () => {
     const pawn = makePiece('P', { file: 3, rank: 1 });
     let shop: Shop = { gold: 20, pieces: [pawn] };
     shop = ok(upgradePiece(shop, pawn.id, 'N'));
-    shop = ok(upgradePiece(shop, pawn.id, 'R'));
-    shop = ok(upgradePiece(shop, pawn.id, 'Q'));
-    expect(shop.pieces[0]).toMatchObject({ id: pawn.id, type: 'Q', square: { file: 3, rank: 1 } });
-    expect(shop.gold).toBe(20 - 12); // 3 + 3 + 6
+    expect(shop.pieces[0]).toMatchObject({ id: pawn.id, type: 'N', square: { file: 3, rank: 1 } });
+    expect(shop.gold).toBe(20 - 3);
+    expect(upgradePiece(shop, pawn.id, 'R').ok).toBe(false);
+    const rook = makePiece('R');
+    expect(upgradePiece({ gold: 20, pieces: [rook] }, rook.id, 'Q').ok).toBe(false);
   });
 
   it('rejects skipped steps, maxed pieces and the king', () => {
@@ -64,8 +65,8 @@ describe('upgradePiece', () => {
   });
 
   it('rejects upgrades the player cannot afford', () => {
-    const rook = makePiece('R');
-    expect(upgradePiece({ gold: 3, pieces: [rook] }, rook.id, 'Q')).toMatchObject({
+    const pawn = makePiece('P');
+    expect(upgradePiece({ gold: 2, pieces: [pawn] }, pawn.id, 'B')).toMatchObject({
       ok: false,
       error: 'Not enough gold',
     });
@@ -76,8 +77,7 @@ describe('upgradePiece', () => {
     const next = ok(upgradePiece(shop, shop.pieces[1].id, 'B'));
     expect(next.gold + points(next)).toBe(shop.gold + points(shop) - 1);
     expect(upgradeCost('P', 'N')).toBe(3);
-    expect(upgradeCost('B', 'R')).toBe(3);
-    expect(upgradeCost('R', 'Q')).toBe(6);
+    expect(upgradeCost('P', 'B')).toBe(3);
   });
 });
 

@@ -169,7 +169,14 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     if (PLAYER_POINTS === 'ai') playerPoints = aiPoints;
     let playerTypes: PieceType[];
     if (PLAYER === 'shop') {
-      shop = spendGold({ ...shop, offers: rollOffers(round, rng, PLAYER_FAIRY) }, runStyle, rng, spec, PLAYER_FAIRY);
+      shop = spendGold(
+        { ...shop, offers: rollOffers(round, rng, PLAYER_FAIRY) },
+        runStyle,
+        rng,
+        spec,
+        PLAYER_FAIRY,
+        round,
+      );
       playerPoints = armyValue(shop);
       playerTypes = shop.pieces.map((p) => p.type);
     } else {

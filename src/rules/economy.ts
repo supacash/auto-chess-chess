@@ -19,15 +19,12 @@ export const WIN_BONUS = 2;
 export const DRAW_BONUS = 1;
 
 /**
- * Which pieces each type can be upgraded into with gold: the fallback when you don't have the parts
- * to merge. Fairy pieces come from the shop or fusion instead.
+ * Which pieces each type can be upgraded into with gold: only a pawn into a minor piece. Rooks and
+ * queens come from merging or the shop, never from gold alone; spare gold goes into rerolls.
  */
 export const UPGRADES: Record<PieceType, PieceType[]> = {
   ...(Object.fromEntries(PIECE_TYPES.map((t) => [t, []])) as unknown as Record<PieceType, PieceType[]>),
   P: ['N', 'B'],
-  N: ['R'],
-  B: ['R'],
-  R: ['Q'],
 };
 
 /** The player's persistent army and purse between rounds. */
@@ -44,11 +41,8 @@ export function startingShop(army: PieceType[] = START_ARMY): Shop {
   return { gold: START_GOLD, pieces: army.map((t) => makePiece(t)) };
 }
 
-/**
- * Gold upgrades cost more than the value they add (1 more for a pawn or minor piece, 2 more for a
- * queen), so merging is the main way up and gold the fallback. See MERGES.
- */
-const UPGRADE_PREMIUM: Partial<Record<PieceType, number>> = { N: 1, B: 1, R: 1, Q: 2 };
+/** A gold upgrade costs 1 more than the value it adds, so merging three pawns is the better deal. */
+const UPGRADE_PREMIUM: Partial<Record<PieceType, number>> = { N: 1, B: 1 };
 
 export function upgradeCost(from: PieceType, to: PieceType): number {
   return PIECE_VALUE[to] - PIECE_VALUE[from] + (UPGRADE_PREMIUM[to] ?? 0);
