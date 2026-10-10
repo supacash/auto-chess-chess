@@ -10,8 +10,8 @@ export interface Difficulty {
 export const DIFFICULTIES: Difficulty[] = [
   // Tuned with the simulator for affinity pawns (SIMULATION.md §16), aiming at about 78% / 60% / 33% wins.
   { id: 'easy', name: 'Easy', perRound: 5 },
-  { id: 'normal', name: 'Normal', perRound: 5.25 },
-  { id: 'hard', name: 'Hard', perRound: 5.75 },
+  { id: 'normal', name: 'Normal', perRound: 5.35 },
+  { id: 'hard', name: 'Hard', perRound: 5.65 },
 ];
 
 import type { ModeId } from './mode';

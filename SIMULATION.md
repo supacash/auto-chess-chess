@@ -257,6 +257,23 @@ Ferz and Wazir are worth about a pawn here; they're now 1 point.
 - **25 rounds (Normal, random side, 20 runs):** 65–70% through round 12, then 50% (13), 25% (14), 20% (15) and about 5% after: late on the player adds 4–5 points a round to the AI's 6, so runs end gradually around rounds 13–16 (8.2 wins on average).
 - **Left as is:** Normal rounds 7–9 run a little easy (76–88%) and Hard dips in round 5 (18%).
 
+### 16. Affinity pawns (shop player, 200 runs × 10 rounds per row)
+
+Affinity pawns replaced the merge recipes (DESIGN.md: three matching affinity pawns make the piece; 2 rooks, 3 knights or 3 bishops make a queen). The stand-in collects up to two sets at a time and rerolls. Pawns cost gold but count 1 point until merged, so the old budgets were far too high: Normal at 6 per round won about 18%.
+
+| Points per round (as White) | Win | Run score |
+|---|---|---|
+| 4.0 | 99% | 9.88 |
+| 4.5 | 93% | 9.08 |
+| 5.0 (Easy) | 76% | 7.18 |
+| 5.25 | 69% | 6.33 |
+| 5.75 | 26% | 2.14 |
+
+- **Per round** (5.25): 78%, 55%, 74%, 73%, 77%, 68%, 58%, 64%, 72%, 71%: flat, the ramp works for this economy too.
+- **Random side** (5.25): 64%.
+- **25 rounds** (5.25, random side, 20 runs): 50–85% through round 12, then a gentle slide to 30–40% (no wall); 7.7 wins on average.
+- **Chosen:** Easy 5, Normal 5.35, Hard 5.65 (Normal and Hard interpolated toward ~62% and ~33%).
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.
