@@ -93,7 +93,7 @@ describe('budget caps and sides', () => {
   it('gives a player moving second a smaller opponent', () => {
     expect(budgetForSide(30, true)).toBe(30);
     expect(budgetForSide(30, false)).toBe(29);
-    expect(budgetForSide(60, false)).toBe(58);
+    expect(budgetForSide(60, false)).toBe(59);
     expect(budgetForSide(30, false, 0.1)).toBe(27);
   });
 

@@ -133,10 +133,10 @@ export function aiBudget(
 }
 
 /**
- * Moving second is a handicap (Black won ~60% of Normal games to White's ~72%: SIMULATION.md §14), so
- * when the player is Black the AI's army is this much smaller. 10% overshot (Black then won 90%).
+ * Moving second is a small handicap (with merge-first upgrades Black won 74% to White's 78% at the
+ * same budget: SIMULATION.md §14), so when the player is Black the AI's army is a little smaller.
  */
-export const BLACK_DISCOUNT = 0.04;
+export const BLACK_DISCOUNT = 0.02;
 
 /** The AI's budget once the player's side is known: smaller when the player moves second. */
 export function budgetForSide(budget: number, playerFirst: boolean, discount = BLACK_DISCOUNT): number {
