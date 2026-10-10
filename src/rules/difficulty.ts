@@ -8,10 +8,10 @@ export interface Difficulty {
 }
 
 export const DIFFICULTIES: Difficulty[] = [
-  // Tuned with the simulator after merge-first upgrades (SIMULATION.md §14): about 78% / 60% / 31% wins as White.
-  { id: 'easy', name: 'Easy', perRound: 5.5 },
-  { id: 'normal', name: 'Normal', perRound: 6 },
-  { id: 'hard', name: 'Hard', perRound: 6.5 },
+  // Tuned with the simulator for affinity pawns (SIMULATION.md §16), aiming at about 78% / 60% / 33% wins.
+  { id: 'easy', name: 'Easy', perRound: 5 },
+  { id: 'normal', name: 'Normal', perRound: 5.25 },
+  { id: 'hard', name: 'Hard', perRound: 5.75 },
 ];
 
 import type { ModeId } from './mode';
