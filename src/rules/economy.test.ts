@@ -299,13 +299,16 @@ describe('three-piece merges', () => {
     expect(fuseSet(shop, [benched.id, benched.id, third.id], 'R').ok).toBe(false);
   });
 
-  it('merges three knights or three bishops into a queen, but not a mix', () => {
+  it('merges three knights or three bishops into a queen, three plain pawns into a minor piece, but not a mix', () => {
     const plain = (t: PieceType) => ({ type: t });
     expect(setMergeResults([plain('N'), plain('N'), plain('N')])).toEqual(['Q']);
     expect(setMergeResults([plain('B'), plain('B'), plain('B')])).toEqual(['Q']);
     expect(setMergeResults([plain('N'), plain('N'), plain('B')])).toEqual([]);
     expect(setMergeResults([plain('R'), plain('R'), plain('R')])).toEqual([]);
-    expect(setMergeResults([plain('P'), plain('P'), plain('P')])).toEqual([]); // plain pawns don't merge
+    expect(setMergeResults([plain('P'), plain('P'), plain('P')])).toEqual(['N', 'B']); // three plain pawns
+    expect(setMergeResults([plain('E'), plain('E'), plain('E')])).toEqual(['N', 'B']);
+    expect(setMergeResults([plain('P'), plain('P'), plain('E')])).toEqual([]);
+    expect(setMergeResults([plain('P'), plain('P'), makePiece('P', null, 'R')])).toEqual([]);
     const q = makePiece('P', null, 'Q');
     expect(setMergeResults([q, { ...q }, { ...q }])).toEqual(['Q']);
   });

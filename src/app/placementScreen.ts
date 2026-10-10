@@ -20,7 +20,15 @@ import {
   upgradeCost,
   upgradePiece,
 } from '../rules/economy';
-import { type Affinity, type Piece, PIECE_NAME, PIECE_VALUE, PIECES, type PieceType } from '../rules/pieces';
+import {
+  type Affinity,
+  isPawnLike,
+  type Piece,
+  PIECE_NAME,
+  PIECE_VALUE,
+  PIECES,
+  type PieceType,
+} from '../rules/pieces';
 import { armyCap, BENCH_SIZE, benchCount } from '../rules/placement';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
@@ -237,7 +245,7 @@ export class PlacementScreen {
               `<button type="button" class="fuse" data-fuse-to="${to}">→ ${inlinePiece(to)} ${PIECE_NAME[to]}</button>`,
           )
           .join('')
-      : `<span class="hint">${missing > 0 ? `Pick ${missing} more.` : 'These don’t merge: pick 3 pawns with the same affinity, or 3 knights, or 3 bishops.'}</span>`;
+      : `<span class="hint">${missing > 0 ? `Pick ${missing} more.` : 'These don’t merge: pick 3 of a kind (pawns with the same affinity, plain pawns, knights or bishops).'}</span>`;
     return (
       `<p class="piece-info"><strong>Merge ${SET_MERGE_SIZE} pieces</strong> · tap pieces on the board or bench to pick them (${picked.length}/${SET_MERGE_SIZE}): ${chosen}</p>` +
       `${buttons}<button type="button" data-cancel-fuse>Cancel</button>`
@@ -411,7 +419,9 @@ export class PlacementScreen {
       : '';
     const info = piece.affinity
       ? affinityText(piece.affinity, pieces)
-      : `${PIECE_VALUE[piece.type]} pts. ${PIECES[piece.type].description}`;
+      : `${PIECE_VALUE[piece.type]} pts. ${PIECES[piece.type].description}${
+          isPawnLike(piece.type) ? ` Three of them merge into a Knight or Bishop.` : ''
+        }`;
     actions.innerHTML =
       `<p class="piece-info"><strong>${pieceName(piece)}</strong> · ${info}</p>` +
       `${fusions}${pawnFusions}${upgrades}${sell}`;

@@ -3,6 +3,7 @@ import { BENCH_SIZE, benchCount } from './placement';
 import {
   type Affinity,
   AFFINITIES,
+  isPawnLike,
   makePiece,
   type Piece,
   type PieceType,
@@ -269,11 +270,12 @@ export function fusePieces(
   };
 }
 
-// ---- three-piece merges: three matching affinity pawns, or three knights or bishops ----
+// ---- three-piece merges: three of a kind ----
 
 /**
- * Three pawns with the same affinity merge into that piece; three Knights (or three Bishops) into a
- * Queen. Free; two board squares are freed.
+ * Three pawns with the same affinity merge into that piece; three plain pawns (the starting ones, or
+ * three Berolina pawns) into a Knight or Bishop; three Knights (or three Bishops) into a Queen. Free;
+ * two board squares are freed.
  */
 export const SET_MERGE_SIZE = 3;
 
@@ -284,14 +286,15 @@ export function setMergeResults(parts: MergePart[]): PieceType[] {
   if (parts.length !== SET_MERGE_SIZE) return [];
   const [first] = parts;
   if (first.affinity) return parts.every((p) => p.affinity === first.affinity) ? [first.affinity] : [];
-  if ((first.type === 'N' || first.type === 'B') && parts.every((p) => p.type === first.type && !p.affinity))
-    return ['Q'];
+  if (!parts.every((p) => p.type === first.type && !p.affinity)) return [];
+  if (isPawnLike(first.type)) return ['N', 'B'];
+  if (first.type === 'N' || first.type === 'B') return ['Q'];
   return [];
 }
 
 /** Pieces that can take part in a three-piece merge (what the picker lets you circle). */
 export function canSetMerge(piece: MergePart): boolean {
-  return piece.affinity !== undefined || piece.type === 'N' || piece.type === 'B';
+  return piece.affinity !== undefined || isPawnLike(piece.type) || piece.type === 'N' || piece.type === 'B';
 }
 
 /** True when two pieces are the same kind for a three-piece merge (same affinity, or both plain of one type). */

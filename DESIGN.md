@@ -43,7 +43,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 | Piece | Value | Merge | Or gold upgrade |
 |---|---|---|---|
 | Pawn | 1 | Starting pawns; Berolina pawns from the shop (fairy) | |
-| Knight / Bishop | 3 | 3 knight-pawns / 3 bishop-pawns (1 gold each) | Plain pawn + 3 gold |
+| Knight / Bishop | 3 | 3 knight-pawns / 3 bishop-pawns (1 gold each), or 3 plain pawns | Plain pawn + 3 gold |
 | Rook | 5 | 3 rook-pawns (2 gold each) | No |
 | Queen | 9 | 3 queen-pawns (3 gold each), 2 Rooks, 3 Knights or 3 Bishops | No |
 | King | — | Free, always owned, can't be sold |
@@ -61,6 +61,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **No single-pawn purchases:** pawns come from shop offers (Pawn and Berolina pawn are the most common offers).
 - **Merging** (free, every mode, by hand: there's no automatic merging yet):
   - Three affinity pawns with the same affinity → that piece.
+  - Three plain pawns (the starting pawns, or three Berolina pawns) → Knight or Bishop.
   - Two Rooks → Queen.
   - Three Knights → Queen, or three Bishops → Queen (no mixing knights and bishops).
   - Three-piece merges open a picker (*Merge 3 rook-pawns…*, *Merge 3 knights…*): the tapped piece and two more of the same kind (benched first) are circled, and tapping pieces on the board or bench circles or un-circles them. The result takes the square of the first picked piece on the board. Two-piece merges are buttons on the selected piece, which becomes the result where it stands.

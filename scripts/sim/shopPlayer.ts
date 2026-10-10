@@ -75,6 +75,12 @@ function bestMerge(shop: Shop, full: boolean, fairy: boolean): Shop | null {
       if (r.ok) return r.shop;
     }
   }
+  // Three plain pawns (the starting ones) into a minor piece.
+  const pawns = plain('P');
+  if (pawns.length >= 3) {
+    const r = fuseSet(shop, ids(pawns.slice(0, 3)), 'N');
+    if (r.ok) return r.shop;
+  }
   return null;
 }
 
