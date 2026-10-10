@@ -224,6 +224,24 @@ Ferz and Wazir are worth about a pawn here; they're now 1 point.
 - **Move limit** decides a third of Normal games (40–60% in rounds 1–3); 35% of games where a side was ≥5 ahead end without mate.
 - **30 rounds:** the player's army stops growing at ~63 points by round 12 (the 16-piece cap, and this stand-in never upgrades, fuses or sells), while the AI budget keeps rising 6 a round; from round 12 on the player loses every game, mostly in under 10 plies.
 
+### 14. Fixed stand-in and merge-first tuning (shop player, 200 runs × 10 rounds per row)
+
+- **Stand-in bug:** §13's shop player never placed its pieces, so its 8-slot bench filled and it stopped buying at 63 points (King + 7 Queens). Fixed (the shop holds the placed army); it now also fuses, merges and sells once the board is full. With the fix it reaches a full board of queens around round 23 and the late game is no longer a wall.
+- **AI drafting fix:** leftover points used to upgrade pawns first, so Fortress had no pawns at 40 points. Now leftovers buy more of the style's pieces while squares are free, then upgrade with pawns last.
+- **Merge-first upgrades** (merges as the main way up, pricier gold upgrades, rarer rooks and queens): the player gets a little less army per gold, so budgets came down.
+
+| Points per round (as White) | Win | Round 3 | Round 10 | Run score |
+|---|---|---|---|---|
+| 5.0 | 92% | 85% | 100% | 8.77 |
+| 5.5 (Easy) | 78% | 59% | 95% | 6.49 |
+| 6.0 (Normal) | 61% | 36% | 78% | 4.32 |
+| 6.5 (Hard) | 31% | 8% | 47% | 1.06 |
+| 6.75 | 23% | 7% | 31% | 0.63 |
+
+- **Black:** at 5.5 with no handicap Black won 74% to White's 78%; with the 2% handicap Normal as Black won 58% (White 61%). The 12-point gap measured before merges (and 10% handicap, which made Black win 90%) belonged to the old economy.
+- **Easy, random side:** 76%.
+- **Open problem: the ramp runs backwards.** Every difficulty is hardest in rounds 3–5 and gets easier later (merged rooks and queens beat the AI's drafted armies at equal points). Runs end after 3 losses, so the early rounds decide them: Hard averages about one win.
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.
