@@ -11,9 +11,9 @@ describe('difficulty', () => {
       ['hard', 6.5],
     ] as const) {
       for (let seed = 0; seed < 20; seed++) {
-        const b = aiBudget(5, seededRng(seed), difficulty(id).perRound);
-        expect(b).toBeGreaterThanOrEqual(Math.round(5 * per) - 1);
-        expect(b).toBeLessThanOrEqual(Math.round(5 * per) + 1);
+        const b = aiBudget(6, seededRng(seed), difficulty(id).perRound);
+        expect(b).toBeGreaterThanOrEqual(Math.round(6 * per) - 1);
+        expect(b).toBeLessThanOrEqual(Math.round(6 * per) + 1);
       }
     }
   });

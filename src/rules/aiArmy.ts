@@ -129,7 +129,25 @@ export function aiBudget(
   roundOneDiscount = ROUND_ONE_DISCOUNT,
   bonus = 0,
 ): number {
-  return Math.round(perRound * round) + bonus + randomInt(rng, 3) - 1 - (round === 1 ? roundOneDiscount : 0);
+  return (
+    Math.round(perRound * round * rampFactor(round)) +
+    bonus +
+    randomInt(rng, 3) -
+    1 -
+    (round === 1 ? roundOneDiscount : 0)
+  );
+}
+
+/**
+ * Shapes the budget over a run so the difficulty is steady: with a flat perRound × round, every
+ * difficulty was hardest in rounds 3–5 (the player has few pieces and no merges yet) and easiest from
+ * round 7 (merged rooks and queens beat drafted armies at equal points). Per round, the factor that
+ * gave the target win rate (SIMULATION.md §15); the last one holds from then on.
+ */
+export const RAMP = [1, 0.93, 0.92, 0.94, 0.97, 1, 1.03, 1.05];
+
+export function rampFactor(round: number): number {
+  return RAMP[Math.min(round, RAMP.length) - 1] ?? 1;
 }
 
 /**

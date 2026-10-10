@@ -11,6 +11,8 @@ import {
   placeAiArmy,
   maxArmyValue,
   placeForBattle,
+  RAMP,
+  rampFactor,
 } from './aiArmy';
 import { BOARDS, homeSquares, pawnSquares } from '../chess/boardSpec';
 import { PIECES, type PieceType, PIECE_VALUE } from './pieces';
@@ -22,12 +24,21 @@ const points = (types: PieceType[]) => types.reduce((s, t) => s + PIECE_VALUE[t]
 const count = (types: PieceType[], t: PieceType) => types.filter((x) => x === t).length;
 
 describe('aiBudget', () => {
-  it('is 6×round within ±1', () => {
+  it('is 6×round within ±1 where the ramp is neutral (round 6)', () => {
     for (let seed = 0; seed < 20; seed++) {
-      const b = aiBudget(3, seededRng(seed));
-      expect(b).toBeGreaterThanOrEqual(17);
-      expect(b).toBeLessThanOrEqual(19);
+      const b = aiBudget(6, seededRng(seed));
+      expect(b).toBeGreaterThanOrEqual(35);
+      expect(b).toBeLessThanOrEqual(37);
     }
+  });
+
+  it('ramps: smaller in the early rounds, bigger later', () => {
+    const mid = (round: number) => aiBudget(round, () => 0.5); // randomInt(…, 3) = 1: no jitter
+    expect(mid(3)).toBe(Math.round(18 * 0.92));
+    expect(mid(10)).toBe(Math.round(60 * 1.05));
+    expect(rampFactor(3)).toBeLessThan(1);
+    expect(rampFactor(6)).toBe(1);
+    expect(rampFactor(20)).toBe(RAMP.at(-1));
   });
 
   it('is one point smaller in round 1', () => {
