@@ -151,8 +151,8 @@ export class PlacementBoard {
     if (this.picking?.picked.has(p.id)) el.classList.add('picked');
     if (this.press?.dragging && p.id === this.press.pieceId) el.classList.add('drag-source');
     el.dataset.id = p.id;
-    fillPiece(el, p.type);
-    el.title = PIECE_NAME[p.type];
+    fillPiece(el, p.type, 'w', p.affinity);
+    el.title = p.affinity ? `${PIECE_NAME[p.affinity]}-pawn` : PIECE_NAME[p.type];
     return el;
   }
 
@@ -193,7 +193,7 @@ export class PlacementBoard {
       const piece = this.pieces.find((p) => p.id === press.pieceId)!;
       press.ghost = document.createElement('div');
       press.ghost.className = 'piece ghost';
-      fillPiece(press.ghost, piece.type);
+      fillPiece(press.ghost, piece.type, 'w', piece.affinity);
       document.body.appendChild(press.ghost);
       this.render();
     }

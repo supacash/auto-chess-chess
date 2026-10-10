@@ -2,8 +2,8 @@ import { BOARDS } from '../chess/boardSpec';
 import { AI_STYLES } from '../rules/aiArmy';
 import { DEFAULT_SETTINGS, type DifficultyId, isDifficultyId, isSideId, type RunSettings } from '../rules/difficulty';
 import { isModeId, type ModeId } from '../rules/mode';
-import { OFFER_COUNT, type Shop } from '../rules/economy';
-import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
+import { isOffer, type Offer, OFFER_COUNT, type Shop } from '../rules/economy';
+import { isAffinity, isPieceType, type Piece } from '../rules/pieces';
 import type { Run } from '../rules/run';
 import type { ManualState } from './manualBattle';
 import { type BattleRecord, parseRecord } from './record';
@@ -273,8 +273,8 @@ function parseManual(data: unknown): { manual?: ManualState } {
 }
 
 /** Offers are optional (saves from before the shop had them have none; the session rolls new ones). */
-function parseOffers(data: unknown): { offers?: PieceType[] } {
-  if (!Array.isArray(data) || data.length > OFFER_COUNT || !data.every(isPieceType)) return {};
+function parseOffers(data: unknown): { offers?: Offer[] } {
+  if (!Array.isArray(data) || data.length > OFFER_COUNT || !data.every(isOffer)) return {};
   return { offers: data };
 }
 
@@ -296,7 +296,10 @@ function parsePieces(data: unknown): Piece[] | null {
         return null;
       square = { file: sq.file, rank: sq.rank };
     }
-    out.push({ id: p.id, type: p.type as Piece['type'], square });
+    const piece: Piece = { id: p.id, type: p.type as Piece['type'], square };
+    // An affinity only belongs on a pawn; anything else is dropped.
+    if (p.type === 'P' && isAffinity(p.affinity)) piece.affinity = p.affinity;
+    out.push(piece);
   }
   return out;
 }

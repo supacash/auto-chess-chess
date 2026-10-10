@@ -1,29 +1,31 @@
 /**
  * The `--player shop` stand-in: keeps one persistent Shop for the whole run and spends its gold
- * each round with a simple greedy plan.
+ * each round with a simple greedy plan built around affinity pawns.
  *
- * Per step: buy a pawn offer while pawns are below the style's pawn share of the army's total
- * value (army + gold); otherwise buy the affordable offer the style likes best (pawns only if they
- * fit). Once the army fills the board, it merges to free squares: three pawns into a minor piece, a
- * minor piece and two pawns into a rook (both points-neutral), then two rooks into a queen and two
- * minor pieces into a rook (each loses a point); with a full board it also buys offers that complete
- * a merge (a rook to pair with a rook, a minor piece with a minor) onto the bench. Gold upgrades
- * (pawn → minor piece, which costs more than it adds) come after that; then it sells its cheapest
- * piece for a more valuable offer, and rerolls the shop (up to MAX_REROLLS a round) while it has gold
- * and something to gain.
- * Gold that fits nothing carries over. Like a sensible player, it only buys pawns that fit the
- * current board's home rows. Every action goes through the real shop functions, so the caps apply
- * exactly as in the game. The caller stocks `shop.offers` each round.
+ * Per step:
+ * 1. Merge any finished set: three affinity pawns with the same affinity into that piece; once the
+ *    board is full, two rooks into a queen, and three knights or three bishops into a queen.
+ * 2. Buy an affinity pawn that adds to a set it's collecting (fullest set first), or starts one (at
+ *    most MAX_SETS at a time, the affinity its style likes best, rook- and queen-pawns weighted by the
+ *    style's rook and queen weights). Plain pawns (Berolina) fill pawn slots while pawns are below the
+ *    style's pawn share; finished pieces are bought when the style likes them and they fit.
+ * 3. Upgrade a plain pawn into a minor piece with gold (3 gold) when there's room for nothing else.
+ * 4. Sell its cheapest piece for a more valuable offer when the army is full.
+ * 5. Reroll (up to MAX_REROLLS a round, keeping REROLL_RESERVE gold) while it has gold to spend.
+ * Gold that fits nothing carries over. Every action goes through the real shop functions, so the
+ * caps (bench, pawns) apply exactly as in the game. The caller stocks `shop.offers` each round.
  */
 import { type BoardSpec, pawnSquares } from '../../src/chess/boardSpec';
 import type { AiStyle } from '../../src/rules/aiArmy';
 import {
   buyOffer,
   fusePieces,
+  fuseSet,
+  isAffinityOffer,
+  type Offer,
+  offerPrice,
   REROLL_COST,
   rerollOffers,
-  fuseSet,
-  pawnFusionResults,
   type Shop,
   sellPiece,
   sellValue,
@@ -31,7 +33,7 @@ import {
   upgradeCost,
   upgradePiece,
 } from '../../src/rules/economy';
-import { isPawnLike, type Piece, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
+import { type Affinity, isPawnLike, type Piece, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
 import { armyCap } from '../../src/rules/placement';
 import { type Rng, weightedPick } from '../../src/rules/rng';
 
@@ -39,64 +41,70 @@ export function armyValue(shop: Shop): number {
   return shop.pieces.reduce((s, p) => s + PIECE_VALUE[p.type], 0);
 }
 
-const isMinor = (t: PieceType) => t === 'N' || t === 'B';
+/** Sets collected at once: more spreads gold thin and fills the bench with pawns. */
+const MAX_SETS = 2;
+/** Rerolls a round at most. */
+const MAX_REROLLS = 6;
+/** Gold kept back when rerolling: enough to buy a rook-pawn from the new offers. */
+const REROLL_RESERVE = 2;
 
-/** One merge that frees squares, best first (points-neutral before lossy), or null. */
-function bestMerge(shop: Shop, style: AiStyle, fairy: boolean): Shop | null {
-  const pawns = shop.pieces.filter((p) => isPawnLike(p.type));
-  const minors = shop.pieces.filter((p) => isMinor(p.type));
-  const rooks = shop.pieces.filter((p) => p.type === 'R');
-  const like = (t: PieceType) => style.weights[t] ?? 0.1;
-  const tries: (() => ReturnType<typeof fuseSet>)[] = [];
-  if (pawns.length >= 3) {
-    const to = pawnFusionResults(fairy).reduce((a, b) => (like(b) > like(a) ? b : a));
-    tries.push(() => fuseSet(shop, ids(pawns.slice(0, 3)), to, fairy));
+const ids = (pieces: Piece[]) => pieces.map((p) => p.id);
+const affinityOf = (offer: Offer): Affinity | null => (isAffinityOffer(offer) ? (offer[1] as Affinity) : null);
+
+/** One merge, best first, or null. Affinity sets always; the rest only to free squares. */
+function bestMerge(shop: Shop, full: boolean, fairy: boolean): Shop | null {
+  const byAffinity = new Map<Affinity, Piece[]>();
+  for (const p of shop.pieces) if (p.affinity) byAffinity.set(p.affinity, [...(byAffinity.get(p.affinity) ?? []), p]);
+  for (const [affinity, set] of byAffinity) {
+    if (set.length >= 3) {
+      const r = fuseSet(shop, ids(set.slice(0, 3)), affinity);
+      if (r.ok) return r.shop;
+    }
   }
-  if (minors.length >= 1 && pawns.length >= 2)
-    tries.push(() => fuseSet(shop, ids([minors[0], ...pawns.slice(0, 2)]), 'R', fairy));
-  if (rooks.length >= 2) tries.push(() => fusePieces(shop, rooks[0].id, rooks[1].id, 'Q', fairy));
-  if (minors.length >= 2) tries.push(() => fusePieces(shop, minors[0].id, minors[1].id, 'R', fairy));
-  for (const attempt of tries) {
-    const r = attempt();
+  if (!full) return null;
+  const plain = (t: PieceType) => shop.pieces.filter((p) => p.type === t && !p.affinity);
+  const rooks = plain('R');
+  if (rooks.length >= 2) {
+    const r = fusePieces(shop, rooks[0].id, rooks[1].id, 'Q', fairy);
     if (r.ok) return r.shop;
+  }
+  for (const t of ['N', 'B'] as const) {
+    const set = plain(t);
+    if (set.length >= 3) {
+      const r = fuseSet(shop, ids(set.slice(0, 3)), 'Q');
+      if (r.ok) return r.shop;
+    }
   }
   return null;
 }
 
-const ids = (pieces: Piece[]) => pieces.map((p) => p.id);
-
-/** Rerolls a round at most, so a stand-in with spare gold looks for parts without spending it all. */
-const MAX_REROLLS = 6;
-/** Gold kept back when rerolling: enough to buy a minor piece from the new offers. */
-const REROLL_RESERVE = 3;
-
 export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec, fairy = false, round = 1): Shop {
   let shop = start;
   let rerolls = 0;
+  const like = (t: PieceType) => style.weights[t] ?? 0.1;
   for (;;) {
     const offers = shop.offers ?? [];
-    const pawns = shop.pieces.filter((p) => isPawnLike(p.type)).length;
     const full = shop.pieces.length >= armyCap(spec);
+    const pawns = shop.pieces.filter((p) => isPawnLike(p.type)).length;
+    const pawnRoom = pawns < pawnSquares(spec);
 
-    const pawnFits = !full && pawns < pawnSquares(spec);
-    const wantPawn = pawnFits && pawns * PIECE_VALUE.P < style.pawnShare * (armyValue(shop) + shop.gold);
-    const pawnOffer = offers.findIndex((t) => isPawnLike(t) && PIECE_VALUE[t] <= shop.gold);
-    if (wantPawn && pawnOffer >= 0) {
-      const r = buyOffer(shop, pawnOffer);
-      if (r.ok) {
-        shop = r.shop;
-        continue;
-      }
+    const merged = bestMerge(shop, full, fairy);
+    if (merged) {
+      shop = merged;
+      continue;
     }
 
-    // The affordable offer it likes best (by style weight, pawns counted as 1): offers cost exactly
-    // their value, so they beat gold upgrades.
-    const buyable = offers
-      .map((t, i) => ({ t, i }))
-      .filter(({ t }) => PIECE_VALUE[t] <= shop.gold && !full && (!isPawnLike(t) || pawnFits));
-    if (buyable.length > 0) {
-      const like = (t: PieceType) => (isPawnLike(t) ? 1 : (style.weights[t] ?? 0.1));
-      const best = buyable.reduce((a, b) => (like(b.t) > like(a.t) ? b : a));
+    // Affinity pawns: add to the fullest set, or start one the style likes.
+    const count = (a: Affinity) => shop.pieces.filter((p) => p.affinity === a).length;
+    const sets = new Set(shop.pieces.flatMap((p) => (p.affinity ? [p.affinity] : [])));
+    const candidates = offers
+      .map((o, i) => ({ o, i, a: affinityOf(o) }))
+      .filter((c): c is { o: Offer; i: number; a: Affinity } => c.a !== null && offerPrice(c.o) <= shop.gold)
+      .filter((c) => sets.has(c.a) || sets.size < MAX_SETS);
+    if (candidates.length > 0) {
+      const best = candidates.reduce((x, y) =>
+        count(y.a) > count(x.a) || (count(y.a) === count(x.a) && like(y.a) > like(x.a)) ? y : x,
+      );
       const r = buyOffer(shop, best.i);
       if (r.ok) {
         shop = r.shop;
@@ -104,57 +112,55 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
       }
     }
 
-    // A full board: buy an offer that completes a merge (it waits on the bench), then merge.
-    if (full) {
-      const has = (pred: (t: PieceType) => boolean) => shop.pieces.some((p) => pred(p.type));
-      const part = offers.findIndex(
-        (t) => PIECE_VALUE[t] <= shop.gold && ((t === 'R' && has((x) => x === 'R')) || (isMinor(t) && has(isMinor))),
+    // Finished pieces the style likes (and plain pawns while short of the style's pawn share).
+    const wantPawn = pawnRoom && pawns * PIECE_VALUE.P < style.pawnShare * (armyValue(shop) + shop.gold);
+    const pieces = offers
+      .map((o, i) => ({ o, i }))
+      .filter(
+        ({ o }) =>
+          !isAffinityOffer(o) && offerPrice(o) <= shop.gold && !full && (!isPawnLike(o as PieceType) || wantPawn),
       );
-      if (part >= 0) {
-        const r = buyOffer(shop, part);
-        if (r.ok) {
-          shop = r.shop;
-          continue;
-        }
-      }
-      const merged = bestMerge(shop, style, fairy);
-      if (merged) {
-        shop = merged;
-        continue;
-      }
-    }
-
-    // Gold upgrades: the fallback (one per piece type and target: pieces of a type are interchangeable).
-    const options: { id: string; to: PieceType }[] = [];
-    const seen = new Set<string>();
-    for (const p of shop.pieces) {
-      for (const to of UPGRADES[p.type]) {
-        const key = `${p.type}>${to}`;
-        if (seen.has(key) || upgradeCost(p.type, to) > shop.gold) continue;
-        seen.add(key);
-        if (upgradePiece(shop, p.id, to).ok) options.push({ id: p.id, to });
-      }
-    }
-    if (options.length > 0) {
-      const pick = weightedPick(options, (o) => style.weights[o.to] ?? 0.1, rng);
-      const r = upgradePiece(shop, pick.id, pick.to);
+    if (pieces.length > 0) {
+      const score = (o: Offer) => (isPawnLike(o as PieceType) ? 1 : like(o as PieceType));
+      const best = pieces.reduce((x, y) => (score(y.o) > score(x.o) ? y : x));
+      const r = buyOffer(shop, best.i);
       if (r.ok) {
         shop = r.shop;
         continue;
       }
     }
 
-    // Still full with nothing to do: sell the cheapest piece for an offer worth more than it.
+    // Gold upgrades: a plain pawn into the minor piece the style likes.
+    const plainPawn = shop.pieces.find((p) => p.type === 'P' && !p.affinity);
+    if (plainPawn && rerolls >= MAX_REROLLS) {
+      const options = UPGRADES.P.filter((to) => upgradeCost('P', to) <= shop.gold);
+      if (options.length > 0) {
+        const to = weightedPick(options, like, rng);
+        const r = upgradePiece(shop, plainPawn.id, to);
+        if (r.ok) {
+          shop = r.shop;
+          continue;
+        }
+      }
+    }
+
+    // Full with nothing to do: sell the cheapest piece for a finished piece worth more than it.
     if (full) {
       const cheapest = shop.pieces
-        .filter((p) => p.type !== 'K')
+        .filter((p) => p.type !== 'K' && !p.affinity)
         .reduce<Piece | null>((a, b) => (!a || PIECE_VALUE[b.type] < PIECE_VALUE[a.type] ? b : a), null);
       if (cheapest) {
-        const budget = shop.gold + sellValue(cheapest.type);
+        const budget = shop.gold + sellValue(cheapest);
         const better = offers
-          .map((t, i) => ({ t, i }))
-          .filter(({ t }) => PIECE_VALUE[t] > PIECE_VALUE[cheapest.type] && PIECE_VALUE[t] <= budget && !isPawnLike(t))
-          .sort((a, b) => PIECE_VALUE[b.t] - PIECE_VALUE[a.t])[0];
+          .map((o, i) => ({ o, i }))
+          .filter(
+            ({ o }) =>
+              !isAffinityOffer(o) &&
+              !isPawnLike(o as PieceType) &&
+              PIECE_VALUE[o as PieceType] > PIECE_VALUE[cheapest.type] &&
+              offerPrice(o) <= budget,
+          )
+          .sort((a, b) => offerPrice(b.o) - offerPrice(a.o))[0];
         if (better) {
           const sold = sellPiece(shop, cheapest.id);
           const bought = sold.ok ? buyOffer(sold.shop, better.i) : null;
@@ -165,9 +171,9 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
         }
       }
     }
-    // Spare gold: reroll for new offers while there's something to gain (room, or merge parts to pair).
-    const useful = !full || shop.pieces.some((p) => p.type === 'R' || isMinor(p.type) || isPawnLike(p.type));
-    if (useful && rerolls < MAX_REROLLS && shop.gold >= REROLL_COST + REROLL_RESERVE) {
+
+    // Spare gold: reroll for new offers.
+    if (rerolls < MAX_REROLLS && shop.gold >= REROLL_COST + REROLL_RESERVE) {
       const r = rerollOffers(shop, round, rng, fairy);
       if (r.ok) {
         rerolls++;

@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AFFINITY_PRICE,
   buyOffer,
-  fusePawns,
+  fuseDefaultSet,
   fuseSet,
-  pawnFusionOptions,
   fusePieces,
+  isAffinityOffer,
+  offerPrice,
   fusionOptions,
   fusionResults,
   QUEEN_OFFER_ROUND,
+  setMergePartners,
   setMergeResults,
   maxOfferCost,
   OFFER_COUNT,
@@ -130,10 +133,10 @@ describe('shop offers', () => {
       for (let i = 0; i < 30; i++) {
         const offers = rollOffers(round, rng);
         expect(offers).toHaveLength(OFFER_COUNT);
-        for (const t of offers) {
-          expect(PIECE_VALUE[t]).toBeLessThanOrEqual(maxOfferCost(round));
-          expect(t).not.toBe('K');
-          expect(PIECES[t].group).not.toBe('fusion');
+        for (const o of offers) {
+          expect(offerPrice(o)).toBeLessThanOrEqual(maxOfferCost(round));
+          expect(o).not.toBe('K');
+          if (!isAffinityOffer(o)) expect(PIECES[o].group).not.toBe('fusion');
         }
       }
     }
@@ -145,7 +148,10 @@ describe('shop offers', () => {
     for (let round = 1; round <= 10; round++) {
       for (let i = 0; i < 60; i++) {
         const offers = rollOffers(round, rng);
-        if (round < QUEEN_OFFER_ROUND) expect(offers).not.toContain('Q');
+        if (round < QUEEN_OFFER_ROUND) {
+          expect(offers).not.toContain('Q');
+          expect(offers).not.toContain('PQ');
+        }
         expect(offers).not.toContain('G');
         expect(offers).not.toContain('X');
       }
@@ -155,8 +161,26 @@ describe('shop offers', () => {
   it('offers only standard pieces with fairy pieces off', () => {
     const rng = seededRng(4);
     for (let i = 0; i < 100; i++) {
-      for (const t of rollOffers(6, rng, false)) expect(PIECES[t].group).toBe('standard');
+      for (const o of rollOffers(6, rng, false)) if (!isAffinityOffer(o)) expect(PIECES[o].group).toBe('standard');
     }
+  });
+
+  it('mostly offers affinity pawns: finished pieces are rare', () => {
+    const rng = seededRng(5);
+    const offers = Array.from({ length: 500 }, () => rollOffers(8, rng, false)).flat();
+    const affinity = offers.filter(isAffinityOffer).length;
+    expect(affinity / offers.length).toBeGreaterThan(0.75);
+    expect(offers.filter((o) => o === 'R' || o === 'Q').length / offers.length).toBeLessThan(0.1);
+  });
+
+  it('sells affinity pawns at their price: rook-pawns 2 gold, queen-pawns 3', () => {
+    expect(AFFINITY_PRICE).toEqual({ N: 1, B: 1, R: 2, Q: 3 });
+    const shop: Shop = { gold: 5, pieces: [makePiece('K')], offers: ['PR', 'PQ'] };
+    const next = ok(buyOffer(shop, 0));
+    expect(next.gold).toBe(3);
+    expect(next.pieces.at(-1)).toMatchObject({ type: 'P', affinity: 'R', square: null });
+    expect(sellValue(next.pieces.at(-1)!)).toBe(1);
+    expect(sellValue(makePiece('P', null, 'Q'))).toBe(2);
   });
 
   it('holds back rooks until round 2 and queens until round 6', () => {
@@ -165,7 +189,8 @@ describe('shop offers', () => {
     expect(seen(1).has('R')).toBe(false);
     expect(seen(2).has('R')).toBe(true);
     expect(seen(5).has('Q')).toBe(false);
-    expect(seen(6).has('Q')).toBe(true);
+    expect(seen(5).has('PQ')).toBe(false);
+    expect(seen(6).has('PQ')).toBe(true);
   });
 
   it('buys an offer onto the bench for its value and removes it from the shop', () => {
@@ -192,17 +217,16 @@ describe('shop offers', () => {
   });
 });
 
-describe('fusion', () => {
+describe('two-piece merges and fusion', () => {
   it('knows the recipes in either order', () => {
-    expect(fusionResults('N', 'B', true)).toEqual(['R', 'A']);
-    expect(fusionResults('B', 'N', false)).toEqual(['R']);
+    expect(fusionResults('R', 'R', false)).toEqual(['Q']);
+    expect(fusionResults('N', 'B', false)).toEqual([]); // no mixing knights and bishops any more
+    expect(fusionResults('N', 'N', false)).toEqual([]);
+    expect(fusionResults('N', 'B', true)).toEqual(['A']);
     expect(fusionResults('R', 'N', true)).toEqual(['C']);
     expect(fusionResults('R', 'N', false)).toEqual([]);
     expect(fusionResults('N', 'Q', true)).toEqual(['Z']);
     expect(fusionResults('M', 'N', true)).toEqual(['T']);
-    expect(fusionResults('N', 'N', false)).toEqual(['R']);
-    expect(fusionResults('B', 'B', false)).toEqual(['R']);
-    expect(fusionResults('R', 'R', false)).toEqual(['Q']);
     expect(fusionResults('Q', 'Q', true)).toEqual([]);
     expect(fusionResults('K', 'N', true)).toEqual([]);
     // Fusing then selling pays the same as selling both parts.
@@ -223,86 +247,28 @@ describe('fusion', () => {
     expect(fusePieces(shop, rook.id, shop.pieces[0].id, 'C', true).ok).toBe(false);
   });
 
-  it('merges two rooks into a queen, and two minor pieces into a rook, in any mode', () => {
+  it('merges two rooks into a queen in any mode', () => {
     const a = makePiece('R', { file: 0, rank: 0 });
     const b = makePiece('R');
     const queen = ok(fusePieces({ gold: 0, pieces: [makePiece('K'), a, b] }, a.id, b.id, 'Q', false));
     expect(queen.pieces.map((p) => p.type)).toEqual(['K', 'Q']);
     expect(queen.pieces[1].square).toEqual({ file: 0, rank: 0 });
-    const n = makePiece('N');
-    const bishop = makePiece('B');
-    const rook = ok(fusePieces({ gold: 0, pieces: [makePiece('K'), n, bishop] }, n.id, bishop.id, 'R', true));
-    expect(rook.pieces.map((p) => p.type)).toEqual(['K', 'R']);
   });
 
-  it('lists one option per partner type, preferring benched partners', () => {
+  it('lists one option per partner type, preferring benched partners, and never affinity pawns', () => {
     const knight = makePiece('N', { file: 1, rank: 0 });
     const placedBishop = makePiece('B', { file: 2, rank: 0 });
     const benchBishop = makePiece('B');
     const rook = makePiece('R');
-    const shop: Shop = { gold: 0, pieces: [makePiece('K'), knight, placedBishop, benchBishop, rook, makePiece('P')] };
+    const rookPawn = makePiece('P', null, 'R');
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), knight, placedBishop, benchBishop, rook, rookPawn] };
     expect(fusionOptions(shop, knight.id, true)).toEqual([
-      { partnerId: benchBishop.id, result: 'R' },
       { partnerId: benchBishop.id, result: 'A' },
       { partnerId: rook.id, result: 'C' },
     ]);
-    expect(fusionOptions(shop, knight.id, false)).toEqual([{ partnerId: benchBishop.id, result: 'R' }]);
-    expect(fusionOptions(shop, rook.id, true)).toEqual([{ partnerId: knight.id, result: 'C' }]);
+    expect(fusionOptions(shop, knight.id, false)).toEqual([]);
+    expect(fusionOptions(shop, rookPawn.id, true)).toEqual([]);
     expect(fusionOptions(shop, shop.pieces[0].id, true)).toEqual([]);
-  });
-});
-
-describe('pawn fusion', () => {
-  it('needs three pawns (Berolina pawns count) and offers the Man only with fairy pieces on', () => {
-    const a = makePiece('P', { file: 1, rank: 1 });
-    const shop: Shop = { gold: 0, pieces: [makePiece('K'), a, makePiece('E')] };
-    expect(pawnFusionOptions(shop, a.id, true)).toEqual([]);
-    const three = { ...shop, pieces: [...shop.pieces, makePiece('P')] };
-    expect(pawnFusionOptions(three, a.id, true)).toEqual(['N', 'B', 'M']);
-    expect(pawnFusionOptions(three, a.id, false)).toEqual(['N', 'B']);
-    expect(pawnFusionOptions(three, three.pieces[0].id, true)).toEqual([]);
-  });
-
-  it('is free, keeps points, puts the result on the chosen pawn and uses its own kind, benched first', () => {
-    const chosen = makePiece('P', { file: 2, rank: 1 });
-    const placed = makePiece('P', { file: 3, rank: 1 });
-    const bench1 = makePiece('E');
-    const bench2 = makePiece('P');
-    const shop: Shop = { gold: 0, pieces: [makePiece('K'), chosen, placed, bench1, bench2] };
-    const next = ok(fusePawns(shop, chosen.id, 'B', false));
-    expect(next.gold).toBe(0);
-    // The Berolina pawn is kept: plain pawns go first (the benched one, then the placed one).
-    expect(next.pieces.map((p) => p.id)).toEqual([shop.pieces[0].id, chosen.id, bench1.id]);
-    expect(next.pieces[1]).toEqual({ ...chosen, type: 'B' });
-    expect(points(next)).toBe(points(shop));
-  });
-
-  it('fuses exactly the picked pawns, onto the first picked one on the board', () => {
-    const benched = makePiece('E');
-    const placed = makePiece('E', { file: 1, rank: 1 });
-    const plain = makePiece('P');
-    const spare = makePiece('P');
-    const shop: Shop = { gold: 0, pieces: [makePiece('K'), benched, placed, plain, spare] };
-    const next = ok(fuseSet(shop, [benched.id, placed.id, plain.id], 'N', true));
-    expect(next.pieces.map((p) => p.id)).toEqual([shop.pieces[0].id, placed.id, spare.id]);
-    expect(next.pieces[1]).toEqual({ ...placed, type: 'N' });
-    expect(fuseSet(shop, [benched.id, placed.id], 'N', true).ok).toBe(false);
-    expect(fuseSet(shop, [benched.id, benched.id, plain.id], 'N', true).ok).toBe(false);
-    expect(fuseSet(shop, [benched.id, plain.id, shop.pieces[0].id], 'N', true).ok).toBe(false);
-  });
-
-  it('merges a knight or bishop and two pawns into a rook, on the minor piece’s square', () => {
-    const pawnOnBoard = makePiece('P', { file: 0, rank: 1 });
-    const bishop = makePiece('B', { file: 2, rank: 0 });
-    const pawn = makePiece('E');
-    const shop: Shop = { gold: 0, pieces: [makePiece('K'), pawnOnBoard, bishop, pawn] };
-    const next = ok(fuseSet(shop, [pawnOnBoard.id, bishop.id, pawn.id], 'R', false));
-    expect(next.pieces).toEqual([shop.pieces[0], { ...bishop, type: 'R' }]);
-    expect(points(next)).toBe(points(shop));
-    expect(setMergeResults(['N', 'P', 'P'], false)).toEqual(['R']);
-    expect(setMergeResults(['N', 'B', 'P'], false)).toEqual([]);
-    expect(setMergeResults(['R', 'P', 'P'], false)).toEqual([]);
-    expect(fuseSet(shop, [pawnOnBoard.id, bishop.id, pawn.id], 'Q', false).ok).toBe(false);
   });
 
   it('fuses a Ferz and a Wazir into a Man', () => {
@@ -310,12 +276,51 @@ describe('pawn fusion', () => {
     expect(fusionResults('W', 'F', true)).toEqual(['M']);
     expect(fusionResults('F', 'W', false)).toEqual([]);
   });
+});
 
-  it('rejects other results, the Man without fairy pieces, and too few pawns', () => {
-    const pawns = [makePiece('P'), makePiece('P'), makePiece('P')];
-    const shop: Shop = { gold: 0, pieces: [makePiece('K'), ...pawns] };
-    expect(fusePawns(shop, pawns[0].id, 'R', true).ok).toBe(false);
-    expect(fusePawns(shop, pawns[0].id, 'M', false).ok).toBe(false);
-    expect(fusePawns({ ...shop, pieces: shop.pieces.slice(0, 3) }, pawns[0].id, 'N', true).ok).toBe(false);
+describe('three-piece merges', () => {
+  it('merges three pawns with the same affinity into that piece, keeping the first placed one’s square', () => {
+    const benched = makePiece('P', null, 'R');
+    const placed = makePiece('P', { file: 1, rank: 1 }, 'R');
+    const third = makePiece('P', null, 'R');
+    const other = makePiece('P', null, 'N');
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), benched, placed, third, other] };
+    const next = ok(fuseSet(shop, [benched.id, placed.id, third.id], 'R'));
+    expect(next.gold).toBe(0);
+    expect(next.pieces).toEqual([shop.pieces[0], { id: placed.id, type: 'R', square: { file: 1, rank: 1 } }, other]);
+    expect(fuseSet(shop, [benched.id, placed.id, other.id], 'R').ok).toBe(false); // mixed affinities
+    expect(fuseSet(shop, [benched.id, placed.id, third.id], 'Q').ok).toBe(false);
+    expect(fuseSet(shop, [benched.id, placed.id], 'R').ok).toBe(false);
+    expect(fuseSet(shop, [benched.id, benched.id, third.id], 'R').ok).toBe(false);
+  });
+
+  it('merges three knights or three bishops into a queen, but not a mix', () => {
+    const plain = (t: PieceType) => ({ type: t });
+    expect(setMergeResults([plain('N'), plain('N'), plain('N')])).toEqual(['Q']);
+    expect(setMergeResults([plain('B'), plain('B'), plain('B')])).toEqual(['Q']);
+    expect(setMergeResults([plain('N'), plain('N'), plain('B')])).toEqual([]);
+    expect(setMergeResults([plain('R'), plain('R'), plain('R')])).toEqual([]);
+    expect(setMergeResults([plain('P'), plain('P'), plain('P')])).toEqual([]); // plain pawns don't merge
+    const q = makePiece('P', null, 'Q');
+    expect(setMergeResults([q, { ...q }, { ...q }])).toEqual(['Q']);
+  });
+
+  it('circles two more of the same kind by default, benched ones first', () => {
+    const chosen = makePiece('P', { file: 2, rank: 1 }, 'N');
+    const placed = makePiece('P', { file: 3, rank: 1 }, 'N');
+    const bench = makePiece('P', null, 'N');
+    const wrong = makePiece('P', null, 'B');
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), chosen, placed, wrong, bench] };
+    expect(setMergePartners(shop, chosen.id)?.map((p) => p.id)).toEqual([bench.id, placed.id]);
+    expect(setMergePartners({ ...shop, pieces: shop.pieces.slice(0, 4) }, chosen.id)).toBeNull();
+    const next = ok(fuseDefaultSet(shop, chosen.id, 'N'));
+    expect(next.pieces.map((p) => p.type)).toEqual(['K', 'N', 'P']);
+    expect(next.pieces[1]).toEqual({ id: chosen.id, type: 'N', square: { file: 2, rank: 1 } });
+    expect(next.pieces[2]).toEqual(wrong);
+  });
+
+  it('doesn’t gold-upgrade affinity pawns', () => {
+    const pawn = makePiece('P', null, 'R');
+    expect(upgradePiece({ gold: 10, pieces: [pawn] }, pawn.id, 'N').ok).toBe(false);
   });
 });

@@ -42,29 +42,29 @@ Draft and place a chess army, then watch an engine play the round for both sides
 ## Pieces and economy
 | Piece | Value | Merge | Or gold upgrade |
 |---|---|---|---|
-| Pawn | 1 | (shop offers, 1 gold) | |
-| Knight / Bishop | 3 | 3 pawns | Pawn + 3 gold |
-| Rook | 5 | Minor + 2 pawns, or 2 minors | No: merge, or a rare shop offer |
-| Queen | 9 | 2 Rooks | No: merge, or a rare shop offer |
+| Pawn | 1 | Starting pawns; Berolina pawns from the shop (fairy) | |
+| Knight / Bishop | 3 | 3 knight-pawns / 3 bishop-pawns (1 gold each) | Plain pawn + 3 gold |
+| Rook | 5 | 3 rook-pawns (2 gold each) | No |
+| Queen | 9 | 3 queen-pawns (3 gold each), 2 Rooks, 3 Knights or 3 Bishops | No |
 | King | — | Free, always owned, can't be sold |
 
-- **Gold upgrades:** only Pawn → Knight/Bishop, for 3 gold (1 more than it adds, so merging three pawns is the better deal). Rooks and Queens come only from merging or the shop; spare gold goes into rerolls.
+- **Gold upgrades:** only a plain pawn (no affinity) → Knight/Bishop, for 3 gold. Rooks and Queens come only from merging or the shop; spare gold goes into rerolls.
+- **Affinity pawns:** pawns bought for a piece (knight-, bishop-, rook- or queen-pawn), shown with a small badge of that piece. They fight as ordinary pawns (and count toward the 8-pawn limit) until three with the same affinity are merged into the piece. Rook-pawns cost 2 gold (6 for a 5-point rook: rooks proved strong for their value); queen-pawns 3 gold and only from round 6. They sell for their price − 1. The piece panel and the offer show how many of the set you have ("you have 2/3").
 - **Start:** 3 gold plus King + 4 pawns (Growing) or King + 3 pawns (Classic).
 - **Income:** 5 gold per round, +2 for a win, +1 for a draw.
 - **Selling** refunds value minus 1 (minimum 0).
 - **Army size:** only pieces on the board count: at most two per file, a chess side's worth (16 on 8×8; on the smaller boards that's every home square: 10 / 12 / 14), so it grows with the board in Growing mode. AI armies follow the same limit. No limit on the mix of pieces.
 - **Bench:** up to 8 pieces wait off the board, to mix and match. Bought pieces arrive there, so buying needs a free bench slot. A bench piece can go onto a full board by swapping with a placed one.
 - Pieces lost in battle come back for the next round.
-- **Shop offers:** 4 random pieces each round, each priced at its value, bought onto the bench. Offers cost at most 2 + 2×round (Rooks from round 2, Queens from round 6). Rooks and Queens are rare offers: merging is the main way to get them. Reroll: 1 gold. Fusion pieces are never offered, nor are the Grasshopper and Cannon (players didn't find them worth buying; they stay in the rules for old saves and replays). With fairy pieces off, offers are standard pieces only.
+- **Shop offers:** 4 random offers each round, bought onto the bench: mostly affinity pawns, with finished pieces (priced at their value) rare. Offers cost at most 2 + 2×round (Rooks from round 2; Queens and queen-pawns from round 6). Plain pawns aren't offered. Reroll: 1 gold. Fusion pieces are never offered, nor are the Grasshopper and Cannon (players didn't find them worth buying; they stay in the rules for old saves and replays). With fairy pieces off, offers are standard pieces only.
 - **Piece info:** tapping any piece (yours, a shop offer, or the opponent's in its list or on the revealed board) shows its value and how it moves.
 - **No single-pawn purchases:** pawns come from shop offers (Pawn and Berolina pawn are the most common offers).
-- **Merging** (the main way to upgrade; free, every mode):
-  - Three pawns (Berolina pawns count) → Knight or Bishop (or a Man with fairy pieces on). Points-neutral, frees two squares.
-  - Knight or Bishop + two pawns → Rook. Points-neutral, frees two squares.
-  - Two minor pieces (two Knights, two Bishops, or one of each) → Rook. Loses a point, frees a square.
-  - Two Rooks → Queen. Loses a point, frees a square.
-  - Three-piece merges open a picker (*Merge 3 pawns…* / *Merge with 2 pawns…*): the tapped piece and default partners are circled (pawns of the same kind, benched first, so a Berolina pawn is never used up by accident), and tapping pieces on the board or bench circles or un-circles them. The result takes the minor piece's square if it's on the board, else the first picked piece's on the board. Two-piece merges are buttons on the selected piece, which becomes the result where it stands.
-- **Fusion** (fairy pieces on): free, like merging. With fairy pieces on, Knight + Bishop offers both a Rook and an Archbishop. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Ferz + Wazir → Man (two 1-gold pieces make a 3-point piece: the reason to buy them over pawns, besides standing on the back row and not counting toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for value − 2 (the same as selling both parts).
+- **Merging** (free, every mode, by hand: there's no automatic merging yet):
+  - Three affinity pawns with the same affinity → that piece.
+  - Two Rooks → Queen.
+  - Three Knights → Queen, or three Bishops → Queen (no mixing knights and bishops).
+  - Three-piece merges open a picker (*Merge 3 rook-pawns…*, *Merge 3 knights…*): the tapped piece and two more of the same kind (benched first) are circled, and tapping pieces on the board or bench circles or un-circles them. The result takes the square of the first picked piece on the board. Two-piece merges are buttons on the selected piece, which becomes the result where it stands.
+- **Fusion** (fairy pieces on): free, like merging. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Ferz + Wazir → Man (two 1-gold pieces make a 3-point piece: the reason to buy them over pawns, besides standing on the back row and not counting toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for value − 2 (the same as selling both parts).
 
 ### Fairy pieces
 Values are tuned with the simulator (SIMULATION.md section 11): at equal points, AI armies with fairy pieces do as well as standard ones.

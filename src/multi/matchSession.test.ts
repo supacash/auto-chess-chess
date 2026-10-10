@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOARD_8 } from '../chess/boardSpec';
 import { loadRulesForNode } from '../chess/testRules';
-import { BASE_INCOME } from '../rules/economy';
+import { BASE_INCOME, isAffinityOffer } from '../rules/economy';
 import { makePiece, PIECES } from '../rules/pieces';
 import { armyErrors } from '../rules/placement';
 import { seededRng } from '../rules/rng';
@@ -30,7 +30,7 @@ describe('MatchSession', () => {
     expect(m.phase).toBe('shop');
     expect(m.board).toBe(BOARD_8);
     expect(m.shop.pieces.map((p) => p.type)).toEqual(['K', 'P', 'P', 'P']);
-    expect(m.shop.offers?.every((t) => PIECES[t].group === 'standard')).toBe(true);
+    expect(m.shop.offers?.every((o) => isAffinityOffer(o) || PIECES[o].group === 'standard')).toBe(true);
     expect(m.players.every((p) => p.hp === START_HP)).toBe(true);
   });
 

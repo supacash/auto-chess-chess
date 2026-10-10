@@ -178,3 +178,24 @@ describe('parseMatch', () => {
     expect(parseMatch({ ...match, shop: { ...match.shop, pieces: [{ type: 'X' }] } })).toBeNull();
   });
 });
+
+describe('affinity pawns in saves', () => {
+  it('keeps a pawn’s affinity and affinity offers, and drops affinities on anything else', () => {
+    const match = {
+      code: 'ABCD',
+      uid: 'u1',
+      round: 2,
+      streak: 0,
+      at: 1,
+      shop: {
+        gold: 3,
+        pieces: [makePiece('K', { file: 4, rank: 0 }), makePiece('P', null, 'R'), { ...makePiece('N'), affinity: 'Q' }],
+        offers: ['PR', 'PQ', 'N'],
+      },
+    };
+    const parsed = parseMatch(JSON.parse(JSON.stringify(match)))!;
+    expect(parsed.shop.pieces[1].affinity).toBe('R');
+    expect(parsed.shop.pieces[2].affinity).toBeUndefined();
+    expect(parsed.shop.offers).toEqual(['PR', 'PQ', 'N']);
+  });
+});

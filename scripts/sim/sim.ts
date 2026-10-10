@@ -27,7 +27,7 @@ import { gameMode } from '../../src/rules/mode';
 import { difficulty, isDifficultyId } from '../../src/rules/difficulty';
 import { type BattleLimits, type BattleResult, material } from '../../src/rules/battle';
 import { rollOffers, roundIncome, START_GOLD, startingShop } from '../../src/rules/economy';
-import { makePiece, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
+import { type Piece, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
 import { randomInt, seededRng } from '../../src/rules/rng';
 import { formatMargin, meanMargin } from './stats';
 import { loadRulesForNode } from '../../src/chess/testRules';
@@ -185,11 +185,14 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     // A shop army bigger than the board leaves its cheapest pieces on the bench (placement drops them).
     const player = placeAiArmy(playerTypes, runStyle, rng, spec);
     if (PLAYER === 'shop') {
-      // The shop now holds the placed army (so its pieces don't count against the bench), plus any
-      // pieces that didn't fit, on the bench.
-      const left = [...playerTypes];
-      for (const p of player) left.splice(left.indexOf(p.type), 1);
-      shop = { ...shop, pieces: [...player, ...left.map((t) => makePiece(t))] };
+      // Give the shop's own pieces the placed squares (so they don't count against the bench, and
+      // keep their ids and affinities); pieces that didn't fit stay on the bench.
+      const unplaced = shop.pieces.map((p) => ({ ...p, square: null as Piece['square'] }));
+      for (const placed of player) {
+        const match = unplaced.find((p) => p.square === null && p.type === placed.type);
+        if (match) match.square = placed.square;
+      }
+      shop = { ...shop, pieces: unplaced };
     }
     const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec, AI_FAIRY);
 

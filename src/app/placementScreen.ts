@@ -4,10 +4,15 @@ import {
   fusePieces,
   fuseSet,
   fusionOptions,
-  PAWN_FUSION_COUNT,
+  isAffinityOffer,
+  type Offer,
+  offerName,
+  offerPrice,
+  pieceName,
+  REROLL_COST,
+  SET_MERGE_SIZE,
   setMergePartners,
   setMergeResults,
-  REROLL_COST,
   type ShopResult,
   sellPiece,
   sellValue,
@@ -15,7 +20,7 @@ import {
   upgradeCost,
   upgradePiece,
 } from '../rules/economy';
-import { isPawnLike, type Piece, PIECE_NAME, PIECE_VALUE, PIECES, type PieceType } from '../rules/pieces';
+import { type Affinity, type Piece, PIECE_NAME, PIECE_VALUE, PIECES, type PieceType } from '../rules/pieces';
 import { armyCap, BENCH_SIZE, benchCount } from '../rules/placement';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
@@ -91,7 +96,7 @@ export class PlacementScreen {
           const to = btn.dataset.fuseTo as PieceType;
           const picked = this.fusing;
           this.stopFusing();
-          this.applyShop(fuseSet(shop, picked, to, this.session.run.settings.fairy), to);
+          this.applyShop(fuseSet(shop, picked, to), to);
         }
         return;
       }
@@ -126,7 +131,8 @@ export class PlacementScreen {
       if (!(e.target as HTMLElement).closest('button[data-buy]') || this.selectedOffer === null) return;
       const index = this.selectedOffer;
       this.selectedOffer = null;
-      this.applyShop(buyOffer(this.session.run.shop, index), this.session.run.shop.offers?.[index]);
+      const offer = this.session.run.shop.offers?.[index];
+      this.applyShop(buyOffer(this.session.run.shop, index), offer && (isAffinityOffer(offer) ? 'P' : offer));
     });
     $('#reroll').addEventListener('click', () => {
       this.selectedOffer = null;
@@ -201,18 +207,18 @@ export class PlacementScreen {
     this.renderShop();
   }
 
-  /** Circles or un-circles a piece (at most PAWN_FUSION_COUNT). */
+  /** Circles or un-circles a piece (at most SET_MERGE_SIZE). */
   private togglePick(id: string): void {
     if (!this.fusing) return;
     if (this.fusing.includes(id)) this.fusing = this.fusing.filter((x) => x !== id);
-    else if (this.fusing.length < PAWN_FUSION_COUNT) this.fusing = [...this.fusing, id];
-    else this.setMessage(`${PAWN_FUSION_COUNT} pieces are picked: tap one to swap it out.`);
+    else if (this.fusing.length < SET_MERGE_SIZE) this.fusing = [...this.fusing, id];
+    else this.setMessage(`${SET_MERGE_SIZE} pieces are picked: tap one to swap it out.`);
     this.syncPicking();
   }
 
   private syncPicking(): void {
     if (!this.fusing) return;
-    const parts = this.session.run.shop.pieces.filter((p) => canSetMerge(p.type));
+    const parts = this.session.run.shop.pieces.filter((p) => canSetMerge(p));
     this.board.setPicking({ pickable: new Set(parts.map((p) => p.id)), picked: new Set(this.fusing) });
     this.renderShop();
   }
@@ -220,10 +226,10 @@ export class PlacementScreen {
   /** The merge panel: what's picked, what it can become, and Cancel. */
   private renderFusing(picked: string[]): string {
     const { pieces } = this.session.run.shop;
-    const types = picked.map((id) => pieces.find((p) => p.id === id)!.type);
-    const chosen = types.length ? types.map((t) => inlinePiece(t)).join('') : 'none yet';
-    const results = setMergeResults(types, this.session.run.settings.fairy);
-    const missing = PAWN_FUSION_COUNT - types.length;
+    const parts = picked.map((id) => pieces.find((p) => p.id === id)!);
+    const chosen = parts.length ? parts.map((p) => inlinePiece(p.type, 'w', p.affinity)).join('') : 'none yet';
+    const results = setMergeResults(parts);
+    const missing = SET_MERGE_SIZE - parts.length;
     const buttons = results.length
       ? results
           .map(
@@ -231,9 +237,9 @@ export class PlacementScreen {
               `<button type="button" class="fuse" data-fuse-to="${to}">→ ${inlinePiece(to)} ${PIECE_NAME[to]}</button>`,
           )
           .join('')
-      : `<span class="hint">${missing > 0 ? `Pick ${missing} more.` : 'These don’t merge: pick 3 pawns, or a knight or bishop and 2 pawns.'}</span>`;
+      : `<span class="hint">${missing > 0 ? `Pick ${missing} more.` : 'These don’t merge: pick 3 pawns with the same affinity, or 3 knights, or 3 bishops.'}</span>`;
     return (
-      `<p class="piece-info"><strong>Merge ${PAWN_FUSION_COUNT} pieces</strong> · tap pieces on the board or bench to pick them (${picked.length}/${PAWN_FUSION_COUNT}): ${chosen}</p>` +
+      `<p class="piece-info"><strong>Merge ${SET_MERGE_SIZE} pieces</strong> · tap pieces on the board or bench to pick them (${picked.length}/${SET_MERGE_SIZE}): ${chosen}</p>` +
       `${buttons}<button type="button" data-cancel-fuse>Cancel</button>`
     );
   }
@@ -337,23 +343,27 @@ export class PlacementScreen {
     $<HTMLButtonElement>('#reroll').disabled = gold < REROLL_COST;
     $('#offers').innerHTML = offers.length
       ? offers
-          .map((t, i) => {
-            const cls = ['offer', i === this.selectedOffer ? 'selected' : '', gold < PIECE_VALUE[t] ? 'pricey' : '']
+          .map((o, i) => {
+            const price = offerPrice(o);
+            const cls = ['offer', i === this.selectedOffer ? 'selected' : '', gold < price ? 'pricey' : '']
               .filter(Boolean)
               .join(' ');
-            return `<button type="button" class="${cls}" data-offer="${i}" aria-pressed="${i === this.selectedOffer}">${inlinePiece(t)}<span class="offer-name">${PIECE_NAME[t]}</span><span class="offer-price">${PIECE_VALUE[t]}g</span></button>`;
+            return `<button type="button" class="${cls}" data-offer="${i}" aria-pressed="${i === this.selectedOffer}">${offerIcon(o)}<span class="offer-name">${offerName(o)}</span><span class="offer-price">${price}g</span></button>`;
           })
           .join('')
       : '<span class="hint">Sold out. Reroll for more.</span>';
 
     const detail = $('#offer-detail');
-    const type = this.selectedOffer === null ? undefined : offers[this.selectedOffer];
-    detail.hidden = !type;
-    if (!type) return;
-    const price = PIECE_VALUE[type];
+    const offer = this.selectedOffer === null ? undefined : offers[this.selectedOffer];
+    detail.hidden = !offer;
+    if (!offer) return;
+    const price = offerPrice(offer);
     const full = benchCount(pieces) >= BENCH_SIZE;
     const disabled = gold < price || full ? 'disabled' : '';
-    detail.innerHTML = `<p><strong>${PIECE_NAME[type]}</strong> · ${price} pts. ${PIECES[type].description}</p><button type="button" class="primary" data-buy ${disabled}>${full ? 'Bench full' : `Buy · ${price}g`}</button>`;
+    const about = isAffinityOffer(offer)
+      ? affinityText(offer[1] as Affinity, pieces)
+      : `${PIECE_VALUE[offer]} pts. ${PIECES[offer].description}`;
+    detail.innerHTML = `<p><strong>${offerName(offer)}</strong> · ${about}</p><button type="button" class="primary" data-buy ${disabled}>${full ? 'Bench full' : `Buy · ${price}g`}</button>`;
   }
 
   /** Gold, the buy button, offers, and upgrade/fuse/sell buttons for the selected piece. */
@@ -374,7 +384,7 @@ export class PlacementScreen {
       actions.innerHTML = `<span class="hint">Tap a piece to merge, upgrade or sell it.</span>`;
       return;
     }
-    const upgrades = UPGRADES[piece.type]
+    const upgrades = (piece.affinity ? [] : UPGRADES[piece.type])
       .map((to) => {
         const cost = upgradeCost(piece.type, to);
         const disabled = gold < cost ? 'disabled' : '';
@@ -382,27 +392,28 @@ export class PlacementScreen {
       })
       .join('');
     const sell =
-      piece.type === 'K'
-        ? ''
-        : `<button type="button" class="sell" data-sell>Sell · +${sellValue(piece.type)}g</button>`;
+      piece.type === 'K' ? '' : `<button type="button" class="sell" data-sell>Sell · +${sellValue(piece)}g</button>`;
     // Merging is free: the selected piece becomes the result where it stands, and the partner is used up.
     const fusions = fusionOptions(this.session.run.shop, piece.id, this.session.run.settings.fairy)
       .map(({ partnerId, result }) => {
         const partner = pieces.find((p) => p.id === partnerId)!;
-        return `<button type="button" class="fuse" data-fuse="${partnerId}" data-result="${result}" title="Uses up a ${PIECE_NAME[partner.type]}">+ ${inlinePiece(partner.type)} → ${inlinePiece(result)} ${PIECE_NAME[result]}</button>`;
+        return `<button type="button" class="fuse" data-fuse="${partnerId}" data-result="${result}" title="Uses up a ${pieceName(partner)}">+ ${inlinePiece(partner.type)} → ${inlinePiece(result)} ${PIECE_NAME[result]}</button>`;
       })
       .join('');
-    // Three-piece merges (3 pawns, or a minor piece + 2 pawns): open the picker to choose which pieces.
+    // Three-piece merges (3 matching affinity pawns, or 3 knights or 3 bishops): the picker chooses which.
     const partners = setMergePartners(this.session.run.shop, piece.id);
-    const setResults = partners
-      ? setMergeResults([piece.type, ...partners.map((p) => p.type)], this.session.run.settings.fairy)
-      : [];
-    const setLabel = isPawnLike(piece.type) ? `${PAWN_FUSION_COUNT} pawns` : 'with 2 pawns';
+    const setResults = partners ? setMergeResults([piece, ...partners]) : [];
+    const setLabel = piece.affinity
+      ? `3 ${pieceName(piece).toLowerCase()}s`
+      : `3 ${PIECE_NAME[piece.type].toLowerCase()}s`;
     const pawnFusions = setResults.length
       ? `<button type="button" class="fuse" data-fuse-pawns title="Choose the pieces to merge">Merge ${setLabel}… → ${setResults.map((t) => inlinePiece(t)).join(' ')}</button>`
       : '';
+    const info = piece.affinity
+      ? affinityText(piece.affinity, pieces)
+      : `${PIECE_VALUE[piece.type]} pts. ${PIECES[piece.type].description}`;
     actions.innerHTML =
-      `<p class="piece-info"><strong>${PIECE_NAME[piece.type]}</strong> · ${PIECE_VALUE[piece.type]} pts. ${PIECES[piece.type].description}</p>` +
+      `<p class="piece-info"><strong>${pieceName(piece)}</strong> · ${info}</p>` +
       `${fusions}${pawnFusions}${upgrades}${sell}`;
   }
 
@@ -418,4 +429,16 @@ export class PlacementScreen {
     this.board.setPieces(result.shop.pieces);
     this.piecesChanged(result.shop.pieces);
   }
+}
+
+/** An offer's picture: the piece, or a pawn with its affinity badge. */
+function offerIcon(offer: Offer): string {
+  return isAffinityOffer(offer) ? inlinePiece('P', 'w', offer[1] as Affinity) : inlinePiece(offer);
+}
+
+/** What an affinity pawn is for, and how many of its set the player has. */
+function affinityText(affinity: Affinity, pieces: Piece[]): string {
+  const have = pieces.filter((p) => p.affinity === affinity).length;
+  const name = PIECE_NAME[affinity];
+  return `Fights as a pawn. Three ${name.toLowerCase()}-pawns merge into a ${name} (you have ${have}/${SET_MERGE_SIZE}).`;
 }

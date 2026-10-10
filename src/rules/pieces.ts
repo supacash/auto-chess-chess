@@ -108,11 +108,24 @@ export interface Square {
   rank: number;
 }
 
+/** The piece an affinity pawn merges toward: three with the same affinity make that piece. */
+export type Affinity = 'N' | 'B' | 'R' | 'Q';
+export const AFFINITIES: Affinity[] = ['N', 'B', 'R', 'Q'];
+
+export function isAffinity(v: unknown): v is Affinity {
+  return (AFFINITIES as unknown[]).includes(v);
+}
+
 export interface Piece {
   id: string;
   type: PieceType;
   /** null = on the bench (owned but not placed). */
   square: Square | null;
+  /**
+   * Only on a pawn bought as an affinity pawn ("Rook-pawn"). It fights as an ordinary pawn; the
+   * affinity only matters in the shop (merging, selling).
+   */
+  affinity?: Affinity;
 }
 
 export function sameSquare(a: Square | null, b: Square | null): boolean {
@@ -126,6 +139,8 @@ export function squareName(sq: Square): string {
 // Per-page-load prefix keeps ids unique against pieces restored from a saved run.
 const ID_PREFIX = Math.random().toString(36).slice(2, 7);
 let nextId = 0;
-export function makePiece(type: PieceType, square: Square | null = null): Piece {
-  return { id: `${ID_PREFIX}-${nextId++}`, type, square };
+export function makePiece(type: PieceType, square: Square | null = null, affinity?: Affinity): Piece {
+  const piece: Piece = { id: `${ID_PREFIX}-${nextId++}`, type, square };
+  if (affinity) piece.affinity = affinity;
+  return piece;
 }
