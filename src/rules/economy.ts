@@ -100,6 +100,7 @@ export const OFFER_WEIGHTS: Partial<Record<PieceType, number>> = {
   W: 2,
   M: 1.5,
   L: 1.5,
+  X: 1.5,
   // Rooks and queens are rare: merging is the main way to get them.
   R: 0.75,
   Q: 0.375,

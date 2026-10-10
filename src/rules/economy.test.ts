@@ -140,16 +140,21 @@ describe('shop offers', () => {
     expect(Object.keys(OFFER_WEIGHTS)).not.toContain('K');
   });
 
-  it('offers queens only from QUEEN_OFFER_ROUND, and never grasshoppers or cannons', () => {
+  it('offers queens only from QUEEN_OFFER_ROUND, and never grasshoppers', () => {
     const rng = seededRng(3);
     for (let round = 1; round <= 10; round++) {
       for (let i = 0; i < 60; i++) {
         const offers = rollOffers(round, rng);
         if (round < QUEEN_OFFER_ROUND) expect(offers).not.toContain('Q');
         expect(offers).not.toContain('G');
-        expect(offers).not.toContain('X');
       }
     }
+  });
+
+  it('offers cannons with fairy pieces on', () => {
+    const rng = seededRng(9);
+    const offers = Array.from({ length: 300 }, () => rollOffers(4, rng, true)).flat();
+    expect(offers).toContain('X');
   });
 
   it('offers only standard pieces with fairy pieces off', () => {
