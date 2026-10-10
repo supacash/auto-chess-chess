@@ -140,10 +140,11 @@ export function aiBudget(
 /**
  * Shapes the budget over a run so the difficulty is steady: with a flat perRound × round, every
  * difficulty was hardest in rounds 3–5 (the player has few pieces and no merges yet) and easiest from
- * round 7 (merged rooks and queens beat drafted armies at equal points). Per round, the factor that
- * gave the target win rate (SIMULATION.md §15); the last one holds from then on.
+ * round 7 (merged rooks and queens beat drafted armies at equal points). So it dips in rounds 2–4,
+ * peaks around round 7, and is back to 1 from round 10: holding the peak made the AI outgrow the
+ * player's income and the late game a wall (SIMULATION.md §15). The last factor holds from then on.
  */
-export const RAMP = [1, 0.93, 0.92, 0.94, 0.97, 1.03, 1.08, 1.1];
+export const RAMP = [1, 0.93, 0.92, 0.94, 1, 1.06, 1.1, 1.08, 1.04, 1];
 
 export function rampFactor(round: number): number {
   return RAMP[Math.min(round, RAMP.length) - 1] ?? 1;
