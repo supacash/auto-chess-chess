@@ -9,6 +9,8 @@ import { type Candidate, ENGINE_SETUP, type History, parseInfo, positionCommand 
 const ENGINE_DIR = `${import.meta.env.BASE_URL}fairy/`;
 /** A search or handshake that takes longer than this is treated as a hung engine. */
 const TIMEOUT_MS = 10_000;
+/** How long a search told to stop gets to answer before the engine counts as hung. */
+const STOP_GRACE_MS = 3_000;
 
 interface FairyInstance {
   postMessage(cmd: string): void;
@@ -37,8 +39,10 @@ function loadScript(): Promise<void> {
 
 /**
  * Minimal UCI wrapper around Fairy-Stockfish. One search at a time.
- * A search that hangs returns no candidates, so the battle falls back to a random legal move,
- * and a fresh engine instance replaces the stuck one.
+ * A search still running after TIMEOUT_MS is told to stop and answers with what it has (huge
+ * positions, like a board full of queens, are slow on phones, not stuck). Only an engine that then
+ * stays silent is replaced: the old WASM instance can't be freed, so every restart costs memory
+ * (restarting on slow searches ran phones out of memory late in long runs).
  */
 export class Engine {
   private readonly listeners = new Set<(line: string) => void>();
@@ -77,7 +81,13 @@ export class Engine {
     const done = this.waitFor((l) => l.startsWith('bestmove'));
     this.send(positionCommand(fen, history));
     this.send(`go depth ${depth}`);
-    const reply = await done;
+    let reply = await done;
+    if (reply === null) {
+      // Slow rather than stuck, usually: stop the search and take its best lines so far.
+      const stopped = this.waitFor((l) => l.startsWith('bestmove'), STOP_GRACE_MS);
+      this.send('stop');
+      reply = await stopped;
+    }
     this.listeners.delete(onLine);
 
     if (reply === null) {
@@ -122,8 +132,8 @@ export class Engine {
     return (await ready) !== null;
   }
 
-  /** Resolves with the first matching line, or null after TIMEOUT_MS. */
-  private waitFor(match: (line: string) => boolean): Promise<string | null> {
+  /** Resolves with the first matching line, or null after `timeout` ms. */
+  private waitFor(match: (line: string) => boolean, timeout = TIMEOUT_MS): Promise<string | null> {
     return new Promise((resolve) => {
       const fn = (line: string) => {
         if (!match(line)) return;
@@ -134,7 +144,7 @@ export class Engine {
       const timer = setTimeout(() => {
         this.listeners.delete(fn);
         resolve(null);
-      }, TIMEOUT_MS);
+      }, timeout);
       this.listeners.add(fn);
     });
   }
