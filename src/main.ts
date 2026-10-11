@@ -278,7 +278,7 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
     const result = await play(loaded);
     const settings = session.run.settings;
     const outcome = session.finishBattle(result);
-    if (outcome.over) records.runEnd(settings, outcome.score);
+    if (outcome.over) records.runEnd(settings, outcome.score, outcome.won);
     renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
   } catch (err) {

@@ -3,7 +3,7 @@ import { loadRulesForNode } from '../chess/testRules';
 import type { BattleResult } from '../rules/battle';
 import { OFFER_COUNT } from '../rules/economy';
 import { seededRng } from '../rules/rng';
-import { START_LIVES } from '../rules/run';
+import { FINAL_ROUND, isRunOver, START_LIVES } from '../rules/run';
 import { Session } from './session';
 
 beforeAll(loadRulesForNode);
@@ -66,7 +66,8 @@ describe('Session', () => {
     expect(s.armyErrors()).toEqual([]);
     expect(s.resolveStart().fen).toMatch(/ [wb] - - 0 1$/);
     const outcome = s.finishBattle(result('w'));
-    expect(outcome).toEqual({ playedRound: 1, over: false, score: 1, newBest: false });
+    expect(outcome).toMatchObject({ playedRound: 1, over: false, won: false, score: 1, newBest: false });
+    expect(outcome.record).toEqual({ w: 1, l: 0, d: 0 });
     expect(s.run.round).toBe(2);
   });
 
@@ -123,5 +124,14 @@ describe('Session', () => {
     expect(again.run.lives).toBe(START_LIVES);
     again.finishBattle(result('w'));
     expect(again.manual).toBeNull();
+  });
+
+  it('wins the run by getting through the final round with a life left', () => {
+    const s = new Session(seededRng(3));
+    s.startNewRun({ ...s.run.settings, mode: 'classic' });
+    s.run = { ...s.run, round: FINAL_ROUND, record: { w: 20, l: 1, d: FINAL_ROUND - 22 } };
+    const outcome = s.finishBattle(result('b'));
+    expect(outcome).toMatchObject({ over: true, won: true, playedRound: FINAL_ROUND, score: 20 });
+    expect(isRunOver(s.run)).toBe(true);
   });
 });

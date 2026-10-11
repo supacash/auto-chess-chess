@@ -1,4 +1,5 @@
 import { type BoardSpec, plyLimit } from '../chess/boardSpec';
+import { FINAL_ROUND } from '../rules/run';
 import type { Color } from '../chess/fen';
 import { Game, type Move } from '../chess/rules';
 import { mirrorFen, mirrorSquare, parsePlacement } from '../chess/fen';
@@ -507,7 +508,7 @@ export class BattleScreen {
     this.nextOverride = null;
     this.playback.hidden = true;
     this.result.hidden = false;
-    this.result.dataset.winner = outcome.over ? 'b' : winner;
+    this.result.dataset.winner = outcome.won ? 'w' : outcome.over ? 'b' : winner;
     this.status.textContent = 'Final position';
 
     const moves = Math.ceil(result.plies / 2);
@@ -519,7 +520,13 @@ export class BattleScreen {
         : reason === 'insufficient' && winner !== 'draw'
           ? `${verb} on points, ${material.w}–${material.b}: neither side could checkmate any more.`
           : `${verb} ${REASON_TEXT[reason]}. Material ${material.w}–${material.b} after ${moves} moves.`;
-    if (outcome.over) {
+    if (outcome.won) {
+      const r = outcome.record;
+      $('#result-title').textContent = '🏆 Run complete!';
+      $('#result-detail').textContent =
+        `${summary} You got through all ${FINAL_ROUND} rounds: ${r.w} won, ${r.l} lost, ${r.d} drawn, with a ${outcome.armyPoints}-point army. ${outcome.newBest ? 'New best!' : `Best: ${best}.`}`;
+      $('#next').textContent = 'New game';
+    } else if (outcome.over) {
       const rounds = `${outcome.score} round${outcome.score === 1 ? '' : 's'}`;
       $('#result-title').textContent = 'Game over';
       $('#result-detail').textContent =

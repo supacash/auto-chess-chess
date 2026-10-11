@@ -59,9 +59,16 @@ export class RecordBook {
     );
   }
 
-  runEnd(settings: RunSettings, score: number): void {
+  runEnd(settings: RunSettings, score: number, completed = false): void {
     this.update(
-      recordRunEnd(this.records, runKey(settings.mode, settings.difficulty), runLabel(settings), score, Date.now()),
+      recordRunEnd(
+        this.records,
+        runKey(settings.mode, settings.difficulty),
+        runLabel(settings),
+        score,
+        Date.now(),
+        completed,
+      ),
     );
   }
 

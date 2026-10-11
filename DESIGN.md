@@ -20,6 +20,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 
 ## Runs
 - **3 lives.** A loss costs one; a draw costs none. The score is rounds won.
+- **25 rounds.** Getting through round 25 with a life left wins the run: a victory card (record and final army) and a "completed" count on the Profile. By then both armies are a full board of queens, so the run ends on a high instead of fading out. The header shows "Round 12/25". (An endless mode is being discussed.)
 - **Main menu** (the landing screen, and *Menu* in the header): *Resume game* (shown while a run or a Play it game is in progress, with its round and lives), *New game*, *Multiplayer*, and *Watch your last battle*. A battle interrupted by a reload is reported here.
 - **New run window** (opens from *New game*) sets the run's settings, which are fixed for the whole run:
   - **Board (game mode):** *Growing board* (default; 5×5 growing to 8×8, see Board sizes) or *Classic* (8×8 throughout).

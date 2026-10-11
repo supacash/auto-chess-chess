@@ -1,4 +1,5 @@
 import { averagePlace, averageScore, favouritePiece, matchKey, type Records, runKey } from '../game/records';
+import { FINAL_ROUND } from '../rules/run';
 import { ordinal } from '../multi/names';
 import { DIFFICULTIES } from '../rules/difficulty';
 import { MODES } from '../rules/mode';
@@ -80,6 +81,9 @@ function single(r: Records): string {
           stat('Best', String(s.best)) +
           stat('Average', fmt(averageScore(s))) +
           stat('Rounds W/L/D', `${w}/${l}/${draws}`),
+        s.completed > 0
+          ? `<p class="record-note">🏆 Completed all ${FINAL_ROUND} rounds ${s.completed} time${s.completed === 1 ? '' : 's'}</p>`
+          : '',
       );
     }),
   ).join('');

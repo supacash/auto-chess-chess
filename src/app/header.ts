@@ -1,5 +1,5 @@
 import { difficulty } from '../rules/difficulty';
-import { runScore, START_LIVES } from '../rules/run';
+import { FINAL_ROUND, runScore, START_LIVES } from '../rules/run';
 import { $ } from './dom';
 import type { Session } from './session';
 
@@ -10,7 +10,8 @@ const HEART = '♥︎';
 export function renderHeader(session: Session, round = session.run.round, color = session.run.color): void {
   const { lives, record, settings } = session.run;
   const spec = session.boardOf(round);
-  $('#round').textContent = `Round ${round} · ${spec.files}×${spec.ranks} · ${color === 'w' ? 'White' : 'Black'}`;
+  $('#round').textContent =
+    `Round ${round}/${FINAL_ROUND} · ${spec.files}×${spec.ranks} · ${color === 'w' ? 'White' : 'Black'}`;
   const livesEl = $('#lives');
   livesEl.innerHTML = Array.from(
     { length: START_LIVES },

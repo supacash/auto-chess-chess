@@ -6,6 +6,11 @@ import { gameMode } from './mode';
 import type { Rng } from './rng';
 
 export const START_LIVES = 3;
+/**
+ * A run is won by getting through this round. By then both armies are a full board of queens and
+ * battles stop being interesting, so the run ends on a high instead of fading out.
+ */
+export const FINAL_ROUND = 25;
 
 /** Everything that persists across rounds of one run. */
 export interface Run {
@@ -16,6 +21,8 @@ export interface Run {
   settings: RunSettings;
   /** The player's colour this round; white moves first. */
   color: Color;
+  /** Set by the battle that won the run (see FINAL_ROUND). */
+  won?: boolean;
 }
 
 /** The player's colour for a round under `side`. */
@@ -47,11 +54,15 @@ export function applyResult(run: Run, winner: Winner): Run {
   if (winner === 'w') record.w++;
   else if (winner === 'b') record.l++;
   else record.d++;
+  const lives = winner === 'b' ? run.lives - 1 : run.lives;
   return {
     ...run,
     record,
-    lives: winner === 'b' ? run.lives - 1 : run.lives,
+    lives,
     shop: { ...run.shop, gold: run.shop.gold + roundIncome(winner) },
+    // Decided here, when a battle ends: a run saved past the final round (from before runs ended)
+    // wins with its next battle rather than ending the moment it loads.
+    won: lives > 0 && record.w + record.l + record.d >= FINAL_ROUND,
   };
 }
 
@@ -60,8 +71,19 @@ export function nextRound(run: Run, rng: Rng = Math.random): Run {
   return { ...run, round: run.round + 1, color: rollColor(run.settings.side, rng) };
 }
 
+/** Rounds fought so far. */
+export function roundsPlayed(run: Run): number {
+  return run.record.w + run.record.l + run.record.d;
+}
+
+/** True once the player has got through FINAL_ROUND battles with a life left. */
+export function isRunWon(run: Run): boolean {
+  return run.won === true;
+}
+
+/** True when the run has ended: out of lives, or won. */
 export function isRunOver(run: Run): boolean {
-  return run.lives <= 0;
+  return run.lives <= 0 || isRunWon(run);
 }
 
 /** The score is the number of rounds won. */

@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { seededRng } from './rng';
-import { applyResult, hasStarted, isRunOver, newRun, nextRound, rollColor, runScore, START_LIVES } from './run';
+import {
+  applyResult,
+  FINAL_ROUND,
+  hasStarted,
+  isRunOver,
+  isRunWon,
+  newRun,
+  nextRound,
+  rollColor,
+  runScore,
+  START_LIVES,
+} from './run';
 
 describe('run', () => {
   it('starts at round 1 with full lives and the starting shop', () => {
@@ -79,5 +90,24 @@ describe('player colour', () => {
     const rng = seededRng(5);
     const seen = new Set(Array.from({ length: 20 }, () => rollColor('random', rng)));
     expect(seen).toEqual(new Set(['w', 'b']));
+  });
+});
+
+describe('winning a run', () => {
+  it('is won by the battle that completes FINAL_ROUND rounds with a life left', () => {
+    let run = newRun();
+    run = { ...run, record: { w: FINAL_ROUND - 2, l: 1, d: 0 } };
+    expect(isRunOver(run)).toBe(false);
+    const won = applyResult(run, 'b');
+    expect(won.lives).toBe(run.lives - 1);
+    expect(isRunWon(won)).toBe(true);
+    expect(isRunOver(won)).toBe(true);
+    expect(isRunWon(applyResult({ ...run, lives: 1 }, 'b'))).toBe(false); // out of lives on the last round
+  });
+
+  it('lets a run saved past the final round finish with its next battle', () => {
+    const run = { ...newRun(), round: 26, record: { w: 23, l: 2, d: 0 } };
+    expect(isRunOver(run)).toBe(false);
+    expect(isRunWon(applyResult(run, 'w'))).toBe(true);
   });
 });

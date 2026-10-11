@@ -1616,3 +1616,9 @@ body.in-menu .credits {
   padding: 2px 16px calc(10px + env(safe-area-inset-bottom));
   background: linear-gradient(to top, var(--bg) 70%, rgb(29 31 36 / 0));
 }
+
+.record-note {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--gold);
+}

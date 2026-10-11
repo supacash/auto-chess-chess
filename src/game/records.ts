@@ -15,6 +15,8 @@ export interface RunStats {
   best: number;
   /** Sum of finished runs' scores, for the average. */
   totalScore: number;
+  /** Runs that got through the final round. */
+  completed: number;
   rounds: { w: number; l: number; d: number };
 }
 
@@ -76,7 +78,7 @@ export function matchKey(online: boolean, blitz: boolean): string {
   return `${online ? 'online' : 'bots'}.${blitz ? 'blitz' : 'normal'}`;
 }
 
-const emptyRun = (): RunStats => ({ runs: 0, best: 0, totalScore: 0, rounds: { w: 0, l: 0, d: 0 } });
+const emptyRun = (): RunStats => ({ runs: 0, best: 0, totalScore: 0, completed: 0, rounds: { w: 0, l: 0, d: 0 } });
 const emptyMatch = (): MatchStats => ({ matches: 0, places: [0, 0, 0, 0] });
 
 /** A battle the player fought, from their side: who won, how it ended, and how far behind they ever were. */
@@ -105,7 +107,14 @@ export function recordBattle(records: Records, battle: BattleSummary, run?: stri
 }
 
 /** Records a finished single-player run and its score (rounds won). */
-export function recordRunEnd(records: Records, run: string, label: string, score: number, at: number): Records {
+export function recordRunEnd(
+  records: Records,
+  run: string,
+  label: string,
+  score: number,
+  at: number,
+  completed = false,
+): Records {
   const stats = records.runs[run] ?? emptyRun();
   return {
     ...records,
@@ -116,6 +125,7 @@ export function recordRunEnd(records: Records, run: string, label: string, score
         runs: stats.runs + 1,
         best: Math.max(stats.best, score),
         totalScore: stats.totalScore + score,
+        completed: stats.completed + (completed ? 1 : 0),
       },
     },
     history: addHistory(records.history, { at, kind: 'run', mode: label, result: score }),
@@ -184,6 +194,7 @@ export function parseRecords(data: unknown): Records {
           runs: s.runs as number,
           best: s.best as number,
           totalScore: s.totalScore as number,
+          completed: isCount(s.completed) ? s.completed : 0,
           rounds: { w: r.w as number, l: r.l as number, d: r.d as number },
         };
       }

@@ -1,4 +1,5 @@
 import type { BoardSpec } from '../chess/boardSpec';
+import { PIECE_VALUE } from '../rules/pieces';
 import type { BattleRecord } from '../game/record';
 import { snapshotArmy } from '../game/snapshot';
 import {
@@ -32,16 +33,22 @@ import type { PlacementSession } from './placementSession';
 import { armyErrors, fitToBoard } from '../rules/placement';
 import { type StartPosition, startPosition } from '../rules/position';
 import { type Rng, randomSeed } from '../rules/rng';
-import { applyResult, isRunOver, newRun, nextRound, type Run, runScore } from '../rules/run';
+import { applyResult, isRunOver, isRunWon, newRun, nextRound, type Run, runScore } from '../rules/run';
 
 /** What finishing a battle did to the run, for the result screen. */
 export interface BattleOutcome {
   /** The round the battle was played in (the run has already moved on unless it's over). */
   playedRound: number;
   over: boolean;
+  /** True when the run ended by getting through the final round (see FINAL_ROUND). */
+  won: boolean;
   /** Rounds won this run. */
   score: number;
   newBest: boolean;
+  /** The points of the army the player finished with (for the victory screen). */
+  armyPoints: number;
+  /** The run's record after this battle. */
+  record: { w: number; l: number; d: number };
 }
 
 /**
@@ -262,7 +269,9 @@ export class Session implements PlacementSession {
       this.draftOpponent();
       this.persist();
     }
-    return { playedRound, over, score, newBest };
+    const won = isRunWon(this.run);
+    const armyPoints = this.run.shop.pieces.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0);
+    return { playedRound, over, won, score, newBest, armyPoints, record: { ...this.run.record } };
   }
 
   private loadBest(): number {
