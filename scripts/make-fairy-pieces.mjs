@@ -92,9 +92,19 @@ function drawShape(shape, color) {
   return `${HEADER}${bold}${body}${detail}</svg>\n`;
 }
 
-// ---- fusion pieces: partner behind, knight in front, both Chessnut ----
+// ---- fusion pieces: one part behind, the other in front ----
+// The knight compounds use two Chessnut pieces; the others put one of the shapes above in front.
 
-const FUSION = { T: 'K', A: 'B', C: 'R', Z: 'Q' };
+const FUSION = {
+  T: ['K', 'N'],
+  A: ['B', 'N'],
+  C: ['R', 'N'],
+  Z: ['Q', 'N'],
+  D: ['R', 'F'], // Dragon King: rook + ferz
+  H: ['B', 'W'], // Dragon Horse: bishop + wazir
+  U: ['L', 'N'], // Wildebeest: camel + knight
+  S: ['B', 'X'], // Siege Cannon: bishop + cannon
+};
 
 /** The drawing inside a Chessnut SVG (everything between <svg …> and </svg>). */
 function inner(file) {
@@ -102,17 +112,17 @@ function inner(file) {
   return svg.slice(svg.indexOf('>') + 1, svg.lastIndexOf('</svg>'));
 }
 
-function drawFusion(partner, color) {
-  const back = `<g transform="translate(-30 -20) scale(0.82)">${inner(`${color}${partner}.svg`)}</g>`;
-  const front = `<g transform="translate(170 150) scale(0.78)">${inner(`${color}N.svg`)}</g>`;
+function drawFusion([behind, inFront], color) {
+  const back = `<g transform="translate(-30 -20) scale(0.82)">${inner(`${color}${behind}.svg`)}</g>`;
+  const front = `<g transform="translate(170 150) scale(0.78)">${inner(`${color}${inFront}.svg`)}</g>`;
   return `${HEADER}${back}${front}</svg>\n`;
 }
 
 for (const color of ['w', 'b']) {
   for (const [type, shape] of Object.entries(SHAPES))
     writeFileSync(join(dir, `${color}${type}.svg`), drawShape(shape, color));
-  for (const [type, partner] of Object.entries(FUSION)) {
-    writeFileSync(join(dir, `${color}${type}.svg`), drawFusion(partner, color));
+  for (const [type, parts] of Object.entries(FUSION)) {
+    writeFileSync(join(dir, `${color}${type}.svg`), drawFusion(parts, color));
   }
 }
 console.log('Wrote', 2 * (Object.keys(SHAPES).length + Object.keys(FUSION).length), 'fairy piece icons to', dir);

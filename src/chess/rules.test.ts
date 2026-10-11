@@ -48,6 +48,28 @@ describe('Game', () => {
     g.delete();
   });
 
+  it('moves the newer fusions as defined (Dragon King, Dragon Horse, Wildebeest, Siege Cannon)', () => {
+    const moves = (fen: string, from: string) =>
+      new Game(BOARD_8, fen)
+        .legalMoves()
+        .filter((m) => m.startsWith(from))
+        .map((m) => m.slice(from.length));
+    // Dragon King on d4: rook lines plus the four diagonal steps.
+    const dragonKing = moves('7k/8/8/8/3D4/8/8/K7 w - - 0 1', 'd4');
+    expect(dragonKing).toEqual(expect.arrayContaining(['d8', 'a4', 'h4', 'c3', 'e5']));
+    expect(dragonKing).not.toContain('b2');
+    // Dragon Horse on d4: bishop lines plus the four straight steps.
+    const dragonHorse = moves('7k/8/8/8/3H4/8/8/K7 w - - 0 1', 'd4');
+    expect(dragonHorse).toEqual(expect.arrayContaining(['g7', 'd5', 'c4']));
+    expect(dragonHorse).not.toContain('d6');
+    // Wildebeest on d4: knight and camel jumps.
+    expect(moves('7k/8/8/8/3U4/8/8/K7 w - - 0 1', 'd4')).toEqual(expect.arrayContaining(['e6', 'e7', 'g5']));
+    // Siege Cannon on d1: captures the queen only by jumping the pawn on d4.
+    const cannon = moves('3q3k/8/8/8/3P4/8/8/K2S4 w - - 0 1', 'd1');
+    expect(cannon).toContain('d8');
+    expect(cannon).not.toContain('d5');
+  });
+
   it('has no castling even with rooks and king on their home squares', () => {
     const g = new Game(BOARD_8, '4k3/8/8/8/8/8/8/R3K2R w - - 0 1');
     expect(g.legalMoves()).not.toContain('e1g1');

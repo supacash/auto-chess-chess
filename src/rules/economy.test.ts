@@ -284,6 +284,14 @@ describe('two-piece merges and fusion', () => {
     expect(fusionResults('W', 'F', true)).toEqual(['M']);
     expect(fusionResults('F', 'W', false)).toEqual([]);
   });
+
+  it('fuses the Ferz, Wazir, Camel and Cannon into the newer compounds', () => {
+    expect(fusionResults('R', 'F', true)).toEqual(['D']);
+    expect(fusionResults('W', 'B', true)).toEqual(['H']);
+    expect(fusionResults('L', 'N', true)).toEqual(['U']);
+    expect(fusionResults('B', 'X', true)).toEqual(['S']);
+    expect(fusionResults('R', 'F', false)).toEqual([]);
+  });
 });
 
 describe('three-piece merges', () => {

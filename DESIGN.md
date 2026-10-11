@@ -70,7 +70,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
   - Two Rooks → Queen.
   - Three Knights → Queen, or three Bishops → Queen (no mixing knights and bishops).
   - Three of a kind merge in one tap: the selected piece shows *Merge 3 → Rook* (three plain pawns show a button each for Knight and Bishop), using it and two more of the same kind, benched ones first. The result takes the square of the first of them on the board. Two-piece merges are buttons on the selected piece, which becomes the result where it stands.
-- **Fusion** (fairy pieces on): free, like merging. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Ferz + Wazir → Man (two 1-gold pieces make a 3-point piece: the reason to buy them over pawns, besides standing on the back row and not counting toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for value − 2 (the same as selling both parts).
+- **Fusion** (fairy pieces on): free, like merging. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Rook + Ferz → Dragon King, Bishop + Wazir → Dragon Horse, Knight + Camel → Wildebeest, Cannon + Bishop → Siege Cannon, Ferz + Wazir → Man (two 1-gold pieces make a 3-point piece: the reason to buy them over pawns, besides standing on the back row and not counting toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for value − 2 (the same as selling both parts).
 
 ### Fairy pieces
 Values are tuned with the simulator (SIMULATION.md section 11): at equal points, AI armies with fairy pieces do as well as standard ones.
@@ -88,6 +88,10 @@ Values are tuned with the simulator (SIMULATION.md section 11): at equal points,
 | Archbishop | 7 | Bishop + Knight (fusion) |
 | Chancellor | 8 | Rook + Knight (fusion) |
 | Amazon | 12 | Queen + Knight (fusion) |
+| Dragon King | 7 | Rook + one diagonal step (fusion: Rook + Ferz) |
+| Dragon Horse | 5 | Bishop + one straight step (fusion: Bishop + Wazir) |
+| Wildebeest | 5 | Knight and Camel jumps (fusion: Knight + Camel) |
+| Siege Cannon | 6 | Moves like a queen; captures by jumping exactly one piece (fusion: Cannon + Bishop) |
 
 ## Board sizes
 In Growing mode the board opens up during the run:

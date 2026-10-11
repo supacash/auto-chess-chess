@@ -21,7 +21,11 @@ export type PieceType =
   | 'T' // Centaur
   | 'A' // Archbishop
   | 'C' // Chancellor
-  | 'Z'; // Amazon
+  | 'Z' // Amazon
+  | 'D' // Dragon King (rook + ferz)
+  | 'H' // Dragon Horse (bishop + wazir)
+  | 'U' // Wildebeest (knight + camel)
+  | 'S'; // Siege Cannon (cannon + bishop)
 
 export type PieceGroup = 'standard' | 'pawn' | 'utility' | 'chaos' | 'fusion';
 
@@ -83,6 +87,28 @@ export const PIECES: Record<PieceType, PieceDef> = {
   A: { name: 'Archbishop', value: 7, group: 'fusion', betza: 'BN', description: 'Bishop and knight moves combined.' },
   C: { name: 'Chancellor', value: 8, group: 'fusion', betza: 'RN', description: 'Rook and knight moves combined.' },
   Z: { name: 'Amazon', value: 12, group: 'fusion', betza: 'QN', description: 'Queen and knight moves combined.' },
+  D: {
+    name: 'Dragon King',
+    value: 7,
+    group: 'fusion',
+    betza: 'RF',
+    description: 'Moves like a rook, or one step diagonally.',
+  },
+  H: {
+    name: 'Dragon Horse',
+    value: 5,
+    group: 'fusion',
+    betza: 'BW',
+    description: 'Moves like a bishop, or one step straight.',
+  },
+  U: { name: 'Wildebeest', value: 5, group: 'fusion', betza: 'NC', description: 'Jumps like a knight or a camel.' },
+  S: {
+    name: 'Siege Cannon',
+    value: 6,
+    group: 'fusion',
+    betza: 'mQcpQ',
+    description: 'Moves like a queen; captures only by jumping over exactly one piece.',
+  },
 };
 
 export const PIECE_TYPES = Object.keys(PIECES) as PieceType[];

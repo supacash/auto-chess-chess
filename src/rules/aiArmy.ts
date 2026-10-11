@@ -41,7 +41,7 @@ export const AI_STYLES: AiStyle[] = [
     name: 'Balanced',
     pawnShare: 0.35,
     weights: { N: 2, B: 2, R: 1.5, Q: 1 },
-    fairyWeights: { M: 0.6, L: 0.5, X: 0.7, T: 0.4, A: 0.5, C: 0.4 },
+    fairyWeights: { M: 0.6, L: 0.5, X: 0.7, T: 0.4, A: 0.5, C: 0.4, D: 0.3, H: 0.3, U: 0.3, S: 0.3 },
     berolinaShare: 0.2,
     kingFiles: [4, 3],
     kingRank: 0,
@@ -55,7 +55,7 @@ export const AI_STYLES: AiStyle[] = [
     pawnShare: 0.6,
     weights: { N: 1, B: 1.5, R: 1.5, Q: 0.5 },
     // Short-range defenders and a cannon behind the pawn wall.
-    fairyWeights: { F: 1, W: 1, M: 1.2, X: 1, C: 0.3 },
+    fairyWeights: { F: 1, W: 1, M: 1.2, X: 1, C: 0.3, D: 0.6, H: 0.6 },
     berolinaShare: 0.15,
     kingFiles: [6, 7],
     kingRank: 0,
@@ -69,7 +69,7 @@ export const AI_STYLES: AiStyle[] = [
     // Was 0.15 pawns and Q 3: too few pieces and pawns to shield the king (players beat it 71%).
     pawnShare: 0.2,
     weights: { N: 0.5, B: 0.8, R: 2.5, Q: 2 },
-    fairyWeights: { X: 1.5, C: 1.5, A: 0.8, Z: 1.2 },
+    fairyWeights: { X: 1.5, C: 1.5, A: 0.8, Z: 1.2, D: 1, S: 1 },
     berolinaShare: 0.2,
     kingFiles: [4, 3],
     kingRank: 0,
@@ -84,7 +84,7 @@ export const AI_STYLES: AiStyle[] = [
     // Was N 3, B 2.5, R 0.5: at equal points it beat players 59% of the time.
     weights: { N: 2, B: 2, R: 1, Q: 0.7 },
     // Jumpers and knight compounds.
-    fairyWeights: { L: 1.5, T: 1.2, A: 1.5 },
+    fairyWeights: { L: 1.5, T: 1.2, A: 1.5, U: 1.2 },
     berolinaShare: 0.3,
     kingFiles: [4, 3, 5],
     kingRank: 0,
@@ -98,7 +98,7 @@ export const AI_STYLES: AiStyle[] = [
     fairyOnly: true,
     pawnShare: 0.3,
     weights: { N: 0.5, B: 0.5, R: 0.5, Q: 0.3 },
-    fairyWeights: { F: 1, W: 1, M: 1.2, L: 1.2, X: 1.2, T: 1, A: 0.8, C: 0.8, Z: 0.5 },
+    fairyWeights: { F: 1, W: 1, M: 1.2, L: 1.2, X: 1.2, T: 1, A: 0.8, C: 0.8, Z: 0.5, D: 0.5, H: 0.5, U: 0.8, S: 0.6 },
     berolinaShare: 0.6,
     kingFiles: [4, 3],
     kingRank: 0,
@@ -191,10 +191,12 @@ const LADDER: Partial<Record<PieceType, PieceType[]>> = { P: ['N', 'B'], N: ['R'
 const FAIRY_UPGRADES: Partial<Record<PieceType, PieceType[]>> = {
   F: ['M'],
   W: ['M'],
-  N: ['T', 'A', 'C'],
-  B: ['A'],
-  R: ['C'],
+  N: ['T', 'A', 'C', 'U'],
+  B: ['A', 'H', 'S'],
+  R: ['C', 'D'],
   Q: ['Z'],
+  L: ['U'],
+  X: ['S'],
 };
 
 /**
@@ -346,6 +348,10 @@ const PLACEMENT_ANALOG: Record<PieceType, 'K' | 'Q' | 'R' | 'B' | 'N' | 'P'> = {
   A: 'B',
   C: 'R',
   Z: 'Q',
+  D: 'R',
+  H: 'B',
+  U: 'N',
+  S: 'R',
 };
 
 /** Maps a file on an 8-wide board to the nearest file on `spec`. */

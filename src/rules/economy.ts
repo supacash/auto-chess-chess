@@ -252,6 +252,10 @@ export const FUSIONS: FusionRecipe[] = [
   { parts: ['N', 'Q'], result: 'Z' }, // Amazon
   { parts: ['N', 'M'], result: 'T' }, // Centaur (the Man stands in for the king)
   { parts: ['F', 'W'], result: 'M' }, // Man: diagonal and straight steps together (worth 3 from 1 + 1)
+  { parts: ['R', 'F'], result: 'D' }, // Dragon King
+  { parts: ['B', 'W'], result: 'H' }, // Dragon Horse
+  { parts: ['N', 'L'], result: 'U' }, // Wildebeest
+  { parts: ['X', 'B'], result: 'S' }, // Siege Cannon
 ];
 
 /** What `a` and `b` can merge or fuse into. Order doesn't matter. */
