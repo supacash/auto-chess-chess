@@ -630,7 +630,7 @@ export class MatchController {
         const tag = (p.bot ? ' <small>bot</small>' : isReady) + streakTag;
         return `<li class="${classes}">
           <span class="name">${p.id === m.myId ? 'You' : escapeHtml(p.name)}${tag}</span>
-          <span class="hp-bar ${hp > 10 ? 'good' : hp > 5 ? 'warn' : 'low'}"><span style="width:${(hp / START_HP) * 100}%"></span></span>
+          <span class="hp-bar ${hp > START_HP / 2 ? 'good' : hp > START_HP / 4 ? 'warn' : 'low'}"><span style="width:${(hp / START_HP) * 100}%"></span></span>
           <span class="hp">${hp}</span><span class="extra">${hit || badge}</span>
         </li>`;
       })

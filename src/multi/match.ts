@@ -11,7 +11,8 @@ import { type Rng, seededRng, shuffle } from '../rules/rng';
 // deterministic from the match seed, so every client computes the same pairings and bot armies.
 
 export const MATCH_SIZE = 4;
-export const START_HP = 20;
+/** Raised from 20 so matches last a little longer (being tested). */
+export const START_HP = 30;
 /** Seconds to shop and place each round (Blitz rooms get BLITZ_SECONDS). Ends early when all are ready. */
 export const SHOP_SECONDS = 45;
 export const BLITZ_SECONDS = 20;

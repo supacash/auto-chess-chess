@@ -25,7 +25,7 @@ import {
 } from '../rules/aiArmy';
 import type { BattleResult } from '../rules/battle';
 import { difficulty, type RunSettings } from '../rules/difficulty';
-import { REROLL_COST, rerollOffers, rollOffers, type Shop, type ShopResult } from '../rules/economy';
+import { REROLL_COST, rerollOffers, restock, rollOffers, type Shop, type ShopResult } from '../rules/economy';
 import { type PerkId, PRESTIGE_STEP, queenOfferRound } from '../rules/prestige';
 import { gameMode } from '../rules/mode';
 import type { Piece } from '../rules/pieces';
@@ -36,6 +36,7 @@ import { type StartPosition, startPosition } from '../rules/position';
 import { type Rng, randomSeed } from '../rules/rng';
 import {
   applyResult,
+  battleIncome,
   isRunOver,
   isRunWon,
   newRun,
@@ -61,6 +62,8 @@ export interface BattleOutcome {
   record: { w: number; l: number; d: number };
   /** The run's prestige level (the victory card offers the next one). */
   prestige: number;
+  /** Gold the battle paid (income, perks and interest). */
+  income: number;
 }
 
 /**
@@ -180,7 +183,7 @@ export class Session implements PlacementSession {
   draftOpponent(): void {
     this.run = {
       ...this.run,
-      shop: { ...this.run.shop, offers: rollOffers(this.run.round, this.rng, this.run.settings.fairy) },
+      shop: restock(this.run.shop, this.run.round, this.rng, this.run.settings.fairy, queenOfferRound(this.run.perks)),
     };
     const spec = this.board;
     const { settings } = this.run;
@@ -299,6 +302,7 @@ export class Session implements PlacementSession {
    */
   finishBattle(result: BattleResult): BattleOutcome {
     const playedRound = this.run.round;
+    const income = battleIncome(this.run, result.winner);
     this.manual = null;
     this.run = applyResult(this.run, result.winner);
     const over = isRunOver(this.run);
@@ -323,6 +327,7 @@ export class Session implements PlacementSession {
       armyPoints,
       record: { ...this.run.record },
       prestige: this.run.prestige,
+      income,
     };
   }
 

@@ -8,7 +8,6 @@ import type { ManualBattle, ManualState } from '../game/manualBattle';
 import { type BattleRecord, recordBoard } from '../game/record';
 import { type MoveSource, runBattle, SEARCH_DEPTH } from '../game/runBattle';
 import { type BattleResult, type EndReason, material, wonOnPoints } from '../rules/battle';
-import { roundIncome } from '../rules/economy';
 import type { Rng } from '../rules/rng';
 import { PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
 import { BattleView } from '../ui/battleView';
@@ -542,7 +541,7 @@ export class BattleScreen {
       const title = winner === 'w' ? 'Victory' : winner === 'b' ? 'Defeat' : 'Draw';
       $('#result-title').textContent = wonOnPoints(result) || reason === 'move-limit' ? `${title} on points` : title;
       const lifeNote = winner === 'b' ? ` −1 life (${lives} left).` : '';
-      $('#result-detail').textContent = `${summary} +${roundIncome(winner)} gold.${lifeNote}`;
+      $('#result-detail').textContent = `${summary} +${outcome.income} gold.${lifeNote}`;
       $('#next').textContent = 'Next round';
     }
   }

@@ -1,6 +1,10 @@
 import {
   buyOffer,
   fusePieces,
+  INTEREST_STEP,
+  interest,
+  MAX_INTEREST,
+  toggleLock,
   fuseDefaultSet,
   fusionOptions,
   isAffinityOffer,
@@ -125,6 +129,9 @@ export class PlacementScreen {
       this.selectedOffer = null;
       const offer = this.session.run.shop.offers?.[index];
       this.applyShop(buyOffer(this.session.run.shop, index), offer && (isAffinityOffer(offer) ? 'P' : offer));
+    });
+    $('#lock').addEventListener('click', () => {
+      this.applyShop({ ok: true, shop: toggleLock(this.session.run.shop) });
     });
     $('#reroll').addEventListener('click', () => {
       this.selectedOffer = null;
@@ -308,8 +315,20 @@ export class PlacementScreen {
   /** Gold, the buy button, offers, and upgrade/fuse/sell buttons for the selected piece. */
   private renderShop(): void {
     this.renderOffers();
-    const { gold, pieces } = this.session.run.shop;
-    $('#gold').textContent = `${gold}g`;
+    const { gold, pieces, locked } = this.session.run.shop;
+    const owed = interest(gold);
+    $('#gold').innerHTML =
+      `${gold}g` +
+      (owed > 0
+        ? ` <small class="interest" title="Interest: +1 gold per ${INTEREST_STEP} saved (up to ${MAX_INTEREST}), paid after the battle">+${owed} interest</small>`
+        : '');
+    const lock = $<HTMLButtonElement>('#lock');
+    lock.textContent = locked ? '🔒' : '🔓';
+    lock.setAttribute('aria-pressed', String(Boolean(locked)));
+    lock.classList.toggle('active', Boolean(locked));
+    lock.title = locked
+      ? 'Locked: these offers stay for next round'
+      : 'Lock the shop: keep these offers for next round';
 
     const actions = $('#piece-actions');
     const piece = pieces.find((p) => p.id === this.selected);

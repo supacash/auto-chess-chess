@@ -5,6 +5,9 @@ import {
   fuseDefaultSet,
   fuseSet,
   fusePieces,
+  interest,
+  restock,
+  toggleLock,
   isAffinityOffer,
   offerPrice,
   fusionOptions,
@@ -330,5 +333,29 @@ describe('three-piece merges', () => {
   it('doesn’t gold-upgrade affinity pawns', () => {
     const pawn = makePiece('P', null, 'R');
     expect(upgradePiece({ gold: 10, pieces: [pawn] }, pawn.id, 'N').ok).toBe(false);
+  });
+});
+
+describe('shop lock and interest', () => {
+  it('pays 1 gold per 10 saved, up to 3', () => {
+    expect([0, 9, 10, 19, 20, 35, 99].map(interest)).toEqual([0, 0, 1, 1, 2, 3, 3]);
+  });
+
+  it('keeps a locked shop’s offers for the next round, then unlocks it', () => {
+    const shop: Shop = { gold: 5, pieces: [makePiece('K')], offers: ['PR', 'PN'] };
+    const locked = toggleLock(shop);
+    expect(locked.locked).toBe(true);
+    const next = restock(locked, 3, seededRng(1));
+    expect(next.offers).toEqual(['PR', 'PN']);
+    expect(next.locked).toBeUndefined();
+    const fresh = restock(next, 4, seededRng(1));
+    expect(fresh.offers).toHaveLength(OFFER_COUNT);
+  });
+
+  it('unlocks when rerolled', () => {
+    const shop: Shop = { gold: 5, pieces: [makePiece('K')], offers: ['PR'], locked: true };
+    const next = ok(rerollOffers(shop, 3, seededRng(2)));
+    expect(next.locked).toBeUndefined();
+    expect(next.offers).toHaveLength(OFFER_COUNT);
   });
 });

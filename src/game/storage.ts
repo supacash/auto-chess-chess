@@ -144,7 +144,15 @@ export function parseMatch(data: unknown): SavedMatch | null {
   if (typeof streak !== 'number' || !Number.isInteger(streak)) return null;
   const pieces = parsePieces(data.shop.pieces);
   if (!pieces || !isCount(data.shop.gold, 0)) return null;
-  return { code, uid, round, streak, at, shop: { gold: data.shop.gold, pieces, ...parseOffers(data.shop.offers) } };
+  const locked = data.shop.locked === true ? { locked: true } : {};
+  return {
+    code,
+    uid,
+    round,
+    streak,
+    at,
+    shop: { gold: data.shop.gold, pieces, ...parseOffers(data.shop.offers), ...locked },
+  };
 }
 
 export function clearGame(): void {
@@ -253,7 +261,12 @@ export function parseSave(raw: unknown): SavedGame | null {
       round: run.round,
       lives: run.lives,
       record: { w: record.w, l: record.l, d: record.d },
-      shop: { gold: run.shop.gold, pieces, ...parseOffers(run.shop.offers) },
+      shop: {
+        gold: run.shop.gold,
+        pieces,
+        ...parseOffers(run.shop.offers),
+        ...(run.shop.locked === true ? { locked: true } : {}),
+      },
       settings,
       color: run.color === 'b' ? 'b' : 'w',
       prestige: isCount(run.prestige, 0) ? run.prestige : 0,

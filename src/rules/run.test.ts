@@ -29,7 +29,7 @@ describe('run', () => {
     expect(run).toMatchObject({ lives: 3, record: { w: 1, l: 0, d: 1 } });
     run = applyResult(run, 'b');
     expect(run).toMatchObject({ lives: 2, record: { w: 1, l: 1, d: 1 } });
-    expect(run.shop.gold).toBe(3 + 7 + 6 + 5);
+    expect(run.shop.gold).toBe(3 + 7 + 6 + 1 + 5 + 1); // +1 interest on 10 and on 17 gold saved
     expect(run.round).toBe(1);
     expect(nextRound(run).round).toBe(2);
   });

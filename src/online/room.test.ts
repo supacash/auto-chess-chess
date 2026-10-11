@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { START_HP } from '../multi/match';
 import { makePiece } from '../rules/pieces';
 import { seededRng } from '../rules/rng';
 import {
@@ -121,8 +122,8 @@ describe('phases', () => {
     const results = { [resultKey(1, 0)]: { winner: 'w' as const, material: { w: 10, b: 0 } } };
     const next = finishRound({ ...room, results });
     expect([next.round, next.phase, next.status]).toEqual([2, 'shop', 'playing']);
-    expect(next.players.find((p) => p.id === pairings[0].black)!.hp).toBe(20 - 3);
-    expect(next.players.find((p) => p.id === pairings[0].white)!.hp).toBe(20);
+    expect(next.players.find((p) => p.id === pairings[0].black)!.hp).toBe(START_HP - 3);
+    expect(next.players.find((p) => p.id === pairings[0].white)!.hp).toBe(START_HP);
     expect(roundResults({ ...room, results })[1]).toBeNull();
   });
 

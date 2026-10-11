@@ -1,7 +1,7 @@
 import type { Color } from '../chess/fen';
 import type { Winner } from './battle';
 import { DEFAULT_SETTINGS, type RunSettings, type SideId } from './difficulty';
-import { roundIncome, type Shop, startingShop } from './economy';
+import { interest, roundIncome, type Shop, startingShop } from './economy';
 import { gameMode } from './mode';
 import { makePiece } from './pieces';
 import { extraIncome, extraLives, type PerkId, perkCount, startGold } from './prestige';
@@ -86,11 +86,16 @@ export function applyResult(run: Run, winner: Winner): Run {
     ...run,
     record,
     lives,
-    shop: { ...run.shop, gold: run.shop.gold + roundIncome(winner) + extraIncome(run.perks) },
+    shop: { ...run.shop, gold: run.shop.gold + battleIncome(run, winner) },
     // Decided here, when a battle ends: a run saved past the final round (from before runs ended)
     // wins with its next battle rather than ending the moment it loads.
     won: lives > 0 && record.w + record.l + record.d >= FINAL_ROUND,
   };
+}
+
+/** Gold a battle pays: round income, Tithe, and interest on the gold saved before it. */
+export function battleIncome(run: Run, winner: Winner): number {
+  return roundIncome(winner) + extraIncome(run.perks) + interest(run.shop.gold);
 }
 
 /** Moves on to the next round, picking the player's colour for it. */

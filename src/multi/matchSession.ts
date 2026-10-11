@@ -2,7 +2,16 @@ import type { PlacementSession } from '../app/placementSession';
 import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
 import type { Color } from '../chess/fen';
 import type { Winner } from '../rules/battle';
-import { BASE_INCOME, rerollOffers, rollOffers, type Shop, type ShopResult, startingShop } from '../rules/economy';
+import {
+  BASE_INCOME,
+  interest,
+  rerollOffers,
+  restock,
+  rollOffers,
+  type Shop,
+  type ShopResult,
+  startingShop,
+} from '../rules/economy';
 import { gameMode } from '../rules/mode';
 import { makePiece, type Piece, type PieceType } from '../rules/pieces';
 import { armyErrors, canPlace, pieceAt } from '../rules/placement';
@@ -227,11 +236,11 @@ export class MatchSession implements PlacementSession {
       return;
     }
     this.round++;
-    this.shop = {
-      ...this.shop,
-      gold: this.shop.gold + matchIncome(myResult, this.streaks.get(this.myId) ?? 0) + (playedBlack ? BLACK_GOLD : 0),
-      offers: rollOffers(this.round, this.rng, false),
-    };
+    const earned =
+      matchIncome(myResult, this.streaks.get(this.myId) ?? 0) +
+      (playedBlack ? BLACK_GOLD : 0) +
+      interest(this.shop.gold);
+    this.shop = { ...restock(this.shop, this.round, this.rng, false), gold: this.shop.gold + earned };
     this.pairings = [];
     this.phase = 'shop';
   }

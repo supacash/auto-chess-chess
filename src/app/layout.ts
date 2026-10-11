@@ -1,4 +1,5 @@
 import { DIFFICULTIES, SIDES } from '../rules/difficulty';
+import { START_HP } from '../multi/match';
 import { REROLL_COST } from '../rules/economy';
 import { MODES } from '../rules/mode';
 
@@ -62,7 +63,7 @@ export function renderLayout(root: HTMLElement): void {
     <div class="shop">
       <div class="shop-row">
         <span class="gold" id="gold" aria-label="Gold"></span>
-        <span class="offers-label">For sale</span>
+        <button id="lock" type="button" class="lock" aria-pressed="false" title="Lock the shop: keep these offers for next round">🔓</button>
         <button id="reroll" type="button">Reroll · ${REROLL_COST}g</button>
       </div>
       <div class="offers" id="offers"></div>
@@ -154,7 +155,7 @@ export function renderLayout(root: HTMLElement): void {
     <form method="dialog" class="new-run-form">
       <h2 id="match-title">Multiplayer</h2>
       <p class="dialog-text">
-        Four players, 20 HP each. Everyone shops at the same time, then the engine plays the battles. Last one
+        Four players, ${START_HP} HP each. Everyone shops at the same time, then the engine plays the battles. Last one
         standing wins.
       </p>
       <details class="rules">

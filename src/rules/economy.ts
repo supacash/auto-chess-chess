@@ -35,6 +35,8 @@ export interface Shop {
   pieces: Piece[];
   /** Offers for sale this round (bought ones are removed). Missing = none. */
   offers?: Offer[];
+  /** Locked: the offers stay for the next round instead of being replaced (see restock). */
+  locked?: boolean;
 }
 
 export type ShopResult = { ok: true; shop: Shop } | { ok: false; error: string };
@@ -59,6 +61,14 @@ export function sellValue(piece: PieceType | Pick<Piece, 'type' | 'affinity'>): 
   if (type === 'K') return 0;
   if (affinity) return AFFINITY_PRICE[affinity] - 1;
   return Math.max(0, PIECE_VALUE[type] - (PIECES[type].group === 'fusion' ? 2 : 1));
+}
+
+/** Interest: +1 gold per INTEREST_STEP gold saved, up to MAX_INTEREST, paid with each round's income. */
+export const INTEREST_STEP = 10;
+export const MAX_INTEREST = 3;
+
+export function interest(gold: number): number {
+  return Math.min(MAX_INTEREST, Math.floor(Math.max(0, gold) / INTEREST_STEP));
 }
 
 export function roundIncome(winner: Winner): number {
@@ -205,7 +215,23 @@ export function rerollOffers(
   queenRound = QUEEN_OFFER_ROUND,
 ): ShopResult {
   if (shop.gold < cost) return { ok: false, error: 'Not enough gold' };
-  return { ok: true, shop: { ...shop, gold: shop.gold - cost, offers: rollOffers(round, rng, fairy, queenRound) } };
+  const { locked: _, ...rest } = shop; // rerolling unlocks
+  return { ok: true, shop: { ...rest, gold: shop.gold - cost, offers: rollOffers(round, rng, fairy, queenRound) } };
+}
+
+/** Locks or unlocks the shop: a locked shop keeps its offers into the next round. */
+export function toggleLock(shop: Shop): Shop {
+  return { ...shop, locked: !shop.locked };
+}
+
+/**
+ * The shop for a new round: fresh offers, unless it was locked, in which case it keeps the offers
+ * (whatever's left of them) and unlocks.
+ */
+export function restock(shop: Shop, round: number, rng: Rng, fairy = true, queenRound = QUEEN_OFFER_ROUND): Shop {
+  const { locked, ...rest } = shop;
+  if (locked && rest.offers) return rest;
+  return { ...rest, offers: rollOffers(round, rng, fairy, queenRound) };
 }
 
 // ---- two-piece merges and fusion ----
