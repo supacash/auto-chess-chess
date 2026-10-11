@@ -158,9 +158,9 @@ export class PlacementScreen {
   /** Shows the screen for the session's current round. */
   show(): void {
     const match = this.mode.onReady !== undefined;
-    // Play yourself runs only have Play it; auto runs and matches only Auto fight / Ready.
+    // Auto runs have Play it and Auto fight; Play yourself runs only Play it; matches only Ready.
     const manual = !match && this.session.run.settings.manual === true;
-    this.playBtn.hidden = !manual;
+    this.playBtn.hidden = match;
     this.playBtn.classList.toggle('primary', manual);
     this.fightBtn.hidden = manual;
     $('#clear').hidden = false;
