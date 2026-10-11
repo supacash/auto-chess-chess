@@ -52,10 +52,10 @@ export function renderLayout(root: HTMLElement): void {
   </div>
 
   <section id="placement">
-    <p class="help" id="help">
-      Place your king and any other pieces in your home rows (the lit squares), buy pieces from the shop, upgrade or fuse them, then press
-      <strong>Auto fight</strong> to let the engine play both sides, or <strong>Play it</strong> to move your own pieces. Lose a round and you lose a life.
-    </p>
+    <div class="tip" id="tip" role="status" hidden>
+      <span class="tip-icon" aria-hidden="true">💡</span><span id="tip-text"></span>
+      <button type="button" id="tip-close" class="tip-close" aria-label="Dismiss tip">×</button>
+    </div>
     <p class="notice" id="notice" role="status" hidden></p>
     <p class="opponent" id="opponent"></p>
     <p class="opponent-info" id="opponent-info" role="status" hidden></p>
@@ -143,6 +143,7 @@ export function renderLayout(root: HTMLElement): void {
     <div class="result" id="result" hidden>
       <h2 id="result-title"></h2>
       <p id="result-detail"></p>
+      <div class="run-summary" id="run-summary" hidden></div>
       <div class="actions result-actions">
         <button type="button" id="replay">Watch replay</button>
         <button type="button" id="next" class="primary">Next round</button>

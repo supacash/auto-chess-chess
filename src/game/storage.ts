@@ -5,7 +5,8 @@ import { isModeId, type ModeId } from '../rules/mode';
 import { isOffer, type Offer, OFFER_COUNT, type Shop } from '../rules/economy';
 import { isAffinity, isPieceType, type Piece } from '../rules/pieces';
 import { isPerkId } from '../rules/prestige';
-import type { Run } from '../rules/run';
+import type { RoundLog, Run } from '../rules/run';
+import { TIPS, type TipId } from './tips';
 import type { ManualState } from './manualBattle';
 import { type BattleRecord, parseRecord } from './record';
 import { parseRecords, type Records } from './records';
@@ -155,6 +156,26 @@ export function parseMatch(data: unknown): SavedMatch | null {
   };
 }
 
+/** First-run tips the player has dismissed (see game/tips.ts). */
+const TIPS_KEY = 'acc.tips.v1';
+
+export function seenTips(): Set<TipId> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(TIPS_KEY) ?? '[]');
+    return new Set(Array.isArray(raw) ? raw.filter((t): t is TipId => typeof t === 'string' && t in TIPS) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function dismissTip(id: TipId): void {
+  try {
+    localStorage.setItem(TIPS_KEY, JSON.stringify([...seenTips(), id]));
+  } catch {
+    // ignore
+  }
+}
+
 export function clearGame(): void {
   try {
     localStorage.removeItem(RUN_KEY);
@@ -272,11 +293,28 @@ export function parseSave(raw: unknown): SavedGame | null {
       prestige: isCount(run.prestige, 0) ? run.prestige : 0,
       perks: Array.isArray(run.perks) ? run.perks.filter(isPerkId) : [],
       ...(isCount(run.freeRerollRound, 1) ? { freeRerollRound: run.freeRerollRound } : {}),
+      ...parseHistory(run.history),
     },
     ai: { styleId: ai.styleId, pieces: aiPieces },
     ...(data.battleInProgress === true ? { battleInProgress: true } : {}),
     ...parseManual(data.manual),
   };
+}
+
+/** The run's battle log (for the summary); malformed entries are dropped, at most 60 kept. */
+function parseHistory(data: unknown): { history?: RoundLog[] } {
+  if (!Array.isArray(data)) return {};
+  const history = data
+    .filter(
+      (h): h is RoundLog =>
+        isObject(h) &&
+        isCount(h.you, 0) &&
+        isCount(h.them, 0) &&
+        (h.winner === 'w' || h.winner === 'b' || h.winner === 'draw'),
+    )
+    .slice(-60)
+    .map((h) => ({ you: h.you, them: h.them, winner: h.winner }));
+  return { history };
 }
 
 const UCI_MOVE = /^[a-z]\d+[a-z]\d+[a-z]?$/;

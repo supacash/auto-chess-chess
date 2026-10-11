@@ -24,5 +24,4 @@ export function renderHeader(session: Session, round = session.run.round, color 
   const level = difficulty(settings.difficulty);
   $('#best').textContent =
     `Best ${Math.max(session.best, runScore(session.run))}${level.id === 'normal' ? '' : ` (${level.name})`}`;
-  $('#help').hidden = record.w + record.l + record.d > 0;
 }

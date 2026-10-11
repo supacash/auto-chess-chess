@@ -42,6 +42,7 @@ import {
   newRun,
   nextRound,
   type PrestigeCarry,
+  type RoundLog,
   type Run,
   runScore,
 } from '../rules/run';
@@ -56,14 +57,14 @@ export interface BattleOutcome {
   /** Rounds won this run. */
   score: number;
   newBest: boolean;
-  /** The points of the army the player finished with (for the victory screen). */
-  armyPoints: number;
   /** The run's record after this battle. */
   record: { w: number; l: number; d: number };
   /** The run's prestige level (the victory card offers the next one). */
   prestige: number;
   /** Gold the battle paid (income, perks and interest). */
   income: number;
+  /** Every battle of the run so far (the summary shows it when the run ends). */
+  history: RoundLog[];
 }
 
 /**
@@ -303,6 +304,13 @@ export class Session implements PlacementSession {
   finishBattle(result: BattleResult): BattleOutcome {
     const playedRound = this.run.round;
     const income = battleIncome(this.run, result.winner);
+    const points = (pieces: Piece[]) => pieces.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0);
+    const log: RoundLog = {
+      you: points(this.run.shop.pieces.filter((p) => p.square)),
+      them: points(this.aiPieces),
+      winner: result.winner,
+    };
+    this.run = { ...this.run, history: [...(this.run.history ?? []), log] };
     this.manual = null;
     this.run = applyResult(this.run, result.winner);
     const over = isRunOver(this.run);
@@ -317,17 +325,16 @@ export class Session implements PlacementSession {
       this.persist();
     }
     const won = isRunWon(this.run);
-    const armyPoints = this.run.shop.pieces.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0);
     return {
       playedRound,
       over,
       won,
       score,
       newBest,
-      armyPoints,
       record: { ...this.run.record },
       prestige: this.run.prestige,
       income,
+      history: this.run.history ?? [],
     };
   }
 

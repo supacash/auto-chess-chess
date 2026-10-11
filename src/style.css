@@ -994,7 +994,6 @@ button.muted {
 
 /* In a match the run's stats and help give way to the players' health list. */
 body.in-match .run-bar,
-body.in-match #help,
 body.in-match #last-replay,
 body.in-match #menu-button {
   display: none;
@@ -1175,7 +1174,6 @@ details.rules[open] summary {
 }
 
 body.in-lobby .run-bar,
-body.in-lobby #help,
 body.in-lobby #placement,
 body.in-lobby #menu-button {
   display: none;
@@ -1288,7 +1286,6 @@ h1 sup,
 }
 
 body.in-menu .run-bar,
-body.in-menu #help,
 body.in-menu #placement,
 body.in-menu #battle,
 body.in-menu header {
@@ -1681,4 +1678,92 @@ dialog#prestige-dialog::backdrop {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--accent);
+}
+
+/* First-run tip: one line of help, dismissible. */
+.tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 8px 6px 8px 10px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--text);
+  background: rgb(242 201 76 / 0.1);
+  border: 1px solid rgb(242 201 76 / 0.35);
+  border-radius: var(--radius);
+}
+
+.tip[hidden] {
+  display: none;
+}
+
+.tip #tip-text {
+  flex: 1;
+}
+
+button.tip-close {
+  flex: 0 0 auto;
+  min-height: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: none;
+}
+
+/* End-of-run summary on the result card. */
+.run-summary {
+  margin: 4px 0 10px;
+}
+
+.run-summary svg {
+  display: block;
+  width: 100%;
+  height: 72px;
+  background: rgb(255 255 255 / 0.03);
+  border-radius: 6px;
+}
+
+.run-summary polyline {
+  fill: none;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.run-summary polyline.you {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.run-summary polyline.them {
+  stroke: var(--danger);
+  opacity: 0.8;
+}
+
+.run-summary circle.loss {
+  fill: var(--danger);
+}
+
+.summary-legend,
+.summary-stats {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.summary-legend .you {
+  color: var(--accent);
+}
+
+.summary-legend .them {
+  color: var(--danger);
+}
+
+.summary-stats strong {
+  color: var(--text);
 }

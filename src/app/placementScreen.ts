@@ -1,3 +1,5 @@
+import { dismissTip, seenTips } from '../game/storage';
+import { nextTip, TIPS, type TipId } from '../game/tips';
 import {
   buyOffer,
   fusePieces,
@@ -129,6 +131,10 @@ export class PlacementScreen {
       this.selectedOffer = null;
       const offer = this.session.run.shop.offers?.[index];
       this.applyShop(buyOffer(this.session.run.shop, index), offer && (isAffinityOffer(offer) ? 'P' : offer));
+    });
+    $('#tip-close').addEventListener('click', () => {
+      if (this.tip) dismissTip(this.tip);
+      this.renderTip();
     });
     $('#lock').addEventListener('click', () => {
       this.applyShop({ ok: true, shop: toggleLock(this.session.run.shop) });
@@ -280,6 +286,17 @@ export class PlacementScreen {
   }
 
   /** The offer cards, and the selected offer's description and Buy button. */
+  /** The tip currently showing (see game/tips.ts), or null. */
+  private tip: TipId | null = null;
+
+  /** Shows the most useful first-run tip that hasn't been dismissed on this device. */
+  private renderTip(): void {
+    const { shop, round } = this.session.run;
+    this.tip = nextTip(shop, round, seenTips());
+    $('#tip').hidden = this.tip === null;
+    $('#tip-text').textContent = this.tip ? TIPS[this.tip] : '';
+  }
+
   private renderOffers(): void {
     const { gold, pieces, offers = [] } = this.session.run.shop;
     if (this.selectedOffer !== null && this.selectedOffer >= offers.length) this.selectedOffer = null;
@@ -315,6 +332,7 @@ export class PlacementScreen {
   /** Gold, the buy button, offers, and upgrade/fuse/sell buttons for the selected piece. */
   private renderShop(): void {
     this.renderOffers();
+    this.renderTip();
     const { gold, pieces, locked } = this.session.run.shop;
     const owed = interest(gold);
     $('#gold').innerHTML =

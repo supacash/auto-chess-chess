@@ -1,5 +1,5 @@
 import { type BoardSpec, plyLimit } from '../chess/boardSpec';
-import { FINAL_ROUND } from '../rules/run';
+import { FINAL_ROUND, bestStreak, type RoundLog } from '../rules/run';
 import type { Color } from '../chess/fen';
 import { Game, type Move } from '../chess/rules';
 import { mirrorFen, mirrorSquare, parsePlacement } from '../chess/fen';
@@ -482,6 +482,7 @@ export class BattleScreen {
     $('#result-detail').textContent = card.detail;
     $('#replay').hidden = true;
     $('#prestige').hidden = true;
+    $('#run-summary').hidden = true;
     $('#next').textContent = card.button;
     this.nextOverride = card.onButton;
   }
@@ -507,6 +508,9 @@ export class BattleScreen {
     const { winner, reason, material } = result;
     $('#replay').hidden = false;
     $('#prestige').hidden = true;
+    const summary$ = $('#run-summary');
+    summary$.hidden = !outcome.over;
+    summary$.innerHTML = outcome.over ? runSummary(outcome.history) : '';
     this.nextOverride = null;
     this.playback.hidden = true;
     this.result.hidden = false;
@@ -526,11 +530,11 @@ export class BattleScreen {
       const r = outcome.record;
       $('#result-title').textContent = '🏆 Run complete!';
       $('#result-detail').textContent =
-        `${summary} You got through all ${FINAL_ROUND} rounds: ${r.w} won, ${r.l} lost, ${r.d} drawn, with a ${outcome.armyPoints}-point army. ${outcome.newBest ? 'New best!' : `Best: ${best}.`}`;
+        `${summary} You got through all ${FINAL_ROUND} rounds: ${r.w} won, ${r.l} lost, ${r.d} drawn. ${outcome.newBest ? 'New best!' : `Best: ${best}.`}`;
       $('#next').textContent = 'New game';
       const prestige = $<HTMLButtonElement>('#prestige');
       prestige.hidden = false;
-      prestige.textContent = `Prestige ★${outcome.prestige + 1}: start over, tougher, with a perk`;
+      prestige.textContent = `Prestige ★${outcome.prestige + 1}: start over with a perk`;
     } else if (outcome.over) {
       const rounds = `${outcome.score} round${outcome.score === 1 ? '' : 's'}`;
       $('#result-title').textContent = 'Game over';
@@ -571,4 +575,29 @@ export class BattleScreen {
     bar.setAttribute('aria-valuenow', String(Math.round(share * 100)));
     bar.setAttribute('aria-valuetext', `${text} (${share >= 0.5 ? 'you' : 'opponent'} ahead)`);
   }
+}
+
+/**
+ * The end-of-run summary: your army's points against your opponents' round by round (losses
+ * marked), the best win streak and the biggest army.
+ */
+function runSummary(history: RoundLog[]): string {
+  if (history.length === 0) return '';
+  const top = Math.max(1, ...history.flatMap((h) => [h.you, h.them]));
+  const x = (i: number) => (history.length === 1 ? 50 : (i / (history.length - 1)) * 100);
+  const y = (v: number) => 38 - (v / top) * 34;
+  const line = (pick: (h: RoundLog) => number) =>
+    history.map((h, i) => `${x(i).toFixed(1)},${y(pick(h)).toFixed(1)}`).join(' ');
+  const losses = history
+    .map((h, i) =>
+      h.winner === 'b' ? `<circle cx="${x(i).toFixed(1)}" cy="${y(h.you).toFixed(1)}" r="1.6" class="loss" />` : '',
+    )
+    .join('');
+  const peak = Math.max(...history.map((h) => h.you));
+  return `<svg viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="Army points by round: you and your opponents">
+      <polyline points="${line((h) => h.them)}" class="them" />
+      <polyline points="${line((h) => h.you)}" class="you" />${losses}
+    </svg>
+    <p class="summary-legend"><span class="you">● You</span> <span class="them">● Opponents</span> · ${history.length} rounds</p>
+    <p class="summary-stats">Best streak <strong>${bestStreak(history)}</strong> · Biggest army <strong>${peak} pts</strong></p>`;
 }

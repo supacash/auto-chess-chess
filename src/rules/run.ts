@@ -31,6 +31,28 @@ export interface Run {
   perks: PerkId[];
   /** The round the Haggler perk's free reroll was last used in. */
   freeRerollRound?: number;
+  /** One entry per battle fought, for the end-of-run summary. */
+  history?: RoundLog[];
+}
+
+/** A battle in the run's history: the armies' points and how it went. */
+export interface RoundLog {
+  /** Points the player fielded (placed pieces). */
+  you: number;
+  /** Points the opponent fielded. */
+  them: number;
+  winner: Winner;
+}
+
+/** The run's best win streak. */
+export function bestStreak(history: readonly RoundLog[]): number {
+  let best = 0;
+  let current = 0;
+  for (const h of history) {
+    current = h.winner === 'w' ? current + 1 : h.winner === 'b' ? 0 : current;
+    best = Math.max(best, current);
+  }
+  return best;
 }
 
 /** What a new run carries over from the one it prestiges from. */
