@@ -1,4 +1,6 @@
 import './style.css';
+import { whiteEval } from './engine/pick';
+import { SEARCH_DEPTH } from './game/runBattle';
 import { BattleScreen, GamePaused } from './app/battleScreen';
 import { $ } from './app/dom';
 import { renderHeader } from './app/header';
@@ -369,7 +371,22 @@ async function watchReplay(): Promise<void> {
   }
   hideMenu();
   placement.hide();
-  await battle.replay(record, fromMenu ? () => showMenu() : showPlacement);
+  await battle.replay(record, fromMenu ? () => showMenu() : showPlacement, {
+    prepare: async (spec) => {
+      const engine = await ensureEngine();
+      await engine.newGame(spec.variant);
+    },
+    evaluate: async (fen, history) => {
+      const engine = await ensureEngine();
+      const turn = fen.split(' ')[1] === 'b' ? 'b' : 'w';
+      return whiteEval(await engine.candidates(fen, SEARCH_DEPTH, history), turn);
+    },
+    save: (evals) => {
+      // Only while this battle is still the last one (a newer battle replaces it).
+      if (session.lastReplay?.fen !== record.fen || session.lastReplay.seed !== record.seed) return;
+      session.saveReplay({ ...session.lastReplay, evals });
+    },
+  });
 }
 
 /** Picks a saved manual game back up after a reload. */

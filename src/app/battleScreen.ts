@@ -3,7 +3,7 @@ import { FINAL_ROUND, bestStreak, type RoundLog } from '../rules/run';
 import type { Color } from '../chess/fen';
 import { Game, type Move } from '../chess/rules';
 import { mirrorFen, mirrorSquare, parsePlacement } from '../chess/fen';
-import { checkmateEval, evalShare, formatEval, whiteEval } from '../engine/pick';
+import { checkmateEval, evalShare, formatEval, whiteEval, type History } from '../engine/pick';
 import type { ManualBattle, ManualState } from '../game/manualBattle';
 import { type BattleRecord, recordBoard } from '../game/record';
 import { type MoveSource, runBattle, SEARCH_DEPTH } from '../game/runBattle';
@@ -40,6 +40,16 @@ export interface Playback {
   evals: (number | null)[];
   /** The most points the player was ever behind in material (for records). */
   worstDeficit: number;
+}
+
+/** Works out evals for a review of a game that recorded none (manual games). */
+export interface ReviewAnalysis {
+  /** Gets the engine ready for this board. */
+  prepare(spec: BoardSpec): Promise<void>;
+  /** The position's eval from White's side, or null if the engine couldn't search it. */
+  evaluate(fen: string, history: History): Promise<number | null>;
+  /** Keeps the evals worked out so far (so the next review needn't redo them). */
+  save(evals: (number | null)[]): void;
 }
 
 /** Thrown by play() when the battle was stopped with abort(). */
@@ -207,9 +217,10 @@ export class BattleScreen {
   /**
    * Reviews a finished battle: it opens on the final position, and the player steps through the
    * moves (first / back / play / forward / last, or the slider) at their own pace. Done goes back to
-   * the result card, or calls `onDone`. Manual games show no eval bar (none was recorded).
+   * the result card, or calls `onDone`. Manual games recorded no evals: with `analysis`, each
+   * position is evaluated when first shown (cached, and handed to `analysis.save` to keep).
    */
-  async replay(record: BattleRecord, onDone: () => void): Promise<void> {
+  async replay(record: BattleRecord, onDone: () => void, analysis?: ReviewAnalysis): Promise<void> {
     const spec = recordBoard(record);
     if (!spec) return;
     // Every position up front, so stepping back and jumping are instant.
@@ -234,7 +245,10 @@ export class BattleScreen {
     this.replayDone.hidden = false;
     const review = $('#review');
     review.hidden = false;
-    $('#eval').hidden = record.manual;
+    // Evals by move (index i = after move i+1); a manual game's are worked out on demand.
+    const evals: (number | null)[] = record.moves.map((_, i) => record.evals[i] ?? null);
+    const analyse = record.manual ? analysis : undefined;
+    $('#eval').hidden = record.manual && !analyse;
     $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
 
     const slider = $<HTMLInputElement>('#review-slider');
@@ -243,6 +257,36 @@ export class BattleScreen {
     slider.max = String(last);
     let index = last;
     let timer = 0;
+    // On-demand analysis: one search at a time, always for the latest position asked for.
+    let wanted: number | null = null;
+    let running = false;
+    let started = false;
+    let closed = false;
+    const request = (i: number) => {
+      wanted = i;
+      if (running || !analyse) return;
+      running = true;
+      void (async () => {
+        try {
+          while (wanted !== null && !closed) {
+            const k = wanted;
+            wanted = null;
+            if (evals[k - 1] !== null) continue;
+            if (!started) {
+              await analyse.prepare(spec);
+              started = true;
+            }
+            evals[k - 1] = await analyse.evaluate(frames[k].fen, { fen: record.fen, moves: record.moves.slice(0, k) });
+            if (!closed && index === k && evals[k - 1] !== null) this.showEval(evals[k - 1]!);
+          }
+          if (!closed) analyse.save(evals);
+        } catch (err) {
+          console.warn('Review analysis failed', err);
+        } finally {
+          running = false;
+        }
+      })();
+    };
     const stop = () => {
       clearInterval(timer);
       timer = 0;
@@ -258,11 +302,13 @@ export class BattleScreen {
       });
       slider.value = String(index);
       const { result } = record;
-      const score =
-        index === last && result.reason === 'checkmate' && result.winner !== 'draw'
-          ? checkmateEval(result.winner)
-          : latestEval(record.evals, index);
-      this.showEval(score);
+      if (index === last && result.reason === 'checkmate' && result.winner !== 'draw')
+        this.showEval(checkmateEval(result.winner));
+      else if (index === 0 || evals[index - 1] !== null || !analyse) this.showEval(latestEval(evals, index));
+      else {
+        $('#eval-label').textContent = '…';
+        request(index);
+      }
       this.status.textContent =
         index === 0
           ? 'Start position'
@@ -297,6 +343,7 @@ export class BattleScreen {
 
     this.replayDone.onclick = () => {
       stop();
+      closed = true;
       review.hidden = true;
       this.replayDone.hidden = true;
       if (resultWasShown) {
