@@ -11,7 +11,9 @@ import {
   nextStreaks,
   streakBonus,
   type MatchPlayer,
+  matchBoard,
   matchOver,
+  matchRulesLabel,
   mixSeed,
   newPlayers,
   type PairingResult,
@@ -230,5 +232,22 @@ describe('sides', () => {
       }
     }
     for (const id of ['a', 'b', 'c']) expect(sides.get(id)).toEqual(new Set(['w', 'b']));
+  });
+});
+
+describe('match rules', () => {
+  it('play on the room’s board, with fairy bots only in fairy rooms', () => {
+    const growing = { blitz: false, mode: 'growing' as const, fairy: true };
+    expect(matchBoard({ blitz: false }, 1).files).toBe(8);
+    expect(matchBoard(growing, 1).files).toBe(5);
+    expect(matchRulesLabel(growing)).toBe('Growing board · Fairy pieces');
+    expect(matchRulesLabel({ blitz: true })).toBe('Classic · Standard pieces · Blitz');
+    for (let seed = 1; seed <= 20; seed++) {
+      const army = botArmy(seed, 1, 'bot1', growing);
+      expect(armyErrors(army, matchBoard(growing, 1))).toEqual([]);
+      for (const p of botArmy(seed, 8, 'bot1')) expect('KQRBNP').toContain(p.type);
+    }
+    const fairyTypes = Array.from({ length: 20 }, (_, s) => botArmy(s, 8, 'bot1', growing)).flat();
+    expect(fairyTypes.some((p) => !'KQRBNP'.includes(p.type))).toBe(true);
   });
 });

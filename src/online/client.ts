@@ -19,7 +19,8 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import type { MatchSettings } from '../multi/match';
+import { type MatchSettings, matchBoard } from '../multi/match';
+import { isModeId } from '../rules/mode';
 import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
 import { type Rng, randomSeed } from '../rules/rng';
 import {
@@ -170,7 +171,7 @@ export class RoomClient {
         // Filled up or started meanwhile: try the next one.
       }
     }
-    return this.createRoom(name, { blitz }, rng, true);
+    return this.createRoom(name, { blitz, mode: 'classic', fairy: false }, rng, true);
   }
 
   /** Leaves a room still in the lobby. A host leaving an otherwise empty room deletes it. */
@@ -241,7 +242,7 @@ export class RoomClient {
       people.map(async (p) => {
         for (let round = room.round; round >= 1; round--) {
           const snap = await getDoc(doc(this.db, 'rooms', room.code, 'armies', armyId(round, p.id)));
-          const army = snap.exists() ? parseArmy(snap.data()) : null;
+          const army = snap.exists() ? parseArmy(snap.data(), matchBoard(room.settings, round)) : null;
           if (army) {
             armies.set(p.id, army);
             return;
@@ -300,6 +301,7 @@ function fromStored(data: Record<string, unknown>): Room {
   return {
     ...(data as unknown as Room),
     quick: data.quick === true,
+    settings: parseSettings(data.settings),
     createdAt: millis(data.createdAt),
     waitingSince: millis(data.waitingSince),
     phaseStartedAt: millis(data.phaseStartedAt),
@@ -308,6 +310,12 @@ function fromStored(data: Record<string, unknown>): Room {
     preview: parsePreviews(data.preview),
     results: parseResults(data.results),
   };
+}
+
+/** The room's rules; anything missing or unknown is Classic with standard pieces. */
+function parseSettings(data: unknown): MatchSettings {
+  const s = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {};
+  return { blitz: s.blitz === true, mode: isModeId(s.mode) ? s.mode : 'classic', fairy: s.fairy === true };
 }
 
 /** Reported battle results, kept only if well-formed. */

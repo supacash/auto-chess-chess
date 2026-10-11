@@ -1,9 +1,10 @@
-import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
+import type { BoardSpec } from '../chess/boardSpec';
 import type { Color } from '../chess/fen';
 import { aiBudget, draftAiArmy, pickStyle, placeAiArmy } from '../rules/aiArmy';
 import type { Winner } from '../rules/battle';
 import type { Piece } from '../rules/pieces';
 import { BASE_INCOME, DRAW_BONUS } from '../rules/economy';
+import { type GameMode, gameMode, type ModeId } from '../rules/mode';
 import { type Rng, seededRng, shuffle } from '../rules/rng';
 
 // A live, TFT-style match: four players shop and place at the same time, are paired off each round,
@@ -19,6 +20,26 @@ export const BLITZ_SECONDS = 20;
 
 export interface MatchSettings {
   blitz: boolean;
+  /** The board: Classic 8×8 (also when missing, as in rooms from older versions) or Growing. */
+  mode?: ModeId;
+  /** Fairy pieces in the shop and bot armies, and fusion. Missing = off. */
+  fairy?: boolean;
+}
+
+export function matchMode(settings: MatchSettings): GameMode {
+  return gameMode(settings.mode ?? 'classic');
+}
+
+/** The board a round of the match is played on. */
+export function matchBoard(settings: MatchSettings, round: number): BoardSpec {
+  return matchMode(settings).board(round);
+}
+
+/** The rules in a few words ("Growing board · Fairy pieces · Blitz"), for the lobby. */
+export function matchRulesLabel(settings: MatchSettings): string {
+  return [matchMode(settings).name, settings.fairy ? 'Fairy pieces' : 'Standard pieces', settings.blitz ? 'Blitz' : '']
+    .filter(Boolean)
+    .join(' · ');
 }
 
 export function shopSeconds(settings: MatchSettings): number {
@@ -230,12 +251,20 @@ export function nextStreaks(streaks: Map<string, number>, results: PairingResult
   return next;
 }
 
-/** A bot's army for a round: an AI-drafted army at the single-player Normal budget, the same on every client. */
-export function botArmy(seed: number, round: number, botId: string, spec: BoardSpec = BOARD_8): Piece[] {
+/** A bot's army for a round: an AI-drafted army at the single-player Hard budget, the same on every client. */
+export function botArmy(
+  seed: number,
+  round: number,
+  botId: string,
+  settings: MatchSettings = { blitz: false },
+): Piece[] {
   const rng = seededRng(mixSeed(seed, round, hashId(botId)));
-  const style = pickStyle(rng);
-  const budget = aiBudget(round, rng);
-  return placeAiArmy(draftAiArmy(budget, style, rng, spec), style, rng, spec);
+  const fairy = settings.fairy === true;
+  const mode = matchMode(settings);
+  const spec = mode.board(round);
+  const style = pickStyle(rng, fairy);
+  const budget = aiBudget(round, rng, undefined, mode.roundOneDiscount, mode.aiBonus);
+  return placeAiArmy(draftAiArmy(budget, style, rng, spec, fairy), style, rng, spec);
 }
 
 function hashId(id: string): number {

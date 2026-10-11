@@ -1,4 +1,4 @@
-import { MATCH_SIZE } from '../multi/match';
+import { MATCH_SIZE, matchRulesLabel } from '../multi/match';
 import type { RoomClient } from '../online/client';
 import { canQuickStart, peopleSeated, quickStartAt, type Room, shouldMoveTo } from '../online/room';
 import { $, escapeHtml } from './dom';
@@ -119,6 +119,7 @@ export class LobbyScreen {
     $('#lobby-label').textContent = room.quick ? 'Quick play' : 'Room code';
     $('#lobby-code').textContent = room.quick ? (room.settings.blitz ? 'Classic Blitz' : 'Classic') : room.code;
     $('#lobby-code').classList.toggle('mode', room.quick);
+    $('#lobby-rules').textContent = room.quick ? '' : matchRulesLabel(room.settings);
     $('#lobby-seats').innerHTML = room.seats
       .map((s, i) => {
         const label = s.uid

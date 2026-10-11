@@ -1792,3 +1792,28 @@ button.tip-close {
   flex: 1.6;
   font-size: 0.9rem;
 }
+
+/* Multiplayer: the rules for a created room (or vs bots). */
+.room-rules {
+  margin: 0;
+  padding: 6px 10px 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+}
+
+.room-rules legend {
+  padding: 0 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.lobby-rules {
+  margin: -4px 0 8px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.lobby-rules:empty {
+  display: none;
+}

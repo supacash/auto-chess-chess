@@ -1,4 +1,4 @@
-import { BOARD_8 } from '../chess/boardSpec';
+import type { BoardSpec } from '../chess/boardSpec';
 import {
   applyRound,
   type MatchPlayer,
@@ -149,6 +149,8 @@ export function isOpenQuickRoom(room: Room, now: number, blitz: boolean): boolea
     room.quick &&
     room.status === 'lobby' &&
     room.settings.blitz === blitz &&
+    (room.settings.mode ?? 'classic') === 'classic' &&
+    room.settings.fairy !== true &&
     peopleSeated(room) > 0 &&
     peopleSeated(room) < MATCH_SIZE &&
     room.waitingSince !== null &&
@@ -322,11 +324,11 @@ export function armyDoc(uid: string, round: number, pieces: Piece[]): ArmyDoc {
   };
 }
 
-/** Checks an army downloaded from another player: known pieces and a legal Classic army. Null if not. */
-export function parseArmy(data: unknown): Piece[] | null {
+/** Checks an army downloaded from another player: known pieces and a legal army on `spec`. Null if not. */
+export function parseArmy(data: unknown, spec: BoardSpec): Piece[] | null {
   if (typeof data !== 'object' || data === null) return null;
   const pieces = (data as { pieces?: unknown }).pieces;
-  if (!Array.isArray(pieces) || pieces.length > 16) return null;
+  if (!Array.isArray(pieces) || pieces.length > 32) return null;
   const out: Piece[] = [];
   for (const p of pieces) {
     if (typeof p !== 'object' || p === null) return null;
@@ -334,7 +336,7 @@ export function parseArmy(data: unknown): Piece[] | null {
     if (!isPieceType(type) || !Number.isInteger(file) || !Number.isInteger(rank)) return null;
     out.push(makePiece(type, { file: file as number, rank: rank as number }));
   }
-  return armyErrors(out, BOARD_8).length === 0 ? out : null;
+  return armyErrors(out, spec).length === 0 ? out : null;
 }
 
 /** The army a person fights with when they uploaded none (left, or timed out): just a king. */

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BOARD_8, BOARDS } from '../chess/boardSpec';
 import { START_HP } from '../multi/match';
 import { makePiece } from '../rules/pieces';
 import { seededRng } from '../rules/rng';
@@ -163,21 +164,28 @@ describe('armies', () => {
     ]);
     expect(doc.pieces).toHaveLength(2);
     expect(armyId(3, 'p2')).toBe('3_p2');
-    expect(parseArmy(JSON.parse(JSON.stringify(doc)))?.map((p) => p.type)).toEqual(['K', 'R']);
+    expect(parseArmy(JSON.parse(JSON.stringify(doc)), BOARD_8)?.map((p) => p.type)).toEqual(['K', 'R']);
   });
 
   it('reject illegal or malformed armies', () => {
-    expect(parseArmy(null)).toBeNull();
-    expect(parseArmy({ pieces: [{ type: 'R', file: 0, rank: 0 }] })).toBeNull(); // no king
+    expect(parseArmy(null, BOARD_8)).toBeNull();
+    expect(parseArmy({ pieces: [{ type: 'R', file: 0, rank: 0 }] }, BOARD_8)).toBeNull(); // no king
     expect(
-      parseArmy({
-        pieces: [
-          { type: 'K', file: 4, rank: 0 },
-          { type: 'P', file: 1, rank: 0 },
-        ],
-      }),
+      parseArmy(
+        {
+          pieces: [
+            { type: 'K', file: 4, rank: 0 },
+            { type: 'P', file: 1, rank: 0 },
+          ],
+        },
+        BOARD_8,
+      ),
     ).toBeNull();
-    expect(parseArmy({ pieces: [{ type: 'K', file: 4, rank: 7 }] })).toBeNull();
+    expect(parseArmy({ pieces: [{ type: 'K', file: 4, rank: 7 }] }, BOARD_8)).toBeNull();
+    // Legal on 8×8, off the board on Growing 5×5.
+    const wide = { pieces: [{ type: 'K', file: 6, rank: 0 }] };
+    expect(parseArmy(wide, BOARD_8)).not.toBeNull();
+    expect(parseArmy(wide, BOARDS[0])).toBeNull();
   });
 });
 
@@ -199,6 +207,8 @@ describe('quick play', () => {
       quick('EEEE', 'e', now - 2_000, now - 2_000, true), // Blitz
       withPeople(quick('FFFF', 'f', now - 3_000), 'f2', 'f3', 'f4'), // full
       { ...newRoom('GGGG', 'g', 'g', { blitz: false }), createdAt: now, waitingSince: now }, // private
+      { ...quick('HHHH', 'h', now - 1_000), settings: { blitz: false, fairy: true } }, // another mode
+      { ...quick('IIII', 'i', now - 1_000), settings: { blitz: false, mode: 'growing' as const } }, // another mode
     ];
     expect(quickRoomsToTry(rooms, 'me', now, false).map((r) => r.code)).toEqual(['BBBB', 'CCCC', 'AAAA']);
     expect(quickRoomsToTry(rooms, 'a', now, false).map((r) => r.code)).toEqual(['BBBB', 'CCCC']);

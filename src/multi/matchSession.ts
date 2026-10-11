@@ -1,5 +1,5 @@
 import type { PlacementSession } from '../app/placementSession';
-import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
+import type { BoardSpec } from '../chess/boardSpec';
 import type { Color } from '../chess/fen';
 import type { Winner } from '../rules/battle';
 import {
@@ -12,9 +12,8 @@ import {
   type ShopResult,
   startingShop,
 } from '../rules/economy';
-import { gameMode } from '../rules/mode';
 import { makePiece, type Piece, type PieceType } from '../rules/pieces';
-import { armyErrors, canPlace, pieceAt } from '../rules/placement';
+import { armyErrors, canPlace, fitToBoard, pieceAt } from '../rules/placement';
 import { startPosition } from '../rules/position';
 import type { Rng } from '../rules/rng';
 import {
@@ -24,7 +23,9 @@ import {
   botArmy,
   type MatchPlayer,
   type MatchSettings,
+  matchBoard,
   matchIncome,
+  matchMode,
   matchOver,
   newPlayers,
   nextStreaks,
@@ -50,8 +51,6 @@ export interface MatchBattle {
  * the same on every client. No DOM; the offline (vs bots) and online modes both drive it.
  */
 export class MatchSession implements PlacementSession {
-  /** Classic 8×8 with standard pieces while multiplayer is being tested. */
-  readonly board: BoardSpec = BOARD_8;
   readonly lastReplay = null;
   players: MatchPlayer[];
   round = 1;
@@ -76,8 +75,18 @@ export class MatchSession implements PlacementSession {
     private readonly rng: Rng,
   ) {
     this.players = newPlayers(entries);
-    const shop = startingShop(gameMode('classic').startArmy);
-    this.shop = { ...shop, offers: rollOffers(1, rng, false) };
+    const mode = matchMode(settings);
+    const shop = startingShop(mode.startArmy);
+    this.shop = { ...shop, gold: shop.gold + mode.extraGold, offers: rollOffers(1, rng, this.fairy) };
+  }
+
+  /** This round's board (the room's mode: Classic 8×8, or Growing). */
+  get board(): BoardSpec {
+    return matchBoard(this.settings, this.round);
+  }
+
+  get fairy(): boolean {
+    return this.settings.fairy === true;
   }
 
   get run() {
@@ -85,7 +94,7 @@ export class MatchSession implements PlacementSession {
       shop: this.shop,
       round: this.round,
       color: 'w' as Color,
-      settings: { fairy: false, reveal: false },
+      settings: { fairy: this.fairy, reveal: false },
     };
   }
 
@@ -110,7 +119,7 @@ export class MatchSession implements PlacementSession {
     const other = this.player(id);
     const name = pairing.copy === otherSide ? `a copy of ${other.name}` : other.name;
     const types = other.bot
-      ? botArmy(this.seed, this.round, id, this.board).map((p) => p.type)
+      ? botArmy(this.seed, this.round, id, this.settings).map((p) => p.type)
       : (this.previews.get(id) ?? null);
     if (!types) return { name, pieces: [] };
     return { name, pieces: types.map((t) => makePiece(t)) };
@@ -140,10 +149,12 @@ export class MatchSession implements PlacementSession {
   }
 
   rerollOffers(): ShopResult {
-    return rerollOffers(this.shop, this.round, this.rng, false);
+    return rerollOffers(this.shop, this.round, this.rng, this.fairy);
   }
 
-  fitPiecesToBoard(): void {}
+  fitPiecesToBoard(): void {
+    this.shop = { ...this.shop, pieces: fitToBoard(this.shop.pieces, this.board) };
+  }
 
   /**
    * Ends the shop phase: places the king if the player forgot (so the timer can't leave them without
@@ -158,7 +169,7 @@ export class MatchSession implements PlacementSession {
         armies.get(p.id) ??
         (p.id === this.myId
           ? this.shop.pieces.filter((x) => x.square)
-          : botArmy(this.seed, this.round, p.id, this.board));
+          : botArmy(this.seed, this.round, p.id, this.settings));
       this.locked.set(p.id, army);
     }
     this.pairings = pairRound(this.players, this.seed, this.round);
@@ -192,7 +203,7 @@ export class MatchSession implements PlacementSession {
 
   /** A battle between two bots' armies, before the round's armies are locked (see armiesKnownEarly). */
   earlyBattle(pairing: Pairing): MatchBattle {
-    const army = (id: string) => botArmy(this.seed, this.round, id, this.board);
+    const army = (id: string) => botArmy(this.seed, this.round, id, this.settings);
     return this.battleBetween(pairing, army(pairing.white), army(pairing.black));
   }
 
@@ -217,7 +228,11 @@ export class MatchSession implements PlacementSession {
     this.shop =
       missed === 0
         ? saved.shop
-        : { ...saved.shop, gold: saved.shop.gold + missed * BASE_INCOME, offers: rollOffers(round, this.rng, false) };
+        : {
+            ...saved.shop,
+            gold: saved.shop.gold + missed * BASE_INCOME,
+            offers: rollOffers(round, this.rng, this.fairy),
+          };
     this.streaks = new Map([[this.myId, missed === 0 ? saved.streak : 0]]);
     this.pairings = [];
     this.phase = 'shop';
@@ -240,7 +255,7 @@ export class MatchSession implements PlacementSession {
       matchIncome(myResult, this.streaks.get(this.myId) ?? 0) +
       (playedBlack ? BLACK_GOLD : 0) +
       interest(this.shop.gold);
-    this.shop = { ...restock(this.shop, this.round, this.rng, false), gold: this.shop.gold + earned };
+    this.shop = { ...restock(this.shop, this.round, this.rng, this.fairy), gold: this.shop.gold + earned };
     this.pairings = [];
     this.phase = 'shop';
   }

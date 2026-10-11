@@ -1,3 +1,4 @@
+import type { MatchSettings } from './multi/match';
 import './style.css';
 import { whiteEval } from './engine/pick';
 import { SEARCH_DEPTH } from './game/runBattle';
@@ -108,12 +109,18 @@ $('#menu-multiplayer').addEventListener('click', () => {
 matchDialog.querySelector('form')?.addEventListener('submit', (e) => {
   const action = (e.submitter as HTMLButtonElement | null)?.value;
   const blitz = $<HTMLInputElement>('#mp-blitz').checked;
+  // Growing board and Fairy pieces are for rooms the player creates and games vs bots (Quick play is Classic).
+  const settings: MatchSettings = {
+    blitz,
+    mode: $<HTMLInputElement>('#mp-growing').checked ? 'growing' : 'classic',
+    fairy: $<HTMLInputElement>('#mp-fairy').checked,
+  };
   if (action === 'bots') {
     hideMenu();
-    match.startOffline({ blitz });
+    match.startOffline(settings);
   } else if (action === 'create' || action === 'join' || action === 'quick') {
     e.preventDefault(); // keep the window open until the room is ready (or show what went wrong)
-    void openRoom(action, blitz);
+    void openRoom(action, settings);
   }
 });
 
@@ -142,7 +149,7 @@ function playerName(): string {
 }
 
 /** Creates or joins an online room (or finds a quick play one), then shows its lobby. The Firebase code loads only now. */
-async function openRoom(action: 'create' | 'join' | 'quick', blitz: boolean): Promise<void> {
+async function openRoom(action: 'create' | 'join' | 'quick', settings: MatchSettings): Promise<void> {
   const error = $('#mp-error');
   const code = normalizeCode($<HTMLInputElement>('#mp-code').value);
   if (action === 'join' && !isRoomCode(code)) {
@@ -156,9 +163,9 @@ async function openRoom(action: 'create' | 'join' | 'quick', blitz: boolean): Pr
     const name = playerName();
     const roomCode =
       action === 'create'
-        ? await client.createRoom(name, { blitz }, Math.random)
+        ? await client.createRoom(name, settings, Math.random)
         : action === 'quick'
-          ? await client.quickPlay(name, blitz, Math.random)
+          ? await client.quickPlay(name, settings.blitz, Math.random)
           : code;
     if (action === 'join') await client.joinRoom(code, name);
     matchDialog.close();

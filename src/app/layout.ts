@@ -108,6 +108,7 @@ export function renderLayout(root: HTMLElement): void {
   <section id="lobby" class="lobby" hidden>
     <p class="lobby-label" id="lobby-label">Room code</p>
     <p class="lobby-code" id="lobby-code"></p>
+    <p class="lobby-rules" id="lobby-rules"></p>
     <p class="dialog-text muted" id="lobby-status"></p>
     <ol class="lobby-seats" id="lobby-seats"></ol>
     <p class="dialog-text error" id="lobby-message"></p>
@@ -172,12 +173,18 @@ export function renderLayout(root: HTMLElement): void {
       <details class="rules">
         <summary>How it works</summary>
         <p class="dialog-text muted">
-          Classic 8×8 with standard pieces and auto battles. The shop lasts 45 seconds (or until everyone is
+          Auto battles, on Classic 8×8 with standard pieces unless the host picks Growing board or Fairy
+          pieces (Quick play is always Classic). The shop lasts 45 seconds (or until everyone is
           ready). Losing a battle costs the round number plus 1 HP per 5 points the winner has left. Quick play
           matches you with anyone looking for a game in the same mode; empty seats get bots after 30 seconds.
         </p>
       </details>
       <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 20-second shop</label>
+      <fieldset class="room-rules">
+        <legend>Your room and vs bots</legend>
+        <label class="check"><input type="checkbox" id="mp-growing" /> Growing board: 5×5 up to 9×9</label>
+        <label class="check"><input type="checkbox" id="mp-fairy" /> Fairy pieces and fusion</label>
+      </fieldset>
       <button type="submit" value="quick" class="primary big-choice">
         Quick play<small>Play with anyone looking for a game</small>
       </button>
