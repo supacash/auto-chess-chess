@@ -4,11 +4,11 @@ import { DEFAULT_SETTINGS, difficulty, isDifficultyId } from './difficulty';
 import { seededRng } from './rng';
 
 describe('difficulty', () => {
-  it('scales the AI budget by 5.35, 5.75 or 6.25 points per round (rounded, times the ramp)', () => {
+  it('scales the AI budget by 5.35, 5.5 or 6 points per round (rounded, times the ramp)', () => {
     for (const [id, per] of [
       ['easy', 5.35],
-      ['normal', 5.75],
-      ['hard', 6.25],
+      ['normal', 5.5],
+      ['hard', 6],
     ] as const) {
       for (let seed = 0; seed < 20; seed++) {
         const b = aiBudget(6, seededRng(seed), difficulty(id).perRound);
@@ -27,7 +27,7 @@ describe('difficulty', () => {
       side: 'white',
       fairy: true,
     });
-    expect(difficulty(DEFAULT_SETTINGS.difficulty).perRound).toBe(5.75);
+    expect(difficulty(DEFAULT_SETTINGS.difficulty).perRound).toBe(5.5);
   });
 
   it('recognises valid ids only', () => {

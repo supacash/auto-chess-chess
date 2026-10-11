@@ -13,8 +13,8 @@ export const DIFFICULTIES: Difficulty[] = [
   // Raised after playtesting: real players out-build the simulator's stand-in (SIMULATION.md §16 was
   // 5 / 5.35 / 5.65), so Easy should about match a player, Normal sit just above, Hard be the test.
   { id: 'easy', name: 'Easy', perRound: 5.35, blurb: 'a gentle start' },
-  { id: 'normal', name: 'Normal', perRound: 5.75, blurb: 'a fair fight' },
-  { id: 'hard', name: 'Hard', perRound: 6.25, blurb: 'a real challenge' },
+  { id: 'normal', name: 'Normal', perRound: 5.5, blurb: 'a fair fight' },
+  { id: 'hard', name: 'Hard', perRound: 6, blurb: 'a real challenge' },
 ];
 
 import type { ModeId } from './mode';
