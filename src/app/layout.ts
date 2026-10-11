@@ -227,9 +227,9 @@ export function renderLayout(root: HTMLElement): void {
           ${SIDES.map((s) => `<option value="${s.id}">${s.name}</option>`).join('')}
         </select>
       </label>
-      <label class="check"><input type="checkbox" id="nr-fairy" /> Fairy pieces: new pieces and fusion in the shop and in opponents' armies</label>
-      <label class="check"><input type="checkbox" id="nr-reveal" /> Reveal the opponent's placement (easier)</label>
-      <label class="check"><input type="checkbox" id="nr-manual" /> Play yourself: move your own pieces in every battle (harder)</label>
+      <label class="check"><input type="checkbox" id="nr-fairy" /> Fairy pieces</label>
+      <label class="check"><input type="checkbox" id="nr-reveal" /> Reveal opponent's setup (easier)</label>
+      <label class="check"><input type="checkbox" id="nr-manual" /> Play yourself (harder)</label>
       <p class="warning" id="nr-warning" hidden>Starting a new game abandons the one in progress.</p>
       <div class="actions">
         <button type="submit" value="cancel" formnovalidate>Cancel</button>

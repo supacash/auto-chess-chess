@@ -221,7 +221,7 @@ function showMenu(notice = ''): void {
   const { round, lives } = session.run;
   $('#menu-resume-detail').textContent = session.manual
     ? `Round ${round} · your game is in progress`
-    : `Round ${round} · ${lives} ${lives === 1 ? 'life' : 'lives'} left`;
+    : `Round ${round} · ${lives} ${lives === 1 ? 'life' : 'lives'} left${session.run.settings.manual ? ' · Play yourself' : ''}`;
   const saved = match.active ? null : loadMatch();
   $('#menu-rejoin').hidden = !saved;
   $('#menu-rejoin-detail').textContent = saved ? `Room ${saved.code} · round ${saved.round}` : '';
