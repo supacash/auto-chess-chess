@@ -38,7 +38,9 @@ describe('aiBudget', () => {
   it('ramps: smaller in the early rounds, bigger later', () => {
     const mid = (round: number) => aiBudget(round, () => 0.5); // randomInt(…, 3) = 1: no jitter
     expect(mid(3)).toBe(Math.round(18 * 0.92));
-    expect(mid(10)).toBe(Math.round(60 * RAMP.at(-1)!));
+    expect(mid(10)).toBe(60);
+    expect(rampFactor(18)).toBe(0.95);
+    expect(mid(25)).toBe(Math.round(150 * RAMP.at(-1)!));
     expect(rampFactor(3)).toBeLessThan(1);
     expect(rampFactor(8)).toBeGreaterThan(1);
     expect(rampFactor(20)).toBe(RAMP.at(-1));
