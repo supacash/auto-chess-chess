@@ -7,6 +7,7 @@ import { NewRunDialog } from './app/newRunDialog';
 import { PlacementScreen } from './app/placementScreen';
 import { LobbyScreen } from './app/lobbyScreen';
 import { MatchController } from './app/matchController';
+import { PrestigeDialog } from './app/prestigeDialog';
 import { ProfileScreen } from './app/profileScreen';
 import { RecordBook } from './app/recordBook';
 import { Session } from './app/session';
@@ -18,6 +19,7 @@ import { generateName } from './multi/names';
 import { isRoomCode, normalizeCode } from './online/room';
 import type { RunSettings } from './rules/difficulty';
 import type { BattleResult } from './rules/battle';
+import { perk, perkChoices } from './rules/prestige';
 import { seededRng } from './rules/rng';
 import { hasStarted, isRunOver } from './rules/run';
 
@@ -33,13 +35,25 @@ const placement = new PlacementScreen(
   () => void playYourself(),
   () => void watchReplay(),
 );
+const prestigeDialog = new PrestigeDialog();
 const battle = new BattleScreen(
   () => {
     if (isRunOver(session.run)) showMenu();
     else showPlacement();
   },
   () => void watchReplay(),
+  () => openPrestige(),
 );
+
+/** After a won run: pick a perk and start the next prestige level. */
+function openPrestige(): void {
+  const owned = session.run.perks.map(perk);
+  prestigeDialog.open(session.run.prestige + 1, perkChoices(session.run.perks, rng), owned, (id) => {
+    session.startPrestige(id);
+    placement.resetForNewRun();
+    showPlacement();
+  });
+}
 placement.onGained = (type) => records.bought(type);
 const profile = new ProfileScreen(records, playerName, renamePlayer, () => showMenu());
 $('#menu-profile').addEventListener('click', () => {
@@ -278,7 +292,7 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
     const result = await play(loaded);
     const settings = session.run.settings;
     const outcome = session.finishBattle(result);
-    if (outcome.over) records.runEnd(settings, outcome.score, outcome.won);
+    if (outcome.over) records.runEnd(settings, outcome.score, outcome.won, outcome.prestige);
     renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
   } catch (err) {

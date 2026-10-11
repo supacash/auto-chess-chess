@@ -146,6 +146,7 @@ export function renderLayout(root: HTMLElement): void {
         <button type="button" id="replay">Watch replay</button>
         <button type="button" id="next" class="primary">Next round</button>
       </div>
+      <button type="button" id="prestige" class="prestige-button" hidden></button>
     </div>
   </section>
 
@@ -179,6 +180,16 @@ export function renderLayout(root: HTMLElement): void {
       </div>
       <p class="dialog-text error" id="mp-error"></p>
       <button type="submit" value="cancel" class="link-button" formnovalidate>Cancel</button>
+    </form>
+  </dialog>
+
+  <dialog id="prestige-dialog" aria-labelledby="prestige-title">
+    <form method="dialog" class="new-run-form">
+      <h2 id="prestige-title">Prestige</h2>
+      <p class="dialog-text" id="prestige-intro"></p>
+      <div class="prestige-choices" id="prestige-choices"></div>
+      <p class="dialog-text muted" id="prestige-owned" hidden></p>
+      <button type="submit" value="cancel" class="link-button" formnovalidate>Not now</button>
     </form>
   </dialog>
 

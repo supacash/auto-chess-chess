@@ -1622,3 +1622,38 @@ body.in-menu .credits {
   font-size: 0.85rem;
   color: var(--gold);
 }
+
+/* The victory card's Prestige button, and the perk choices. */
+.prestige-button {
+  width: 100%;
+  margin-top: 8px;
+  color: #241c05;
+  font-weight: 700;
+  background: linear-gradient(180deg, #f6d873, var(--gold));
+  border: 1px solid rgb(0 0 0 / 0.2);
+}
+
+dialog#prestige-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+}
+
+dialog#prestige-dialog::backdrop {
+  background: rgb(0 0 0 / 0.6);
+  backdrop-filter: blur(2px);
+}
+
+.prestige-choices {
+  display: grid;
+  gap: 8px;
+}
+
+.prestige-choices button.big-choice {
+  align-items: flex-start;
+  text-align: left;
+}

@@ -1,5 +1,5 @@
 import { difficulty } from '../rules/difficulty';
-import { FINAL_ROUND, runScore, START_LIVES } from '../rules/run';
+import { FINAL_ROUND, maxLives, runScore } from '../rules/run';
 import { $ } from './dom';
 import type { Session } from './session';
 
@@ -10,14 +10,16 @@ const HEART = '♥︎';
 export function renderHeader(session: Session, round = session.run.round, color = session.run.color): void {
   const { lives, record, settings } = session.run;
   const spec = session.boardOf(round);
+  const star = session.run.prestige > 0 ? ` · ★${session.run.prestige}` : '';
   $('#round').textContent =
-    `Round ${round}/${FINAL_ROUND} · ${spec.files}×${spec.ranks} · ${color === 'w' ? 'White' : 'Black'}`;
+    `Round ${round}/${FINAL_ROUND}${star} · ${spec.files}×${spec.ranks} · ${color === 'w' ? 'White' : 'Black'}`;
+  const most = maxLives(session.run.perks);
   const livesEl = $('#lives');
   livesEl.innerHTML = Array.from(
-    { length: START_LIVES },
+    { length: most },
     (_, i) => `<span class="heart ${i < lives ? 'full' : 'empty'}">${HEART}</span>`,
   ).join('');
-  livesEl.setAttribute('aria-label', `${lives} of ${START_LIVES} lives`);
+  livesEl.setAttribute('aria-label', `${lives} of ${most} lives`);
   $('#record').textContent = `${record.w}W ${record.l}L ${record.d}D`;
   const level = difficulty(settings.difficulty);
   $('#best').textContent =

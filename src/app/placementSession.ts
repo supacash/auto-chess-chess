@@ -25,6 +25,8 @@ export interface PlacementSession {
   setPieces(pieces: Piece[]): void;
   setShop(shop: Shop): void;
   rerollOffers(): ShopResult;
+  /** What the next reroll costs (REROLL_COST unless a perk makes it free). */
+  rerollCost?(): number;
   /** Repairs squares that don't fit the current board (older saves). */
   fitPiecesToBoard(): void;
 }

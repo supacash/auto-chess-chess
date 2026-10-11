@@ -59,7 +59,7 @@ export class RecordBook {
     );
   }
 
-  runEnd(settings: RunSettings, score: number, completed = false): void {
+  runEnd(settings: RunSettings, score: number, completed = false, prestige = 0): void {
     this.update(
       recordRunEnd(
         this.records,
@@ -68,6 +68,7 @@ export class RecordBook {
         score,
         Date.now(),
         completed,
+        prestige,
       ),
     );
   }

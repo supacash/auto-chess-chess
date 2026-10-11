@@ -81,7 +81,7 @@ export class BattleScreen {
   /** Overrides what the result card's main button does while a custom card is showing (see showCard). */
   private nextOverride: (() => void) | null = null;
 
-  constructor(onNext: () => void, onReplay: () => void) {
+  constructor(onNext: () => void, onReplay: () => void, onPrestige?: () => void) {
     $('#replay').addEventListener('click', onReplay);
     this.undoBtn.addEventListener('click', () => this.pending?.({ kind: 'undo' }));
     // Resigning takes a second tap, so a stray tap can't throw the game away.
@@ -103,6 +103,7 @@ export class BattleScreen {
       else this.speed = Number(btn.dataset.speed);
       this.renderPlaybackButtons();
     });
+    $('#prestige').addEventListener('click', () => onPrestige?.());
     $('#next').addEventListener('click', () => {
       const override = this.nextOverride;
       this.nextOverride = null;
@@ -481,6 +482,7 @@ export class BattleScreen {
     $('#result-title').textContent = card.title;
     $('#result-detail').textContent = card.detail;
     $('#replay').hidden = true;
+    $('#prestige').hidden = true;
     $('#next').textContent = card.button;
     this.nextOverride = card.onButton;
   }
@@ -505,6 +507,7 @@ export class BattleScreen {
   showResult(result: BattleResult, outcome: BattleOutcome, spec: BoardSpec, lives: number, best: number): void {
     const { winner, reason, material } = result;
     $('#replay').hidden = false;
+    $('#prestige').hidden = true;
     this.nextOverride = null;
     this.playback.hidden = true;
     this.result.hidden = false;
@@ -526,6 +529,9 @@ export class BattleScreen {
       $('#result-detail').textContent =
         `${summary} You got through all ${FINAL_ROUND} rounds: ${r.w} won, ${r.l} lost, ${r.d} drawn, with a ${outcome.armyPoints}-point army. ${outcome.newBest ? 'New best!' : `Best: ${best}.`}`;
       $('#next').textContent = 'New game';
+      const prestige = $<HTMLButtonElement>('#prestige');
+      prestige.hidden = false;
+      prestige.textContent = `Prestige ★${outcome.prestige + 1}: start over, tougher, with a perk`;
     } else if (outcome.over) {
       const rounds = `${outcome.score} round${outcome.score === 1 ? '' : 's'}`;
       $('#result-title').textContent = 'Game over';

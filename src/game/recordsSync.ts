@@ -18,6 +18,7 @@ export function mergeRecords(cloud: Records, local: Records, base: Records): Rec
       best: Math.max(c.best, l.best),
       totalScore: c.totalScore + added(l.totalScore, b.totalScore),
       completed: c.completed + added(l.completed, b.completed),
+      prestige: Math.max(c.prestige, l.prestige),
       rounds: {
         w: c.rounds.w + added(l.rounds.w, b.rounds.w),
         l: c.rounds.l + added(l.rounds.l, b.rounds.l),
@@ -62,7 +63,14 @@ function mergeHistory(a: HistoryEntry[], b: HistoryEntry[]): HistoryEntry[] {
     .slice(0, HISTORY_SIZE);
 }
 
-const emptyRun = (): RunStats => ({ runs: 0, best: 0, totalScore: 0, completed: 0, rounds: { w: 0, l: 0, d: 0 } });
+const emptyRun = (): RunStats => ({
+  runs: 0,
+  best: 0,
+  totalScore: 0,
+  completed: 0,
+  prestige: 0,
+  rounds: { w: 0, l: 0, d: 0 },
+});
 const emptyMatch = (): MatchStats => ({ matches: 0, places: [0, 0, 0, 0] });
 
 /** Records nobody has synced yet: the starting point for a device's first sync. */

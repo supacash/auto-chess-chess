@@ -276,7 +276,10 @@ export class PlacementScreen {
   private renderOffers(): void {
     const { gold, pieces, offers = [] } = this.session.run.shop;
     if (this.selectedOffer !== null && this.selectedOffer >= offers.length) this.selectedOffer = null;
-    $<HTMLButtonElement>('#reroll').disabled = gold < REROLL_COST;
+    const rerollCost = this.session.rerollCost?.() ?? REROLL_COST;
+    const reroll = $<HTMLButtonElement>('#reroll');
+    reroll.disabled = gold < rerollCost;
+    reroll.textContent = rerollCost === 0 ? 'Reroll · free' : `Reroll · ${rerollCost}g`;
     $('#offers').innerHTML = offers.length
       ? offers
           .map((o, i) => {

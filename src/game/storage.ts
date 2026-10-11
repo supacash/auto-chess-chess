@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, type DifficultyId, isDifficultyId, isSideId, type Run
 import { isModeId, type ModeId } from '../rules/mode';
 import { isOffer, type Offer, OFFER_COUNT, type Shop } from '../rules/economy';
 import { isAffinity, isPieceType, type Piece } from '../rules/pieces';
+import { isPerkId } from '../rules/prestige';
 import type { Run } from '../rules/run';
 import type { ManualState } from './manualBattle';
 import { type BattleRecord, parseRecord } from './record';
@@ -255,6 +256,9 @@ export function parseSave(raw: unknown): SavedGame | null {
       shop: { gold: run.shop.gold, pieces, ...parseOffers(run.shop.offers) },
       settings,
       color: run.color === 'b' ? 'b' : 'w',
+      prestige: isCount(run.prestige, 0) ? run.prestige : 0,
+      perks: Array.isArray(run.perks) ? run.perks.filter(isPerkId) : [],
+      ...(isCount(run.freeRerollRound, 1) ? { freeRerollRound: run.freeRerollRound } : {}),
     },
     ai: { styleId: ai.styleId, pieces: aiPieces },
     ...(data.battleInProgress === true ? { battleInProgress: true } : {}),

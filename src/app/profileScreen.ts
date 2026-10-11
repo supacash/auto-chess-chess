@@ -81,9 +81,9 @@ function single(r: Records): string {
           stat('Best', String(s.best)) +
           stat('Average', fmt(averageScore(s))) +
           stat('Rounds W/L/D', `${w}/${l}/${draws}`),
-        s.completed > 0
+        (s.completed > 0
           ? `<p class="record-note">🏆 Completed all ${FINAL_ROUND} rounds ${s.completed} time${s.completed === 1 ? '' : 's'}</p>`
-          : '',
+          : '') + (s.prestige > 0 ? `<p class="record-note">★ Highest prestige: ${s.prestige}</p>` : ''),
       );
     }),
   ).join('');

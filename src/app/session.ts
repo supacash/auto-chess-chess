@@ -25,7 +25,8 @@ import {
 } from '../rules/aiArmy';
 import type { BattleResult } from '../rules/battle';
 import { difficulty, type RunSettings } from '../rules/difficulty';
-import { rerollOffers, rollOffers, type Shop, type ShopResult } from '../rules/economy';
+import { REROLL_COST, rerollOffers, rollOffers, type Shop, type ShopResult } from '../rules/economy';
+import { type PerkId, PRESTIGE_STEP, queenOfferRound } from '../rules/prestige';
 import { gameMode } from '../rules/mode';
 import type { Piece } from '../rules/pieces';
 import type { ManualState } from '../game/manualBattle';
@@ -33,7 +34,16 @@ import type { PlacementSession } from './placementSession';
 import { armyErrors, fitToBoard } from '../rules/placement';
 import { type StartPosition, startPosition } from '../rules/position';
 import { type Rng, randomSeed } from '../rules/rng';
-import { applyResult, isRunOver, isRunWon, newRun, nextRound, type Run, runScore } from '../rules/run';
+import {
+  applyResult,
+  isRunOver,
+  isRunWon,
+  newRun,
+  nextRound,
+  type PrestigeCarry,
+  type Run,
+  runScore,
+} from '../rules/run';
 
 /** What finishing a battle did to the run, for the result screen. */
 export interface BattleOutcome {
@@ -49,6 +59,8 @@ export interface BattleOutcome {
   armyPoints: number;
   /** The run's record after this battle. */
   record: { w: number; l: number; d: number };
+  /** The run's prestige level (the victory card offers the next one). */
+  prestige: number;
 }
 
 /**
@@ -122,7 +134,10 @@ export class Session implements PlacementSession {
     if (!this.run.shop.offers) {
       this.run = {
         ...this.run,
-        shop: { ...this.run.shop, offers: rollOffers(this.run.round, this.rng, this.run.settings.fairy) },
+        shop: {
+          ...this.run.shop,
+          offers: rollOffers(this.run.round, this.rng, this.run.settings.fairy, queenOfferRound(this.run.perks)),
+        },
       };
     }
     this.best = this.loadBest();
@@ -152,10 +167,10 @@ export class Session implements PlacementSession {
   }
 
   /** Starts over, keeping the current settings unless new ones are given. */
-  startNewRun(settings: RunSettings = this.run.settings): void {
+  startNewRun(settings: RunSettings = this.run.settings, carry?: PrestigeCarry): void {
     clearGame();
     this.manual = null;
-    this.run = newRun(settings, this.rng);
+    this.run = newRun(settings, this.rng, carry);
     this.best = this.loadBest();
     this.draftOpponent();
     this.persist(); // a run the player chose: the menu offers Resume from now on
@@ -172,7 +187,13 @@ export class Session implements PlacementSession {
     const mode = gameMode(settings.mode);
     this.aiStyle = pickStyle(this.rng, settings.fairy);
     const budget = budgetForSide(
-      aiBudget(this.run.round, this.rng, difficulty(settings.difficulty).perRound, mode.roundOneDiscount, mode.aiBonus),
+      aiBudget(
+        this.run.round,
+        this.rng,
+        difficulty(settings.difficulty).perRound + PRESTIGE_STEP * this.run.prestige,
+        mode.roundOneDiscount,
+        mode.aiBonus,
+      ),
       this.run.color === 'w',
     );
     this.aiPieces = placeAiArmy(
@@ -184,8 +205,30 @@ export class Session implements PlacementSession {
   }
 
   /** Pays for a fresh set of shop offers (doesn't apply it: see setShop). */
+  /** Pays for a fresh set of offers (doesn't apply it: see setShop). Haggler makes the first one each round free. */
   rerollOffers(): ShopResult {
-    return rerollOffers(this.run.shop, this.run.round, this.rng, this.run.settings.fairy);
+    const free = this.rerollCost() === 0;
+    const result = rerollOffers(
+      this.run.shop,
+      this.run.round,
+      this.rng,
+      this.run.settings.fairy,
+      this.rerollCost(),
+      queenOfferRound(this.run.perks),
+    );
+    if (result.ok && free) this.run = { ...this.run, freeRerollRound: this.run.round };
+    return result;
+  }
+
+  /** What the next reroll costs this round. */
+  rerollCost(): number {
+    const { perks, freeRerollRound, round } = this.run;
+    return perks.includes('freeReroll') && freeRerollRound !== round ? 0 : REROLL_COST;
+  }
+
+  /** Starts the next prestige level after a won run, keeping the perks plus `picked`. */
+  startPrestige(picked: PerkId): void {
+    this.startNewRun(this.run.settings, { prestige: this.run.prestige + 1, perks: [...this.run.perks, picked] });
   }
 
   /** Saves the manual game in progress (or clears it with null), so a reload resumes it. */
@@ -271,7 +314,16 @@ export class Session implements PlacementSession {
     }
     const won = isRunWon(this.run);
     const armyPoints = this.run.shop.pieces.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0);
-    return { playedRound, over, won, score, newBest, armyPoints, record: { ...this.run.record } };
+    return {
+      playedRound,
+      over,
+      won,
+      score,
+      newBest,
+      armyPoints,
+      record: { ...this.run.record },
+      prestige: this.run.prestige,
+    };
   }
 
   private loadBest(): number {

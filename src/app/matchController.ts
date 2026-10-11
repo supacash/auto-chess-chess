@@ -515,7 +515,10 @@ export class MatchController {
 
     if (final && m.phase === 'over') {
       const place = m.me.place ?? 1;
-      this.deps.records.matchEnd(this.online !== null, m.settings.blitz, place);
+      // An online match only counts as online with at least one other person in it: a quick play
+      // room that filled up with bots is recorded as a match against bots.
+      const withPeople = m.players.some((p) => !p.bot && p.id !== m.myId);
+      this.deps.records.matchEnd(this.online !== null && withPeople, m.settings.blitz, place);
       if (this.online) clearMatch();
       if (this.online) void this.online.client.markDone(this.online.code, this.online.fought).catch(console.warn);
       this.deps.battle.showCard({

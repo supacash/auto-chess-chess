@@ -17,6 +17,8 @@ export interface RunStats {
   totalScore: number;
   /** Runs that got through the final round. */
   completed: number;
+  /** The highest prestige level played. */
+  prestige: number;
   rounds: { w: number; l: number; d: number };
 }
 
@@ -78,7 +80,14 @@ export function matchKey(online: boolean, blitz: boolean): string {
   return `${online ? 'online' : 'bots'}.${blitz ? 'blitz' : 'normal'}`;
 }
 
-const emptyRun = (): RunStats => ({ runs: 0, best: 0, totalScore: 0, completed: 0, rounds: { w: 0, l: 0, d: 0 } });
+const emptyRun = (): RunStats => ({
+  runs: 0,
+  best: 0,
+  totalScore: 0,
+  completed: 0,
+  prestige: 0,
+  rounds: { w: 0, l: 0, d: 0 },
+});
 const emptyMatch = (): MatchStats => ({ matches: 0, places: [0, 0, 0, 0] });
 
 /** A battle the player fought, from their side: who won, how it ended, and how far behind they ever were. */
@@ -114,6 +123,7 @@ export function recordRunEnd(
   score: number,
   at: number,
   completed = false,
+  prestige = 0,
 ): Records {
   const stats = records.runs[run] ?? emptyRun();
   return {
@@ -126,6 +136,7 @@ export function recordRunEnd(
         best: Math.max(stats.best, score),
         totalScore: stats.totalScore + score,
         completed: stats.completed + (completed ? 1 : 0),
+        prestige: Math.max(stats.prestige, prestige),
       },
     },
     history: addHistory(records.history, { at, kind: 'run', mode: label, result: score }),
@@ -195,6 +206,7 @@ export function parseRecords(data: unknown): Records {
           best: s.best as number,
           totalScore: s.totalScore as number,
           completed: isCount(s.completed) ? s.completed : 0,
+          prestige: isCount(s.prestige) ? s.prestige : 0,
           rounds: { w: r.w as number, l: r.l as number, d: r.d as number },
         };
       }
