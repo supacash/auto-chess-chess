@@ -26,7 +26,7 @@ import { type BoardSpec, plyLimit } from '../../src/chess/boardSpec';
 import { gameMode } from '../../src/rules/mode';
 import { difficulty, isDifficultyId } from '../../src/rules/difficulty';
 import { type BattleLimits, type BattleResult, material } from '../../src/rules/battle';
-import { rollOffers, roundIncome, START_GOLD, startingShop } from '../../src/rules/economy';
+import { interest, rollOffers, roundIncome, START_GOLD, startingShop } from '../../src/rules/economy';
 import { type Piece, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
 import { randomInt, seededRng } from '../../src/rules/rng';
 import { formatMargin, meanMargin } from './stats';
@@ -225,7 +225,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       const side = e.kind === 'hung' ? null : /WHITE/.test(e.detail) ? 'player' : 'AI';
       rejected.push({ kind: e.kind, round, plies, fen: e.fen, side });
       playerPoints += roundIncome('draw');
-      shop = { ...shop, gold: shop.gold + roundIncome('draw') };
+      shop = { ...shop, gold: shop.gold + roundIncome('draw') + interest(shop.gold) };
       onGame();
       continue;
     }
@@ -242,7 +242,8 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       peakLeader,
     });
     playerPoints += roundIncome(result.winner);
-    shop = { ...shop, gold: shop.gold + roundIncome(result.winner) };
+    // As in the game: income plus interest on the gold saved (see economy.interest).
+    shop = { ...shop, gold: shop.gold + roundIncome(result.winner) + interest(shop.gold) };
   }
   return { games: records, rejected };
 }
