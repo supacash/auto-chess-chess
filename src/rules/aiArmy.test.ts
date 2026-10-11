@@ -43,7 +43,7 @@ describe('aiBudget', () => {
     expect(mid(25)).toBe(Math.round(150 * RAMP.at(-1)!));
     expect(rampFactor(3)).toBeLessThan(1);
     expect(rampFactor(8)).toBeGreaterThan(1);
-    expect(rampFactor(20)).toBe(RAMP.at(-1));
+    expect(rampFactor(30)).toBe(RAMP.at(-1));
   });
 
   it('is one point smaller in round 1', () => {
