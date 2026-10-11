@@ -248,10 +248,11 @@ h1 .logo {
   letter-spacing: 0.05em;
 }
 
+/* Eight slots in one row (BENCH_SIZE): pieces shrink a little to fit inside the padding and border. */
 .bench {
   min-height: calc(var(--sq) + 12px);
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   align-items: center;
   padding: 6px;
   background: var(--panel);
@@ -263,7 +264,14 @@ h1 .logo {
   border-color: rgb(95 179 107 / 0.6);
 }
 
+.bench .piece {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
 .bench-empty {
+  grid-column: 1 / -1;
   color: var(--muted);
   font-size: 0.85rem;
   padding: 0 8px;
