@@ -14,7 +14,7 @@ export interface PlacementSession {
     round: number;
     /** The player's colour on screen this round. */
     color: Color;
-    settings: { fairy: boolean; reveal: boolean };
+    settings: { fairy: boolean; reveal: boolean; manual?: boolean };
   };
   readonly board: BoardSpec;
   readonly lastReplay: BattleRecord | null;

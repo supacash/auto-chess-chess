@@ -1767,3 +1767,28 @@ button.tip-close {
 .summary-stats strong {
   color: var(--text);
 }
+
+/* Battle review: a slider over every move, and step buttons. */
+.review {
+  margin-top: 10px;
+}
+
+.review[hidden] {
+  display: none;
+}
+
+.review input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.review-buttons button {
+  min-width: 0;
+  padding: 0 6px;
+  font-size: 1rem;
+}
+
+.review-buttons #review-play {
+  flex: 1.6;
+  font-size: 0.9rem;
+}

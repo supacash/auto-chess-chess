@@ -78,7 +78,7 @@ export class Session implements PlacementSession {
   aiStyle: AiStyle = AI_STYLES[0];
   /** The game the player is playing themselves this round, if one is in progress. */
   manual: ManualState | null = null;
-  /** The last finished battle, for Watch replay (kept across reloads). */
+  /** The last finished battle, for Review (kept across reloads). */
   lastReplay: BattleRecord | null = null;
   /** True once the run has been saved (the player has started it), so the menu offers Resume. */
   saved = false;
@@ -265,7 +265,7 @@ export class Session implements PlacementSession {
     };
   }
 
-  /** Keeps a finished battle for Watch replay. */
+  /** Keeps a finished battle for Review. */
   saveReplay(record: BattleRecord): void {
     this.lastReplay = record;
     saveReplay(record);
@@ -339,14 +339,14 @@ export class Session implements PlacementSession {
   }
 
   private loadBest(): number {
-    return loadBest(this.run.settings.difficulty, this.run.settings.mode);
+    return loadBest(this.run.settings.difficulty, this.run.settings.mode, this.run.settings.manual);
   }
 
   /** Saves `score` if it beats the best for this mode and difficulty. */
   private recordScore(score: number): boolean {
     if (score <= this.best) return false;
     this.best = score;
-    saveBest(score, this.run.settings.difficulty, this.run.settings.mode);
+    saveBest(score, this.run.settings.difficulty, this.run.settings.mode, this.run.settings.manual);
     return true;
   }
 }

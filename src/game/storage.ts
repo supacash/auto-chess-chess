@@ -20,7 +20,7 @@ const MAX_HOME_ROWS = Math.max(...BOARDS.map((b) => b.homeRows));
 const RUN_KEY = 'acc.run.v1';
 /** Personal records (see records.ts). */
 const RECORDS_KEY = 'acc.records.v1';
-/** The last finished battle, for Watch replay. */
+/** The last finished battle, for Review. */
 const REPLAY_KEY = 'acc.replay.v1';
 const BEST_KEY = 'acc.best.v1';
 /** The online match in progress (see SavedMatch). */
@@ -188,23 +188,29 @@ export function clearGame(): void {
  * Each mode and difficulty has its own best score. Classic keeps the original keys so earlier
  * bests (all played on 8×8) carry over.
  */
-function bestKey(difficulty: DifficultyId, mode: ModeId): string {
+function bestKey(difficulty: DifficultyId, mode: ModeId, manual = false): string {
+  if (manual) return `acc.best.${mode}.${difficulty}.manual.v1`;
   if (mode === 'growing') return `acc.best.growing.${difficulty}.v1`;
   return difficulty === 'normal' ? BEST_KEY : `acc.best.${difficulty}.v1`;
 }
 
-export function loadBest(difficulty: DifficultyId = 'normal', mode: ModeId = 'classic'): number {
+export function loadBest(difficulty: DifficultyId = 'normal', mode: ModeId = 'classic', manual = false): number {
   try {
-    const best = Number(localStorage.getItem(bestKey(difficulty, mode)));
+    const best = Number(localStorage.getItem(bestKey(difficulty, mode, manual)));
     return Number.isInteger(best) && best > 0 ? best : 0;
   } catch {
     return 0;
   }
 }
 
-export function saveBest(score: number, difficulty: DifficultyId = 'normal', mode: ModeId = 'classic'): void {
+export function saveBest(
+  score: number,
+  difficulty: DifficultyId = 'normal',
+  mode: ModeId = 'classic',
+  manual = false,
+): void {
   try {
-    localStorage.setItem(bestKey(difficulty, mode), String(score));
+    localStorage.setItem(bestKey(difficulty, mode, manual), String(score));
   } catch {
     // ignore
   }
@@ -275,6 +281,7 @@ export function parseSave(raw: unknown): SavedGame | null {
     side: isSideId(s.side) ? s.side : DEFAULT_SETTINGS.side,
     // Runs saved before the setting existed already had fairy pieces in the shop.
     fairy: typeof s.fairy === 'boolean' ? s.fairy : true,
+    manual: s.manual === true,
   };
   return {
     version: SAVE_VERSION,

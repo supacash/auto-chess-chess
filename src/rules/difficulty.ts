@@ -41,6 +41,11 @@ export interface RunSettings {
   side: SideId;
   /** Fairy pieces in the shop and in AI armies, and fusion. Off = standard chess pieces only. */
   fairy: boolean;
+  /**
+   * Play yourself: the player moves their own pieces in every battle (Play it), against the same
+   * opponents. A harder challenge with its own records. Off = auto battles only.
+   */
+  manual: boolean;
 }
 
 export const DEFAULT_SETTINGS: RunSettings = {
@@ -49,6 +54,7 @@ export const DEFAULT_SETTINGS: RunSettings = {
   reveal: false,
   side: 'white',
   fairy: true,
+  manual: false,
 };
 
 export function difficulty(id: DifficultyId): Difficulty {

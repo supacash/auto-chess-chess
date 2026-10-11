@@ -16,8 +16,8 @@ import type { PieceType } from '../rules/pieces';
 import type { BattleResult } from '../rules/battle';
 
 /** "Growing board · Normal". */
-export function runLabel(settings: Pick<RunSettings, 'mode' | 'difficulty'>): string {
-  return `${gameMode(settings.mode).name} · ${difficulty(settings.difficulty).name}`;
+export function runLabel(settings: Pick<RunSettings, 'mode' | 'difficulty'> & { manual?: boolean }): string {
+  return `${gameMode(settings.mode).name} · ${difficulty(settings.difficulty).name}${settings.manual ? ' · Play yourself' : ''}`;
 }
 
 /** "Online · Blitz", "Vs bots". */
@@ -54,7 +54,7 @@ export class RecordBook {
       recordBattle(
         this.records,
         { outcome, checkmate: result.reason === 'checkmate', worstDeficit },
-        run && runKey(run.mode, run.difficulty),
+        run && runKey(run.mode, run.difficulty, run.manual),
       ),
     );
   }
@@ -63,7 +63,7 @@ export class RecordBook {
     this.update(
       recordRunEnd(
         this.records,
-        runKey(settings.mode, settings.difficulty),
+        runKey(settings.mode, settings.difficulty, settings.manual),
         runLabel(settings),
         score,
         Date.now(),

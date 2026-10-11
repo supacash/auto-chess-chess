@@ -45,7 +45,14 @@ describe('run', () => {
   });
 
   it('keeps its settings across rounds and knows when it has started', () => {
-    const settings = { mode: 'classic', difficulty: 'hard', reveal: true, side: 'white', fairy: true } as const;
+    const settings = {
+      mode: 'classic',
+      difficulty: 'hard',
+      reveal: true,
+      side: 'white',
+      fairy: true,
+      manual: false,
+    } as const;
     let run = newRun(settings);
     expect(newRun().settings).toEqual({
       mode: 'growing',
@@ -53,6 +60,7 @@ describe('run', () => {
       reveal: false,
       side: 'white',
       fairy: true,
+      manual: false,
     });
     expect(hasStarted(run)).toBe(false);
     run = nextRound(applyResult(run, 'draw'));
@@ -62,14 +70,24 @@ describe('run', () => {
 
   it('starts each mode with its own army', () => {
     expect(
-      newRun({ mode: 'growing', difficulty: 'normal', reveal: false, side: 'white', fairy: true }).shop.pieces.map(
-        (p) => p.type,
-      ),
+      newRun({
+        mode: 'growing',
+        difficulty: 'normal',
+        reveal: false,
+        side: 'white',
+        fairy: true,
+        manual: false,
+      }).shop.pieces.map((p) => p.type),
     ).toEqual(['K', 'P', 'P', 'P', 'P']);
     expect(
-      newRun({ mode: 'classic', difficulty: 'normal', reveal: false, side: 'white', fairy: true }).shop.pieces.map(
-        (p) => p.type,
-      ),
+      newRun({
+        mode: 'classic',
+        difficulty: 'normal',
+        reveal: false,
+        side: 'white',
+        fairy: true,
+        manual: false,
+      }).shop.pieces.map((p) => p.type),
     ).toEqual(['K', 'P', 'P', 'P']);
   });
 
@@ -84,7 +102,14 @@ describe('run', () => {
 describe('player colour', () => {
   it('is White by default, Black when chosen, and either each round when random', () => {
     expect(newRun().color).toBe('w');
-    const black = newRun({ mode: 'classic', difficulty: 'normal', reveal: false, side: 'black', fairy: true });
+    const black = newRun({
+      mode: 'classic',
+      difficulty: 'normal',
+      reveal: false,
+      side: 'black',
+      fairy: true,
+      manual: false,
+    });
     expect(black.color).toBe('b');
     expect(nextRound(black).color).toBe('b');
     const rng = seededRng(5);

@@ -56,6 +56,7 @@ describe('migrateSave', () => {
       reveal: false,
       side: 'white',
       fairy: true,
+      manual: false,
     });
   });
 });
@@ -113,6 +114,7 @@ describe('parseSave', () => {
       reveal: true,
       side: 'white',
       fairy: true,
+      manual: false,
     });
     g.version = 1;
     delete g.run.settings;
@@ -122,6 +124,7 @@ describe('parseSave', () => {
       reveal: false,
       side: 'white',
       fairy: true,
+      manual: false,
     });
     // Saves from before modes existed were played on 8×8, so they stay Classic.
     g.run.settings = { difficulty: 'hard', reveal: false, side: 'white', fairy: true };
@@ -133,6 +136,7 @@ describe('parseSave', () => {
       reveal: false,
       side: 'white',
       fairy: true,
+      manual: false,
     });
   });
 

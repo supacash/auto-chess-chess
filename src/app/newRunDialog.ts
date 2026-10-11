@@ -20,6 +20,7 @@ export class NewRunDialog {
         reveal: $<HTMLInputElement>('#nr-reveal').checked,
         side: isSideId(side) ? side : DEFAULT_SETTINGS.side,
         fairy: $<HTMLInputElement>('#nr-fairy').checked,
+        manual: $<HTMLInputElement>('#nr-manual').checked,
       });
     });
   }
@@ -33,6 +34,7 @@ export class NewRunDialog {
     $<HTMLInputElement>('#nr-reveal').checked = current.reveal;
     $<HTMLSelectElement>('#nr-side').value = current.side;
     $<HTMLInputElement>('#nr-fairy').checked = current.fairy;
+    $<HTMLInputElement>('#nr-manual').checked = current.manual;
     $('#nr-warning').hidden = !warnAbandon;
     this.dialog.showModal();
   }

@@ -72,8 +72,9 @@ export function emptyRecords(): Records {
   };
 }
 
-export function runKey(mode: ModeId, difficulty: DifficultyId): string {
-  return `${mode}.${difficulty}`;
+/** Play yourself runs keep their own records (".manual"). */
+export function runKey(mode: ModeId, difficulty: DifficultyId, manual = false): string {
+  return `${mode}.${difficulty}${manual ? '.manual' : ''}`;
 }
 
 export function matchKey(online: boolean, blitz: boolean): string {

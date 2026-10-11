@@ -26,6 +26,7 @@ describe('difficulty', () => {
       reveal: false,
       side: 'white',
       fairy: true,
+      manual: false,
     });
     expect(difficulty(DEFAULT_SETTINGS.difficulty).perRound).toBe(5.5);
   });

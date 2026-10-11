@@ -31,7 +31,7 @@ export function renderLayout(root: HTMLElement): void {
       <button type="button" id="menu-multiplayer">Multiplayer</button>
       <button type="button" id="menu-profile">Profile</button>
     </div>
-    <button type="button" id="menu-replay" class="link-button" hidden>Watch your last battle</button>
+    <button type="button" id="menu-replay" class="link-button" hidden>Review your last battle</button>
   </section>
   <section id="match-hud" class="match-hud" hidden>
     <div class="match-top">
@@ -80,7 +80,7 @@ export function renderLayout(root: HTMLElement): void {
       <p class="fight-hint" id="fight-hint" hidden></p>
     </div>
     <p class="hint" id="points"></p>
-    <button type="button" id="last-replay" class="link-button" hidden>Watch your last battle</button>
+    <button type="button" id="last-replay" class="link-button" hidden>Review your last battle</button>
   </section>
 
   <section id="profile" class="profile" hidden>
@@ -137,6 +137,16 @@ export function renderLayout(root: HTMLElement): void {
       <button type="button" id="undo">Undo</button>
       <button type="button" id="resign" class="sell">Resign</button>
     </div>
+    <div class="review" id="review" hidden>
+      <input type="range" id="review-slider" min="0" max="0" value="0" aria-label="Move" />
+      <div class="actions review-buttons">
+        <button type="button" data-step="first" aria-label="First move">⏮</button>
+        <button type="button" data-step="prev" aria-label="Previous move">◀</button>
+        <button type="button" data-step="play" id="review-play" aria-label="Play">▶︎ Play</button>
+        <button type="button" data-step="next" aria-label="Next move">▶</button>
+        <button type="button" data-step="last" aria-label="Last move">⏭</button>
+      </div>
+    </div>
     <div class="actions" id="replay-actions">
       <button type="button" id="replay-done" class="primary" hidden>Done</button>
     </div>
@@ -145,7 +155,7 @@ export function renderLayout(root: HTMLElement): void {
       <p id="result-detail"></p>
       <div class="run-summary" id="run-summary" hidden></div>
       <div class="actions result-actions">
-        <button type="button" id="replay">Watch replay</button>
+        <button type="button" id="replay">Review</button>
         <button type="button" id="next" class="primary">Next round</button>
       </div>
       <button type="button" id="prestige" class="prestige-button" hidden></button>
@@ -219,6 +229,7 @@ export function renderLayout(root: HTMLElement): void {
       </label>
       <label class="check"><input type="checkbox" id="nr-fairy" /> Fairy pieces: new pieces and fusion in the shop and in opponents' armies</label>
       <label class="check"><input type="checkbox" id="nr-reveal" /> Reveal the opponent's placement (easier)</label>
+      <label class="check"><input type="checkbox" id="nr-manual" /> Play yourself: move your own pieces in every battle (harder)</label>
       <p class="warning" id="nr-warning" hidden>Starting a new game abandons the one in progress.</p>
       <div class="actions">
         <button type="submit" value="cancel" formnovalidate>Cancel</button>

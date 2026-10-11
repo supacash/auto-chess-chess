@@ -205,53 +205,99 @@ export class BattleScreen {
   }
 
   /**
-   * Replays a finished battle move by move with the playback controls, then calls `onDone` from
-   * the Done button. Manual games show no eval bar (none was recorded).
+   * Reviews a finished battle: it opens on the final position, and the player steps through the
+   * moves (first / back / play / forward / last, or the slider) at their own pace. Done goes back to
+   * the result card, or calls `onDone`. Manual games show no eval bar (none was recorded).
    */
   async replay(record: BattleRecord, onDone: () => void): Promise<void> {
     const spec = recordBoard(record);
     if (!spec) return;
-    this.speed = 1;
-    this.skipping = false;
-    this.renderPlaybackButtons();
-    const resultWasShown = !this.section.hidden && !this.result.hidden;
-    this.section.hidden = false;
-    this.result.hidden = true;
-    this.manual.hidden = true;
-    this.replayDone.hidden = true;
-    this.playback.hidden = false;
-    $('#eval').hidden = record.manual;
-    $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
-    this.showEval(0);
-
+    // Every position up front, so stepping back and jumping are instant.
+    const frames: { fen: string; last: { from: string; to: string } | null; check: boolean }[] = [];
     const game = new Game(spec, record.fen);
     try {
-      this.view.render(game.fen(), spec);
-      this.status.textContent = 'Replay';
-      await sleep(INTRO_MS);
-      for (let i = 0; i < record.moves.length; i++) {
-        const move = game.play(record.moves[i]);
+      frames.push({ fen: game.fen(), last: null, check: game.isCheck() });
+      for (const uci of record.moves) {
+        const move = game.play(uci);
         if (!move) break; // made under rules this build doesn't have
-        const ms = this.skipping ? 0 : MOVE_MS / this.speed;
-        this.view.render(game.fen(), spec, {
-          last: move,
-          animateMs: this.reduceMotion ? 0 : ms * 0.8,
-          check: game.isCheck(),
-        });
-        const score = record.evals[i];
-        if (score !== null && score !== undefined) this.showEval(score);
-        this.status.textContent = this.skipping ? 'Skipping…' : `Replay · move ${Math.ceil((i + 1) / 2)}`;
-        if (ms) await sleep(ms);
+        frames.push({ fen: game.fen(), last: move, check: game.isCheck() });
       }
     } finally {
       game.delete();
     }
-    const { result } = record;
-    if (result.reason === 'checkmate' && result.winner !== 'draw') this.showEval(checkmateEval(result.winner));
-    this.status.textContent = 'Replay finished';
+
+    const resultWasShown = !this.section.hidden && !this.result.hidden;
+    this.section.hidden = false;
+    this.result.hidden = true;
+    this.manual.hidden = true;
     this.playback.hidden = true;
     this.replayDone.hidden = false;
+    const review = $('#review');
+    review.hidden = false;
+    $('#eval').hidden = record.manual;
+    $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
+
+    const slider = $<HTMLInputElement>('#review-slider');
+    const playBtn = $<HTMLButtonElement>('#review-play');
+    const last = frames.length - 1;
+    slider.max = String(last);
+    let index = last;
+    let timer = 0;
+    const stop = () => {
+      clearInterval(timer);
+      timer = 0;
+      playBtn.textContent = '▶︎ Play';
+    };
+    const show = (i: number, animate = false) => {
+      index = Math.max(0, Math.min(last, i));
+      const f = frames[index];
+      this.view.render(f.fen, spec, {
+        ...(f.last ? { last: f.last } : {}),
+        animateMs: animate && !this.reduceMotion ? MOVE_MS * 0.4 : 0,
+        check: f.check,
+      });
+      slider.value = String(index);
+      const { result } = record;
+      const score =
+        index === last && result.reason === 'checkmate' && result.winner !== 'draw'
+          ? checkmateEval(result.winner)
+          : latestEval(record.evals, index);
+      this.showEval(score);
+      this.status.textContent =
+        index === 0
+          ? 'Start position'
+          : `Move ${Math.ceil(index / 2)} of ${Math.ceil(last / 2)}${index === last ? ' · final position' : ''}`;
+      for (const b of review.querySelectorAll<HTMLButtonElement>('[data-step="first"], [data-step="prev"]'))
+        b.disabled = index === 0;
+      for (const b of review.querySelectorAll<HTMLButtonElement>('[data-step="next"], [data-step="last"]'))
+        b.disabled = index === last;
+      if (index === last) stop();
+    };
+    review.onclick = (e) => {
+      const step = (e.target as HTMLElement).closest<HTMLButtonElement>('button')?.dataset.step;
+      if (!step) return;
+      if (step === 'play') {
+        if (timer) return stop();
+        if (index === last) show(0);
+        playBtn.textContent = '⏸ Pause';
+        timer = window.setInterval(() => show(index + 1, true), MOVE_MS);
+        return;
+      }
+      stop();
+      if (step === 'first') show(0);
+      else if (step === 'prev') show(index - 1);
+      else if (step === 'next') show(index + 1, true);
+      else show(last);
+    };
+    slider.oninput = () => {
+      stop();
+      show(Number(slider.value));
+    };
+    show(last);
+
     this.replayDone.onclick = () => {
+      stop();
+      review.hidden = true;
       this.replayDone.hidden = true;
       if (resultWasShown) {
         this.result.hidden = false;
@@ -600,4 +646,13 @@ function runSummary(history: RoundLog[]): string {
     </svg>
     <p class="summary-legend"><span class="you">● You</span> <span class="them">● Opponents</span> · ${history.length} rounds</p>
     <p class="summary-stats">Best streak <strong>${bestStreak(history)}</strong> · Biggest army <strong>${peak} pts</strong></p>`;
+}
+
+/** The last recorded eval among the first `count` moves (0 before any). */
+function latestEval(evals: (number | null)[], count: number): number {
+  for (let i = Math.min(count, evals.length) - 1; i >= 0; i--) {
+    const e = evals[i];
+    if (e !== null && e !== undefined) return e;
+  }
+  return 0;
 }

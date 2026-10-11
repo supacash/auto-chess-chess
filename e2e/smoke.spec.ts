@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 
 /** Opens a fresh game (no saved run) and starts a Growing-board run from the menu's New game. */
-async function startRun(page: Page): Promise<void> {
+async function startRun(page: Page, manual = false): Promise<void> {
   await page.goto('./');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
@@ -10,6 +10,7 @@ async function startRun(page: Page): Promise<void> {
   await page.locator('#menu-new').click();
   const dialog = page.locator('#new-run-dialog');
   await expect(dialog).toBeVisible();
+  if (manual) await page.locator('#nr-manual').check();
   await dialog.getByRole('button', { name: 'Start game' }).click();
   await expect(dialog).toBeHidden();
 }
@@ -21,7 +22,7 @@ async function placeKing(page: Page): Promise<void> {
     .filter({ has: page.getByAltText('King') })
     .click();
   await page.locator('#board-root .square[data-file="2"][data-rank="0"]').click();
-  await expect(page.locator('#fight')).toBeEnabled();
+  await expect(page.locator('#fight-hint')).toBeHidden(); // the army can fight
 }
 
 test('a first visit shows the menu, New game starts a run, and the placement screen works', async ({ page }) => {
@@ -45,9 +46,13 @@ test('an auto battle plays to a result, replays, and moves on to round 2', async
   await expect(result).toBeVisible({ timeout: 120_000 });
   await expect(page.locator('#result-title')).toHaveText(/Victory|Defeat|Draw/);
 
+  // Review opens on the final position; step back to the start and forward again.
   await page.locator('#replay').click();
-  await expect(page.locator('#battle-status')).toContainText('Replay');
-  await page.locator('#skip').click();
+  await expect(page.locator('#battle-status')).toContainText('final position');
+  await page.locator('#review [data-step="first"]').click();
+  await expect(page.locator('#battle-status')).toHaveText('Start position');
+  await page.locator('#review [data-step="next"]').click();
+  await expect(page.locator('#battle-status')).toContainText('Move 1 of');
   await page.locator('#replay-done').click();
   await expect(result).toBeVisible();
 
@@ -69,7 +74,8 @@ test('leaving during an auto battle counts as a loss', async ({ page }) => {
 });
 
 test('Play it: move, resume after a reload, undo and resign', async ({ page }) => {
-  await startRun(page);
+  await startRun(page, true);
+  await expect(page.locator('#fight')).toBeHidden(); // Play yourself runs have only Play it
   await placeKing(page);
   // A fixed opponent (king and a pawn, nowhere near our king) so the game always starts the same
   // way: a random army can start with our king in check.

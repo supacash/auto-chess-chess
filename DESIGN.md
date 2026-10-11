@@ -14,7 +14,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 ## Core loop
 1. **Shop.** Spend gold on the round's shop offers and rerolls, and merge pieces into stronger ones. You see the opponent's style and piece list (and, with Reveal on, where its pieces are).
 2. **Place.** Arrange your army in your home rows. Extras wait on the bench.
-3. **Battle.** Each round, pick **Auto fight** (the engine plays both sides; you watch, with an eval bar and 1×/2×/4×/Skip playback) or **Play it** (you move your own pieces; the engine plays the opponent exactly as in auto battles).
+3. **Battle.** **Auto fight**: the engine plays both sides; you watch, with an eval bar and 1×/2×/4×/Skip playback. In a **Play yourself** run (a New game option) every battle is **Play it** instead: you move your own pieces and the engine plays the opponent exactly as in auto battles.
 4. **Result.** Win, lose or draw. Gold is paid out; a loss costs a life.
 5. Repeat until you're out of lives.
 
@@ -24,7 +24,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **End-of-run summary:** the victory and game-over cards chart your army's points against your opponents' for each round (losses marked), with the run's best win streak and biggest army.
 - **First-run tips:** one short tip at a time above the opponent line on the shop screen (how to play, a set ready to merge, affinity pawns, interest and the lock, the opponent list), each dismissed for good with ×. Kept per device.
 - **Prestige:** the victory card offers *Prestige ★N*: start over at round 1 with the starting army and lives, one prestige level higher. Opponents get 0.25 more points per round per level, and the player picks one of three perks to keep for good (stackable ones can come up again): War chest (+2 starting gold, stacks), Squire (start with a Knight, stacks), Royal favour (queens and queen-pawns from round 4), Haggler (first reroll each round free), Second wind (+1 life), Tithe (+1 gold every round). The header shows ★N; the Profile shows the highest prestige. Single player only.
-- **Main menu** (the landing screen, and *Menu* in the header): *Resume game* (shown while a run or a Play it game is in progress, with its round and lives), *New game*, *Multiplayer*, and *Watch your last battle*. A battle interrupted by a reload is reported here.
+- **Main menu** (the landing screen, and *Menu* in the header): *Resume game* (shown while a run or a Play it game is in progress, with its round and lives), *New game*, *Multiplayer*, and *Review your last battle*. A battle interrupted by a reload is reported here.
 - **New run window** (opens from *New game*) sets the run's settings, which are fixed for the whole run:
   - **Board (game mode):** *Growing board* (default; 5×5 growing to 8×8, see Board sizes) or *Classic* (8×8 throughout).
   - **Difficulty:** how fast the AI's budget grows: Easy 5.35×round, Normal 5.5×round (default), Hard 6×round, times the ramp. Easy about matches a typical player (the simulator's stand-in matched it point for point over 25 rounds); Normal sits a little above; Hard is the real test. 5.75 / 6.25 suited a strong player but walled the stand-in (Normal 14% wins). The simulator's stand-in builds worse than people, so its win rates (SIMULATION.md §16) understate the difficulty.
@@ -39,7 +39,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
   - *History*: the last 20 finished runs and matches.
   - *Fun*: most-bought piece (offers, upgrades and fusions), best and current win streak, checkmates delivered, biggest comeback (largest material deficit turned into a win).
   - Signing in to keep records across devices is planned (anonymous records would carry over).
-- **Replays:** the last finished battle is kept (start position, seed, moves, evals); *Watch replay* on the result screen and *Watch your last battle* on placement play it back. Auto battles are deterministic from their start position and seed.
+- **Replays:** the last finished battle is kept (start position, seed, moves, evals); *Watch replay* on the result screen and *Review your last battle* on placement play it back. Auto battles are deterministic from their start position and seed.
 - **Saving:** the run (army, gold, lives, record, settings and the current opponent) is saved after every change, so a reload resumes it. Saves carry a format version and are migrated when the format changes; runs saved before game modes existed load as Classic.
 - **No replays:** when a battle ends, the game moves straight to the next round and drafts its opponent, so reloading on the result screen can't replay a round. Leaving or reloading *during* a battle counts as a loss on the next load (with a notice). A battle that fails with an error doesn't count.
 
@@ -110,6 +110,8 @@ In Growing mode the board opens up during the run:
 - Promotion works as normal (the engine picks the piece) and lasts only for that battle.
 
 ## Battle rules
+- **Play yourself** (New game toggle, like Fairy pieces and Reveal): every battle of the run is played by hand; auto runs have no Play it button. Same opponents and difficulties, so it's the harder challenge; its records (best, runs, completions) are kept separately on the Profile ("Classic · Normal · Play yourself").
+- **Review:** the result card's *Review* (and *Review your last battle*) opens the battle on its final position with a slider over every move and ⏮ ◀ ▶︎ Play ▶ ⏭ buttons, for auto and manual battles alike.
 - **Playing it yourself:** tap a piece then a highlighted square, or drag it. No move limit: the game ends on the board (checkmate, stalemate, repetition, insufficient material on points, the 50-move rule) or by resigning (a loss; it takes two taps). **Undo** takes back your last move and the opponent's reply. The eval bar is hidden until the game ends. The game is saved after every move, so closing or reloading the page resumes it instead of counting a loss.
 - **Insufficient material** (nobody can mate) is decided on points like the move limit; level material is a draw.
 - **Repetition:** the engine is given the moves played so far, so it sees repeated positions as draws and the side that is ahead avoids them.

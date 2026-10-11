@@ -70,23 +70,27 @@ const empty = (text: string) => `<p class="profile-empty">${text}</p>`;
 const fmt = (n: number | null, digits = 1) => (n === null ? '–' : n.toFixed(digits).replace(/\.0$/, ''));
 
 function single(r: Records): string {
-  const cards = MODES.flatMap((m) =>
-    DIFFICULTIES.map((d) => {
-      const s = r.runs[runKey(m.id, d.id)];
-      if (!s || (s.runs === 0 && s.best === 0 && s.rounds.w + s.rounds.l + s.rounds.d === 0)) return '';
-      const { w, l, d: draws } = s.rounds;
-      return card(
-        runLabel({ mode: m.id, difficulty: d.id }),
-        stat('Runs', String(s.runs)) +
-          stat('Best', String(s.best)) +
-          stat('Average', fmt(averageScore(s))) +
-          stat('Rounds W/L/D', `${w}/${l}/${draws}`),
-        (s.completed > 0
-          ? `<p class="record-note">🏆 Completed all ${FINAL_ROUND} rounds ${s.completed} time${s.completed === 1 ? '' : 's'}</p>`
-          : '') + (s.prestige > 0 ? `<p class="record-note">★ Highest prestige: ${s.prestige}</p>` : ''),
-      );
-    }),
-  ).join('');
+  const cards = [false, true]
+    .flatMap((manual) =>
+      MODES.flatMap((m) =>
+        DIFFICULTIES.map((d) => {
+          const s = r.runs[runKey(m.id, d.id, manual)];
+          if (!s || (s.runs === 0 && s.best === 0 && s.rounds.w + s.rounds.l + s.rounds.d === 0)) return '';
+          const { w, l, d: draws } = s.rounds;
+          return card(
+            runLabel({ mode: m.id, difficulty: d.id, manual }),
+            stat('Runs', String(s.runs)) +
+              stat('Best', String(s.best)) +
+              stat('Average', fmt(averageScore(s))) +
+              stat('Rounds W/L/D', `${w}/${l}/${draws}`),
+            (s.completed > 0
+              ? `<p class="record-note">🏆 Completed all ${FINAL_ROUND} rounds ${s.completed} time${s.completed === 1 ? '' : 's'}</p>`
+              : '') + (s.prestige > 0 ? `<p class="record-note">★ Highest prestige: ${s.prestige}</p>` : ''),
+          );
+        }),
+      ),
+    )
+    .join('');
   return cards || empty('No single-player runs yet. Start one from New game!');
 }
 
