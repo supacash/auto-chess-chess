@@ -11,7 +11,7 @@ import { SEARCH_DEPTH } from './runBattle';
  * Bump it whenever the rules change. version.test.ts fails when the fingerprint below changes
  * without a bump; rule changes it can't see (such as how battleResult decides a game) need a manual bump.
  */
-export const RULES_VERSION = 1;
+export const RULES_VERSION = 2;
 
 /** Everything about the rules that can be read as data, as one stable string. */
 export function rulesFingerprint(): string {

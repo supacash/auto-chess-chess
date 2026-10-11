@@ -31,7 +31,7 @@ describe('battle records', () => {
     const bad: unknown[] = [
       null,
       { ...r, format: 2 },
-      { ...r, board: 'acc9' },
+      { ...r, board: 'acc11' },
       { ...r, moves: ['e1d1', 'rm -rf'] },
       { ...r, evals: [1, 2, 3] },
       { ...r, evals: ['x'] },

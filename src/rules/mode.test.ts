@@ -4,8 +4,8 @@ import { aiBudget } from './aiArmy';
 import { gameMode, isModeId } from './mode';
 
 describe('game modes', () => {
-  it('grows the board in Growing mode and stays 8×8 in Classic', () => {
-    expect([1, 3, 5, 7, 9].map((r) => gameMode('growing').board(r).files)).toEqual([5, 6, 7, 8, 8]);
+  it('grows the board in Growing mode (to 9×9) and stays 8×8 in Classic', () => {
+    expect([1, 3, 5, 7, 9, 20].map((r) => gameMode('growing').board(r).files)).toEqual([5, 6, 7, 8, 9, 9]);
     expect([1, 3, 5, 7, 9].map((r) => gameMode('classic').board(r).files)).toEqual([8, 8, 8, 8, 8]);
   });
 

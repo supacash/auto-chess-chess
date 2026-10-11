@@ -26,7 +26,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **Prestige:** the victory card offers *Prestige ★N*: start over at round 1 with the starting army and lives, one prestige level higher. Opponents get 0.25 more points per round per level, and the player picks one of three perks to keep for good (stackable ones can come up again): War chest (+2 starting gold, stacks), Squire (start with a Knight, stacks), Royal favour (queens and queen-pawns from round 4), Haggler (first reroll each round free), Second wind (+1 life), Tithe (+1 gold every round). The header shows ★N; the Profile shows the highest prestige. Single player only.
 - **Main menu** (the landing screen, and *Menu* in the header): *Resume game* (shown while a run or a Play it game is in progress, with its round and lives), *New game*, *Multiplayer*, and *Review your last battle*. A battle interrupted by a reload is reported here.
 - **New run window** (opens from *New game*) sets the run's settings, which are fixed for the whole run:
-  - **Board (game mode):** *Growing board* (default; 5×5 growing to 8×8, see Board sizes) or *Classic* (8×8 throughout).
+  - **Board (game mode):** *Growing board* (default; 5×5 growing to 9×9, see Board sizes) or *Classic* (8×8 throughout).
   - **Difficulty:** how fast the AI's budget grows: Easy 5.35×round, Normal 5.5×round (default), Hard 6×round, times the ramp. Easy about matches a typical player (the simulator's stand-in matched it point for point over 25 rounds); Normal sits a little above; Hard is the real test. 5.75 / 6.25 suited a strong player but walled the stand-in (Normal 14% wins). The simulator's stand-in builds worse than people, so its win rates (SIMULATION.md §16) understate the difficulty.
   - **Play as:** White (default; you move first), Black (the opponent moves first, but its army is 2% smaller: moving second costs a few points of win rate) or Random each round. Your pieces are always white to the engine; playing Black only swaps the colours on screen and who moves first.
   - **Fairy pieces** (default on): fairy pieces in the shop and in AI armies, and fusion. Off = standard chess pieces only.
@@ -97,7 +97,8 @@ In Growing mode the board opens up during the run:
 | 1–2 | 5×5 | 2 | 10 | 1 row | 60 plies (30 moves each) |
 | 3–4 | 6×6 | 2 | 12 | 2 rows | 70 plies |
 | 5–6 | 7×7 | 2 | 14 | 3 rows | 80 plies |
-| 7+ | 8×8 | 3 | 24 | 2 rows | 90 plies |
+| 7–8 | 8×8 | 3 | 24 (16-piece limit) | 2 rows | 90 plies |
+| 9+ | 9×9 | 3 | 27 (18-piece limit) | 3 rows | 100 plies |
 
 - Classic uses the 8×8 row throughout.
 - Placed pieces keep their squares when the board grows; a notice announces the new size.

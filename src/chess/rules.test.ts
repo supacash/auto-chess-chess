@@ -110,12 +110,13 @@ describe('kingInCheck and parseUci', () => {
 });
 
 describe('board schedule', () => {
-  it('grows 5→6→7→8 every two rounds and stays at 8×8', async () => {
+  it('grows 5→6→7→8→9 every two rounds and stays at 9×9', async () => {
     const { boardForRound, plyLimit, homeSquares, pawnSquares } = await import('./boardSpec');
-    expect([1, 2, 3, 4, 5, 6, 7, 12].map((r) => boardForRound(r).files)).toEqual([5, 5, 6, 6, 7, 7, 8, 8]);
+    expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 25].map((r) => boardForRound(r).files)).toEqual([5, 5, 6, 6, 7, 7, 8, 8, 9, 9]);
     expect(boardForRound(1).homeRows).toBe(2);
     expect(boardForRound(7).homeRows).toBe(3);
-    expect(BOARDS.map(plyLimit)).toEqual([60, 70, 80, 90]);
+    expect(BOARDS.map(plyLimit)).toEqual([60, 70, 80, 90, 100]);
+    expect(BOARD_8.files).toBe(8);
     expect(homeSquares(BOARDS[0])).toBe(10);
     expect(pawnSquares(BOARDS[0])).toBe(5);
     expect(pawnSquares(BOARD_8)).toBe(16);

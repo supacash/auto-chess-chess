@@ -119,7 +119,7 @@ describe('small boards', () => {
 
 describe('board limit and bench', () => {
   it('allows two pieces per file on the board, within the home squares', () => {
-    expect(BOARDS.map(armyCap)).toEqual([10, 12, 14, 16]);
+    expect(BOARDS.map(armyCap)).toEqual([10, 12, 14, 16, 18]);
   });
 
   it('blocks placing past the limit but allows swaps', () => {

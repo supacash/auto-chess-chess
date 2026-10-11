@@ -45,7 +45,7 @@ describe('army snapshots', () => {
     const bad: unknown[] = [
       null,
       { ...good, format: 2 },
-      { ...good, board: 'acc9' },
+      { ...good, board: 'acc11' },
       { ...good, mode: 'huge' },
       { ...good, pieces: [...good.pieces, { type: 'Y', file: 1, rank: 0 }] },
       { ...good, pieces: good.pieces.filter((p) => p.type !== 'K') }, // no king

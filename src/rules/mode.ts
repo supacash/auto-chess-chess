@@ -21,7 +21,7 @@ export const MODES: GameMode[] = [
   {
     id: 'growing',
     name: 'Growing board',
-    description: 'Starts on 5×5 and grows every two rounds to 8×8. Quick, decisive early battles.',
+    description: 'Starts on 5×5 and grows every two rounds to 9×9. Quick, decisive early battles.',
     board: boardForRound,
     // An extra pawn keeps mating material on 5×5, where 5-point armies drew 40% of round 1s. The AI
     // gets the matching point every round, so the balance matches Classic (the pawn is permanent).

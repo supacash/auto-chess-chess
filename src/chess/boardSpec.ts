@@ -18,9 +18,11 @@ function square(n: number, homeRows: number): BoardSpec {
 }
 
 /** All boards the game uses, smallest first. */
-export const BOARDS: BoardSpec[] = [square(5, 2), square(6, 2), square(7, 2), square(8, 3)];
+/** Every board, smallest first. The Growing mode ends on 9×9 (an 18-piece army); Classic and multiplayer play 8×8. */
+export const BOARDS: BoardSpec[] = [square(5, 2), square(6, 2), square(7, 2), square(8, 3), square(9, 3)];
 
-export const BOARD_8 = BOARDS[BOARDS.length - 1];
+/** The standard 8×8 board (Classic, multiplayer). */
+export const BOARD_8 = BOARDS.find((b) => b.files === 8)!;
 
 export function fileLetter(file: number): string {
   return String.fromCharCode(97 + file);
@@ -66,7 +68,7 @@ export function variantsIni(boards: BoardSpec[] = BOARDS): string {
     .concat('\n');
 }
 
-/** Rounds played on each board before it grows: 5×5 rounds 1–2, 6×6 3–4, 7×7 5–6, then 8×8. */
+/** Rounds played on each board before it grows: 5×5 rounds 1–2, 6×6 3–4, 7×7 5–6, 8×8 7–8, then 9×9. */
 export const ROUNDS_PER_BOARD = 2;
 
 /** The board a round is played on. */
@@ -74,7 +76,7 @@ export function boardForRound(round: number): BoardSpec {
   return BOARDS[Math.min(BOARDS.length - 1, Math.floor((Math.max(1, round) - 1) / ROUNDS_PER_BOARD))];
 }
 
-/** Half-moves before a battle ends on points: 10 × board size + 10 (60 on 5×5 … 90 on 8×8). */
+/** Half-moves before a battle ends on points: 10 × board size + 10 (60 on 5×5 … 90 on 8×8, 100 on 9×9). */
 export function plyLimit(spec: BoardSpec): number {
   return 10 * Math.max(spec.files, spec.ranks) + 10;
 }
