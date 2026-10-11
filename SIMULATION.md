@@ -274,6 +274,21 @@ Affinity pawns replaced the merge recipes (DESIGN.md: three matching affinity pa
 - **25 rounds** (5.25, random side, 20 runs): 50–85% through round 12, then a gentle slide to 30–40% (no wall); 7.7 wins on average.
 - **Chosen:** Easy 5, Normal 5.35, Hard 5.65 (Normal and Hard interpolated toward ~62% and ~33%).
 
+### 17. 9×9 Growing board and late-game easing (shop player, 100 runs × 25 rounds per row)
+
+Difficulty Easy 5.35 / Normal 5.5 / Hard 6 per round; the Growing board ends on 9×9 (18-piece armies). Without easing, the AI outgrew the player from round 16 (Growing Easy won 37% in rounds 16–20 and 27% in 21–25). The ramp now drops to 0.95 from round 16 and 0.9 from round 21:
+
+| Mode, difficulty | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|
+| Growing Easy | 70% | 69% | 67% | 45% | 61% | 63% | 10.6 | 11% |
+| Growing Normal | 60% | 56% | 51% | 37% | 45% | 50% | 7.8 | 6% |
+| Growing Hard | 38% | 24% | 15% | 9% | 9% | 19% | 2.9 | 0% |
+| Classic Easy | 63% | 56% | 48% | 47% | 61% | 55% | 8.6 | 15% |
+| Classic Normal | 50% | 42% | 29% | 28% | 40% | 38% | 4.8 | 3% |
+| Classic Hard | 26% | 11% | 6% | 4% | 8% | 11% | 1.7 | 0% |
+
+The stand-in builds worse than people (it rerolls rather than saving for interest), so real players finish runs more often.
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.
