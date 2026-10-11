@@ -10,6 +10,8 @@ const DRAG_THRESHOLD = 6;
 type DropTarget = { kind: 'square'; sq: Square } | { kind: 'bench' };
 
 interface Press {
+  /** The pointer (finger) this press belongs to: other fingers are ignored until it lifts. */
+  pointerId: number;
   pieceId: string | null;
   /** The opponent piece type pressed, if any (revealed opponents only). */
   foe: PieceType | null;
@@ -56,7 +58,13 @@ export class PlacementBoard {
     root.addEventListener('pointerdown', (e) => this.onPointerDown(e));
     window.addEventListener('pointermove', (e) => this.onPointerMove(e));
     window.addEventListener('pointerup', (e) => this.onPointerUp(e));
-    window.addEventListener('pointercancel', () => this.cancelPress());
+    window.addEventListener('pointercancel', (e) => {
+      if (!this.press || e.pointerId === this.press.pointerId) this.cancelPress();
+    });
+    // Switching apps mid-drag can swallow the pointerup: drop the drag rather than leave a ghost.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.cancelPress();
+    });
     this.render();
   }
 
@@ -151,9 +159,17 @@ export class PlacementBoard {
 
   private onPointerDown(e: PointerEvent): void {
     if (e.button !== 0) return;
+    if (this.press) {
+      // A second finger while one is already down is ignored: taking it over used to orphan the first
+      // finger's drag ghost, which then stayed stuck on screen. A new primary pointer means no other
+      // finger is down, so the old press lost its pointerup: clear it and start over.
+      if (!e.isPrimary) return;
+      this.cancelPress();
+    }
     const pieceEl = (e.target as HTMLElement).closest<HTMLElement>('.piece[data-id]');
     const foe = ((e.target as HTMLElement).closest<HTMLElement>('[data-foe]')?.dataset.foe as PieceType) ?? null;
     this.press = {
+      pointerId: e.pointerId,
       pieceId: pieceEl?.dataset.id ?? null,
       foe,
       x: e.clientX,
@@ -166,7 +182,7 @@ export class PlacementBoard {
 
   private onPointerMove(e: PointerEvent): void {
     const press = this.press;
-    if (!press?.pieceId) return;
+    if (!press?.pieceId || e.pointerId !== press.pointerId) return;
     if (!press.dragging) {
       if (Math.hypot(e.clientX - press.x, e.clientY - press.y) < DRAG_THRESHOLD) return;
       press.dragging = true;
@@ -183,7 +199,7 @@ export class PlacementBoard {
 
   private onPointerUp(e: PointerEvent): void {
     const press = this.press;
-    if (!press) return;
+    if (!press || e.pointerId !== press.pointerId) return;
     this.cancelPress();
     const target = dropTargetAt(e.clientX, e.clientY);
 
@@ -199,6 +215,8 @@ export class PlacementBoard {
 
   private cancelPress(): void {
     this.press?.ghost?.remove();
+    // Belt and braces: no ghost may outlive its press.
+    for (const ghost of document.querySelectorAll('.piece.ghost')) ghost.remove();
     const wasDragging = this.press?.dragging;
     this.press = null;
     if (wasDragging) this.render();
