@@ -72,13 +72,14 @@ export function newRun(
   rng: Rng = Math.random,
   carry: PrestigeCarry = { prestige: 0, perks: [] },
 ): Run {
-  const shop = startingShop(gameMode(settings.mode).startArmy);
+  const mode = gameMode(settings.mode);
+  const shop = startingShop(mode.startArmy);
   const knights = Array.from({ length: perkCount(carry.perks, 'knight') }, () => makePiece('N'));
   return {
     round: 1,
     lives: maxLives(carry.perks),
     record: { w: 0, l: 0, d: 0 },
-    shop: { ...shop, gold: startGold(carry.perks), pieces: [...shop.pieces, ...knights] },
+    shop: { ...shop, gold: startGold(carry.perks) + mode.extraGold, pieces: [...shop.pieces, ...knights] },
     settings,
     color: rollColor(settings.side, rng),
     prestige: carry.prestige,

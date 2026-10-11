@@ -21,7 +21,7 @@ describe('prestige perks', () => {
   it('carries perks into a new run: gold, knights, lives, queen offers and income', () => {
     const run = newRun(undefined, seededRng(1), { prestige: 2, perks: ['gold', 'gold', 'knight', 'life', 'income'] });
     expect(run.prestige).toBe(2);
-    expect(run.shop.gold).toBe(START_GOLD + 4);
+    expect(run.shop.gold).toBe(START_GOLD + 4 + 1); // + the Growing board's extra gold
     expect(startGold(run.perks)).toBe(START_GOLD + 4);
     expect(run.shop.pieces.filter((p) => p.type === 'N')).toHaveLength(1);
     expect(run.lives).toBe(START_LIVES + 1);

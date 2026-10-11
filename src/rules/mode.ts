@@ -11,6 +11,8 @@ export interface GameMode {
   description: string;
   board(round: number): BoardSpec;
   startArmy: PieceType[];
+  /** Gold on top of the usual starting gold. */
+  extraGold: number;
   /** Round 1 AI armies are this many points smaller (see aiBudget). */
   roundOneDiscount: number;
   /** Extra AI points every round, to match a bigger starting army. */
@@ -23,9 +25,11 @@ export const MODES: GameMode[] = [
     name: 'Growing board',
     description: 'Starts on 5×5 and grows every two rounds to 9×9. Quick, decisive early battles.',
     board: boardForRound,
-    // An extra pawn keeps mating material on 5×5, where 5-point armies drew 40% of round 1s. The AI
-    // gets the matching point every round, so the balance matches Classic (the pawn is permanent).
-    startArmy: ['K', 'P', 'P', 'P', 'P'],
+    // An extra gold keeps mating material on 5×5, where 5-point armies drew 40% of round 1s (it was a
+    // fourth pawn, which had no use once pawns merged in threes). The AI gets the matching point every
+    // round, so the balance matches Classic (what the gold buys is permanent).
+    startArmy: ['K', 'P', 'P', 'P'],
+    extraGold: 1,
     roundOneDiscount: 1,
     aiBonus: 1,
   },
@@ -35,6 +39,7 @@ export const MODES: GameMode[] = [
     description: 'A full 8×8 board from the first round.',
     board: () => BOARD_8,
     startArmy: ['K', 'P', 'P', 'P'],
+    extraGold: 0,
     roundOneDiscount: 1,
     aiBonus: 0,
   },

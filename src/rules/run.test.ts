@@ -17,19 +17,19 @@ describe('run', () => {
   it('starts at round 1 with full lives and the starting shop', () => {
     const run = newRun();
     expect(run).toMatchObject({ round: 1, lives: START_LIVES, record: { w: 0, l: 0, d: 0 } });
-    expect(run.shop.gold).toBe(3);
+    expect(run.shop.gold).toBe(4); // Growing board: 3 + its extra gold
   });
 
   it('records wins, losses and draws with income; only losses cost a life', () => {
     let run = newRun();
     run = applyResult(run, 'w');
     expect(run).toMatchObject({ lives: 3, record: { w: 1, l: 0, d: 0 } });
-    expect(run.shop.gold).toBe(3 + 7);
+    expect(run.shop.gold).toBe(4 + 7);
     run = applyResult(run, 'draw');
     expect(run).toMatchObject({ lives: 3, record: { w: 1, l: 0, d: 1 } });
     run = applyResult(run, 'b');
     expect(run).toMatchObject({ lives: 2, record: { w: 1, l: 1, d: 1 } });
-    expect(run.shop.gold).toBe(3 + 7 + 6 + 1 + 5 + 1); // +1 interest on 10 and on 17 gold saved
+    expect(run.shop.gold).toBe(4 + 7 + 6 + 1 + 5 + 1); // +1 interest on 11 and on 18 gold saved
     expect(run.round).toBe(1);
     expect(nextRound(run).round).toBe(2);
   });
@@ -78,7 +78,7 @@ describe('run', () => {
         fairy: true,
         manual: false,
       }).shop.pieces.map((p) => p.type),
-    ).toEqual(['K', 'P', 'P', 'P', 'P']);
+    ).toEqual(['K', 'P', 'P', 'P']);
     expect(
       newRun({
         mode: 'classic',

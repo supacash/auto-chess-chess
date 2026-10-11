@@ -54,7 +54,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 
 - **Gold upgrades:** only a plain pawn (no affinity) → Knight/Bishop, for 3 gold. Rooks and Queens come only from merging or the shop; spare gold goes into rerolls.
 - **Affinity pawns:** pawns bought for a piece (knight-, bishop-, rook- or queen-pawn), shown with a small badge of that piece. They fight as ordinary pawns (and count toward the 8-pawn limit) until three with the same affinity are merged into the piece. Rook-pawns cost 2 gold (6 for a 5-point rook: rooks proved strong for their value); queen-pawns 3 gold and only from round 6. They sell for their price − 1. The piece panel and the offer show how many of the set you have ("you have 2/3").
-- **Start:** 3 gold plus King + 4 pawns (Growing) or King + 3 pawns (Classic).
+- **Start:** King + 3 pawns, plus 4 gold (Growing) or 3 gold (Classic).
 - **Income:** 5 gold per round, +2 for a win, +1 for a draw, plus **interest**: +1 gold per 10 unspent (up to +3), counted on the gold saved before the battle. The shop shows the interest due ("23g +2 interest").
 - **Shop lock:** 🔒 next to Reroll keeps the current offers (whatever's left of them) into the next round; it unlocks after that round, or when you reroll.
 - **Selling** refunds value minus 1 (minimum 0).
@@ -127,7 +127,7 @@ In Growing mode the board opens up during the run:
 
 ## AI opponent
 - **Engine:** Fairy-Stockfish (WASM) plays both sides with identical settings: depth 8, MultiPV 3, picking randomly among moves within ~50 centipawns of the best for variety. Skill is in drafting and placement, not a better engine.
-- **Budget per round:** difficulty × round (rounded), ±1 random, −1 in round 1, and +1 every round in Growing mode (matching its extra starting pawn so both modes have the same balance). −2% when the player is Black. Never more than a full board of queens around the king (15 queens, 135 points, on 8×8).
+- **Budget per round:** difficulty × round (rounded), ±1 random, −1 in round 1, and +1 every round in Growing mode (matching its extra starting gold so both modes have the same balance). −2% when the player is Black. Never more than a full board of queens around the king (15 queens, 135 points, on 8×8).
 - **Styles** (a new style and army each round, shown during placement):
 
   | Style | Draft | Layout |

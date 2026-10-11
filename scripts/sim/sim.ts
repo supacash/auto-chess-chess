@@ -156,8 +156,9 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
   const records: GameRecord[] = [];
   const rejected: RejectedRecord[] = [];
   const runStyle = PLAYER_STYLE === 'random' ? pickStyle(rng) : AI_STYLES.find((s) => s.id === PLAYER_STYLE)!;
-  let playerPoints = MODE.startArmy.reduce((s, t) => s + PIECE_VALUE[t], 0) + START_GOLD;
+  let playerPoints = MODE.startArmy.reduce((s, t) => s + PIECE_VALUE[t], 0) + START_GOLD + MODE.extraGold;
   let shop = startingShop(MODE.startArmy);
+  shop = { ...shop, gold: shop.gold + MODE.extraGold };
 
   for (let round = 1; round <= ROUNDS; round++) {
     const spec = boardFor(round);
