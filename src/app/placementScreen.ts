@@ -229,14 +229,17 @@ export class PlacementScreen {
     }
     const types = opponent.pieces.map((p) => p.type).sort(pieceOrder);
     const points = types.reduce((s, t) => s + PIECE_VALUE[t], 0);
+    // One glyph per piece type, with a count for repeats ("♛×14"), so big armies stay on one line.
+    const counts = new Map<PieceType, number>();
+    for (const t of types) counts.set(t, (counts.get(t) ?? 0) + 1);
     $('#opponent').innerHTML =
       `${label} · <strong>${name}</strong>: ` +
-      `<span class="glyphs">${types
+      `<span class="glyphs">${[...counts]
         .map(
-          (t) =>
-            `<button type="button" class="foe" data-foe="${t}" aria-label="What does the ${PIECE_NAME[t]} do?">${inlinePiece(t, 'b')}</button>`,
+          ([t, n]) =>
+            `<button type="button" class="foe" data-foe="${t}" aria-label="${n} ${PIECE_NAME[t]}${n > 1 ? 's' : ''}: what does it do?">${inlinePiece(t, 'b')}${n > 1 ? `<span class="foe-count">×${n}</span>` : ''}</button>`,
         )
-        .join('')}</span> · ${points} pts`;
+        .join('')}</span> <span class="foe-points">· ${points} pts</span>`;
     this.renderFoeInfo();
   }
 

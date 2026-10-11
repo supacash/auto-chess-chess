@@ -360,6 +360,17 @@ button:disabled {
   border-radius: 4px;
 }
 
+.opponent .foe-count {
+  margin-left: 1px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.opponent .foe-points {
+  white-space: nowrap;
+}
+
 .opponent button.foe.active {
   border-color: var(--accent);
 }
