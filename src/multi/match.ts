@@ -6,6 +6,7 @@ import type { Piece } from '../rules/pieces';
 import { BASE_INCOME, DRAW_BONUS } from '../rules/economy';
 import { type GameMode, gameMode, type ModeId } from '../rules/mode';
 import { type Rng, seededRng, shuffle } from '../rules/rng';
+import { botPicks, MEND_HP, type PerkPicks, perkedDamage, perksUpTo } from './perks';
 
 // A live, TFT-style match: four players shop and place at the same time, are paired off each round,
 // and lose health when they lose a battle. The last one standing wins. Everything here is pure and
@@ -169,27 +170,56 @@ export interface PairingResult {
   material: Record<Color, number>;
 }
 
-/** Health lost by each player in a round's results. */
-export function roundDamage(round: number, results: PairingResult[]): Map<string, number> {
+/** Each player's perk picks (see perks.ts); none by default. */
+export type PicksOf = (playerId: string) => PerkPicks;
+const NO_PICKS: PicksOf = () => ({});
+
+/** Perk picks for `players`: bots' from the seed, people's from `people` (as shared with the room). */
+export function matchPicksOf(
+  players: readonly MatchPlayer[],
+  seed: number,
+  round: number,
+  people: Record<string, PerkPicks>,
+): PicksOf {
+  return (id) => (players.find((p) => p.id === id)?.bot ? botPicks(seed, id, round) : (people[id] ?? {}));
+}
+
+/**
+ * Health lost by each player in a round's results, after perks: the winner's Sharp edges (not a
+ * copy's: its owner isn't in the battle) and the loser's Bulwarks.
+ */
+export function roundDamage(round: number, results: PairingResult[], picksOf: PicksOf = NO_PICKS): Map<string, number> {
   const damage = new Map<string, number>();
   for (const { pairing, winner, material } of results) {
     if (winner === 'draw') continue;
     const loserSide: Color = winner === 'w' ? 'b' : 'w';
     if (pairing.copy === loserSide) continue; // the copy's owner isn't in this battle
     const loser = loserSide === 'w' ? pairing.white : pairing.black;
-    damage.set(loser, (damage.get(loser) ?? 0) + lossDamage(round, material[winner]));
+    const winnerId = winner === 'w' ? pairing.white : pairing.black;
+    const winnerPerks = pairing.copy === winner ? [] : perksUpTo(picksOf(winnerId), round);
+    const lost = perkedDamage(lossDamage(round, material[winner]), winnerPerks, perksUpTo(picksOf(loser), round));
+    damage.set(loser, (damage.get(loser) ?? 0) + lost);
   }
   return damage;
 }
 
 /**
- * Applies a round's results: losers lose health, players at 0 or below are out (lower health =
- * worse place), and the last one standing wins.
+ * Applies a round's results: losers lose health, Second wind picked this round heals (up to
+ * START_HP), players at 0 or below are out (lower health = worse place), and the last one standing wins.
  */
-export function applyRound(players: MatchPlayer[], round: number, results: PairingResult[]): MatchPlayer[] {
-  const damage = roundDamage(round, results);
+export function applyRound(
+  players: MatchPlayer[],
+  round: number,
+  results: PairingResult[],
+  picksOf: PicksOf = NO_PICKS,
+): MatchPlayer[] {
+  const damage = roundDamage(round, results, picksOf);
   const inBefore = alive(players).length;
-  const next = players.map((p) => (p.place === null ? { ...p, hp: p.hp - (damage.get(p.id) ?? 0) } : { ...p }));
+  const healed = (p: MatchPlayer, hp: number) =>
+    picksOf(p.id)[round] === 'mend' ? Math.min(START_HP, hp + MEND_HP) : hp;
+  const next = players.map((p) =>
+    p.place === null ? { ...p, hp: healed(p, p.hp - (damage.get(p.id) ?? 0)) } : { ...p },
+  );
   const knockedOut = next.filter((p) => p.place === null && p.hp <= 0).sort((a, b) => a.hp - b.hp);
   let place = inBefore;
   for (const p of knockedOut) p.place = place--;
@@ -267,7 +297,7 @@ export function botArmy(
   return placeAiArmy(draftAiArmy(budget, style, rng, spec, fairy), style, rng, spec);
 }
 
-function hashId(id: string): number {
+export function hashId(id: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 0x01000193);
   return h >>> 0;

@@ -1817,3 +1817,116 @@ button.tip-close {
 .lobby-rules:empty {
   display: none;
 }
+
+/* Multiplayer: how many of an offer are left in the shared pool, and players' perks. */
+.offer-left {
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.offer.pricey .offer-left {
+  color: var(--danger);
+}
+
+.player .perks {
+  letter-spacing: 1px;
+}
+
+/* Extra buttons on a match's round card (Watch another battle, Keep watching). */
+.card-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.card-extras[hidden] {
+  display: none;
+}
+
+.card-extras button {
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+/* Scouting a match player: health by round, perks, pool pawns, armies. */
+.match-players li[data-id] {
+  cursor: pointer;
+}
+
+.scout #scout-status {
+  margin-top: -6px;
+}
+
+.scout-section {
+  margin: 10px 0;
+}
+
+.scout-section h3 {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.scout-section p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.scout-perks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.scout-perks li + li {
+  margin-top: 3px;
+}
+
+.scout-pieces .inline-piece {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 44px;
+  color: var(--accent);
+}
+
+.scout-hp {
+  font-size: 0.75rem !important;
+}
+
+.mini-board {
+  display: grid;
+  max-width: 300px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.mini-square {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+}
+
+.mini-square.light {
+  background: var(--light);
+}
+
+.mini-square.dark {
+  background: var(--dark);
+}
+
+.mini-square .inline-piece,
+.mini-square .inline-affinity {
+  width: 90%;
+  height: 90%;
+}

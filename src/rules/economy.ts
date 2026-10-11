@@ -175,14 +175,21 @@ export function maxOfferCost(round: number): number {
 /**
  * A fresh set of offers for `round`. Without `fairy`, standard pieces (and affinity pawns) only.
  * `queenRound` is when queens and queen-pawns start showing up (earlier with a prestige perk).
+ * `scale` multiplies each offer's chance (multiplayer: by how much of it is left in the shared pool).
  */
-export function rollOffers(round: number, rng: Rng, fairy = true, queenRound = QUEEN_OFFER_ROUND): Offer[] {
+export function rollOffers(
+  round: number,
+  rng: Rng,
+  fairy = true,
+  queenRound = QUEEN_OFFER_ROUND,
+  scale: (offer: Offer) => number = () => 1,
+): Offer[] {
   const pool = (Object.keys(OFFER_WEIGHTS) as Offer[]).filter((o) => {
     const queen = o === 'Q' || o === 'PQ';
     const standard = isAffinityOffer(o) || PIECES[o].group === 'standard';
     return offerPrice(o) <= maxOfferCost(round) && (!queen || round >= queenRound) && (fairy || standard);
   });
-  return Array.from({ length: OFFER_COUNT }, () => weightedPick(pool, (o) => OFFER_WEIGHTS[o] ?? 0, rng));
+  return Array.from({ length: OFFER_COUNT }, () => weightedPick(pool, (o) => (OFFER_WEIGHTS[o] ?? 0) * scale(o), rng));
 }
 
 /** Buys offer number `index` onto the bench for its price in gold. */
@@ -213,10 +220,14 @@ export function rerollOffers(
   fairy = true,
   cost = REROLL_COST,
   queenRound = QUEEN_OFFER_ROUND,
+  scale?: (offer: Offer) => number,
 ): ShopResult {
   if (shop.gold < cost) return { ok: false, error: 'Not enough gold' };
   const { locked: _, ...rest } = shop; // rerolling unlocks
-  return { ok: true, shop: { ...rest, gold: shop.gold - cost, offers: rollOffers(round, rng, fairy, queenRound) } };
+  return {
+    ok: true,
+    shop: { ...rest, gold: shop.gold - cost, offers: rollOffers(round, rng, fairy, queenRound, scale) },
+  };
 }
 
 /** Locks or unlocks the shop: a locked shop keeps its offers into the next round. */
@@ -228,10 +239,17 @@ export function toggleLock(shop: Shop): Shop {
  * The shop for a new round: fresh offers, unless it was locked, in which case it keeps the offers
  * (whatever's left of them) and unlocks.
  */
-export function restock(shop: Shop, round: number, rng: Rng, fairy = true, queenRound = QUEEN_OFFER_ROUND): Shop {
+export function restock(
+  shop: Shop,
+  round: number,
+  rng: Rng,
+  fairy = true,
+  queenRound = QUEEN_OFFER_ROUND,
+  scale?: (offer: Offer) => number,
+): Shop {
   const { locked, ...rest } = shop;
   if (locked && rest.offers) return rest;
-  return { ...rest, offers: rollOffers(round, rng, fairy, queenRound) };
+  return { ...rest, offers: rollOffers(round, rng, fairy, queenRound, scale) };
 }
 
 // ---- two-piece merges and fusion ----

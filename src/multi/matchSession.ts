@@ -5,6 +5,9 @@ import type { Winner } from '../rules/battle';
 import {
   BASE_INCOME,
   interest,
+  type Offer,
+  QUEEN_OFFER_ROUND,
+  REROLL_COST,
   rerollOffers,
   restock,
   rollOffers,
@@ -13,7 +16,7 @@ import {
   startingShop,
 } from '../rules/economy';
 import { makePiece, type Piece, type PieceType } from '../rules/pieces';
-import { armyErrors, canPlace, fitToBoard, pieceAt } from '../rules/placement';
+import { armyErrors, BENCH_SIZE, benchCount, canPlace, fitToBoard, pieceAt } from '../rules/placement';
 import { startPosition } from '../rules/position';
 import type { Rng } from '../rules/rng';
 import {
@@ -27,6 +30,7 @@ import {
   matchIncome,
   matchMode,
   matchOver,
+  matchPicksOf,
   newPlayers,
   nextStreaks,
   type Pairing,
@@ -35,6 +39,8 @@ import {
   pairRound,
   roundDamage,
 } from './match';
+import { CHEST_GOLD, countPerk, isPerkRound, type MatchPerkId, type PerkPicks, perkChoices, perksUpTo } from './perks';
+import { botHoldings, type Holdings, holdingsOf, offerLeft, poolLeft, poolScale, sameHoldings } from './pool';
 
 export type MatchPhase = 'shop' | 'battle' | 'over';
 
@@ -66,6 +72,25 @@ export class MatchSession implements PlacementSession {
   previews = new Map<string, PieceType[]>();
   /** Called when the player's placed pieces change (online: shared as a preview, types only). */
   onArmyChange: ((types: PieceType[]) => void) | null = null;
+  /** People's perk picks (the player's own included); bots' come from the seed. */
+  picks = new Map<string, PerkPicks>();
+  /** Other people's affinity pawns (online, from the room), for the shared pool. */
+  held = new Map<string, Holdings>();
+  /** Called when the player picks a perk (online: shared with the room). */
+  onPerkPick: ((round: number, perk: MatchPerkId) => void) | null = null;
+  /** Called when the player's affinity pawns change (online: shared with the room, for the pool). */
+  onHeldChange: ((held: Holdings) => void) | null = null;
+  private lastHeld: Holdings = {};
+  /** The round the player last used Haggler's free reroll in. */
+  private freeRerollRound = 0;
+  /** The board the locked armies were placed on (for showing a player's last army). */
+  lockedBoard: BoardSpec | null = null;
+  /** The round the locked armies are for. */
+  lockedRound: number | null = null;
+  /** The locked round's pairings (kept after the round is applied, for watching its battles). */
+  lockedPairings: Pairing[] = [];
+  /** Everyone's health after each round (round 0 = the start), for scouting. */
+  readonly health = new Map<number, Map<string, number>>();
 
   constructor(
     readonly seed: number,
@@ -77,7 +102,115 @@ export class MatchSession implements PlacementSession {
     this.players = newPlayers(entries);
     const mode = matchMode(settings);
     const shop = startingShop(mode.startArmy);
-    this.shop = { ...shop, gold: shop.gold + mode.extraGold, offers: rollOffers(1, rng, this.fairy) };
+    this.shop = { ...shop, gold: shop.gold + mode.extraGold };
+    this.shop = { ...this.shop, offers: this.roll(1) };
+    this.noteHealth(0);
+  }
+
+  /** Records everyone's health after `round`. */
+  noteHealth(round: number): void {
+    this.health.set(round, new Map(this.players.map((p) => [p.id, Math.max(0, p.hp)])));
+  }
+
+  /** A player's health after each round so far, from the start. */
+  healthOf(id: string): number[] {
+    return [...this.health.keys()]
+      .sort((a, b) => a - b)
+      .flatMap((r) => {
+        const hp = this.health.get(r)!.get(id);
+        return hp === undefined ? [] : [hp];
+      });
+  }
+
+  /** A player's affinity pawns (the player's own, a person's as shared, a bot's from the seed). */
+  holdingsOf(id: string): Holdings {
+    if (id === this.myId) return holdingsOf(this.shop.pieces);
+    return this.player(id).bot ? botHoldings(this.seed, this.round, id) : (this.held.get(id) ?? {});
+  }
+
+  /**
+   * What a player is fielding this round, types only: a bot's army, a person's shared preview, or
+   * the player's own placed pieces. Null when a person hasn't shared one.
+   */
+  currentTypes(id: string): PieceType[] | null {
+    if (id === this.myId) return this.placedTypes();
+    return this.player(id).bot
+      ? botArmy(this.seed, this.round, id, this.settings).map((p) => p.type)
+      : (this.previews.get(id) ?? null);
+  }
+
+  /** After being knocked out: on to the next round, to watch the others play it. */
+  startSpectatorRound(): void {
+    this.round++;
+    this.pairings = [];
+    this.phase = 'shop';
+  }
+
+  // ---- perks ----
+
+  /** A player's perk picks (bots' from the seed). */
+  picksOf(id: string): PerkPicks {
+    return matchPicksOf(this.players, this.seed, this.round, Object.fromEntries(this.picks))(id);
+  }
+
+  /** The perks a player has so far (this round's pick included). */
+  perksOf(id: string): MatchPerkId[] {
+    return perksUpTo(this.picksOf(id), this.round);
+  }
+
+  /** The player's perk choices this round, or null when there's nothing to pick (or it's picked). */
+  perkChoices(): MatchPerkId[] | null {
+    if (this.phase !== 'shop' || this.me.place !== null || !isPerkRound(this.round)) return null;
+    const mine = this.picks.get(this.myId) ?? {};
+    if (mine[this.round]) return null;
+    return perkChoices(this.seed, this.round, this.myId, perksUpTo(mine, this.round - 1));
+  }
+
+  /** Picks one of this round's perk choices and applies what it does now (gold, a Knight). */
+  choosePerk(perk: MatchPerkId): boolean {
+    if (!this.perkChoices()?.includes(perk)) return false;
+    this.picks.set(this.myId, { ...this.picks.get(this.myId), [this.round]: perk });
+    if (perk === 'chest') this.shop = { ...this.shop, gold: this.shop.gold + CHEST_GOLD };
+    if (perk === 'squire') {
+      // A full bench gets the Knight's worth in gold instead.
+      this.shop =
+        benchCount(this.shop.pieces) < BENCH_SIZE
+          ? { ...this.shop, pieces: [...this.shop.pieces, makePiece('N')] }
+          : { ...this.shop, gold: this.shop.gold + 3 };
+    }
+    this.onPerkPick?.(this.round, perk);
+    this.armyChanged();
+    return true;
+  }
+
+  private myPerkCount(perk: MatchPerkId): number {
+    return countPerk(this.perksOf(this.myId), perk);
+  }
+
+  /** Royal favour: queens and queen-pawns right away. */
+  private queenRound(): number {
+    return this.myPerkCount('favour') > 0 ? 1 : QUEEN_OFFER_ROUND;
+  }
+
+  rerollCost(): number {
+    return this.myPerkCount('haggler') > 0 && this.freeRerollRound !== this.round ? 0 : REROLL_COST;
+  }
+
+  // ---- the shared pawn pool ----
+
+  /** What's left in the pool: everyone still in holds some (the player, other people as shared, bots). */
+  poolLeft(): ReturnType<typeof poolLeft> {
+    return poolLeft(alive(this.players).map((p) => this.holdingsOf(p.id)));
+  }
+
+  /** How many of an offer are left in the pool (null: not a pooled offer). */
+  offerLeft(offer: Offer): number | null {
+    return offerLeft(this.poolLeft(), offer);
+  }
+
+  /** Fresh offers for `round`, weighted by what's left in the pool. */
+  private roll(round: number): Offer[] {
+    return rollOffers(round, this.rng, this.fairy, this.queenRound(), poolScale(this.poolLeft()));
   }
 
   /** This round's board (the room's mode: Classic 8×8, or Growing). */
@@ -145,11 +278,27 @@ export class MatchSession implements PlacementSession {
   }
 
   private armyChanged(): void {
+    const held = holdingsOf(this.shop.pieces);
+    if (!sameHoldings(held, this.lastHeld)) {
+      this.lastHeld = held;
+      this.onHeldChange?.(held);
+    }
     if (this.phase === 'shop') this.onArmyChange?.(this.placedTypes());
   }
 
   rerollOffers(): ShopResult {
-    return rerollOffers(this.shop, this.round, this.rng, this.fairy);
+    const cost = this.rerollCost();
+    const result = rerollOffers(
+      this.shop,
+      this.round,
+      this.rng,
+      this.fairy,
+      cost,
+      this.queenRound(),
+      poolScale(this.poolLeft()),
+    );
+    if (result.ok && cost === 0) this.freeRerollRound = this.round;
+    return result;
   }
 
   fitPiecesToBoard(): void {
@@ -173,6 +322,9 @@ export class MatchSession implements PlacementSession {
       this.locked.set(p.id, army);
     }
     this.pairings = pairRound(this.players, this.seed, this.round);
+    this.lockedBoard = this.board;
+    this.lockedRound = this.round;
+    this.lockedPairings = this.pairings;
     this.phase = 'battle';
   }
 
@@ -187,7 +339,13 @@ export class MatchSession implements PlacementSession {
   }
 
   battle(pairing: Pairing): MatchBattle {
-    return this.battleBetween(pairing, this.army(pairing.white), this.army(pairing.black));
+    // On the board the armies were locked on (the round may have moved on since, e.g. when watching).
+    return this.battleBetween(
+      pairing,
+      this.army(pairing.white),
+      this.army(pairing.black),
+      this.lockedBoard ?? this.board,
+    );
   }
 
   /** True when nobody but bots is in this battle (a copy of a person's army doesn't count as them). */
@@ -204,7 +362,7 @@ export class MatchSession implements PlacementSession {
   /** A battle between two bots' armies, before the round's armies are locked (see armiesKnownEarly). */
   earlyBattle(pairing: Pairing): MatchBattle {
     const army = (id: string) => botArmy(this.seed, this.round, id, this.settings);
-    return this.battleBetween(pairing, army(pairing.white), army(pairing.black));
+    return this.battleBetween(pairing, army(pairing.white), army(pairing.black), this.board);
   }
 
   /** This round's pairings, known from the seed as soon as the shop opens. */
@@ -212,9 +370,9 @@ export class MatchSession implements PlacementSession {
     return pairRound(this.players, this.seed, this.round);
   }
 
-  private battleBetween(pairing: Pairing, white: Piece[], black: Piece[]): MatchBattle {
+  private battleBetween(pairing: Pairing, white: Piece[], black: Piece[], spec: BoardSpec): MatchBattle {
     // White moves first, as in chess (a king that starts in check still moves first).
-    const start = startPosition(white, black, true, this.board);
+    const start = startPosition(white, black, true, spec);
     return { pairing, start: start.ok ? { fen: start.fen, firstMover: start.firstMover } : null };
   }
 
@@ -231,7 +389,7 @@ export class MatchSession implements PlacementSession {
         : {
             ...saved.shop,
             gold: saved.shop.gold + missed * BASE_INCOME,
-            offers: rollOffers(round, this.rng, this.fairy),
+            offers: this.roll(round),
           };
     this.streaks = new Map([[this.myId, missed === 0 ? saved.streak : 0]]);
     this.pairings = [];
@@ -240,9 +398,11 @@ export class MatchSession implements PlacementSession {
 
   /** Applies the round's results: health, knockouts, the player's income, then the next round's shop. */
   finishRound(results: PairingResult[]): void {
-    this.lastDamage = roundDamage(this.round, results);
+    const picksOf = (id: string) => this.picksOf(id);
+    this.lastDamage = roundDamage(this.round, results, picksOf);
     this.streaks = nextStreaks(this.streaks, results);
-    this.players = applyRound(this.players, this.round, results);
+    this.players = applyRound(this.players, this.round, results, picksOf);
+    this.noteHealth(this.round);
     const mine = results.find((r) => r.pairing === this.myPairing());
     const myResult = mine ? fromSide(mine.winner, mine.pairing.white === this.myId ? 'w' : 'b') : 'draw';
     const playedBlack = mine !== undefined && mine.pairing.black === this.myId && mine.pairing.copy !== 'b';
@@ -254,8 +414,12 @@ export class MatchSession implements PlacementSession {
     const earned =
       matchIncome(myResult, this.streaks.get(this.myId) ?? 0) +
       (playedBlack ? BLACK_GOLD : 0) +
-      interest(this.shop.gold);
-    this.shop = { ...restock(this.shop, this.round, this.rng, this.fairy), gold: this.shop.gold + earned };
+      interest(this.shop.gold) +
+      this.myPerkCount('tithe');
+    this.shop = {
+      ...restock(this.shop, this.round, this.rng, this.fairy, this.queenRound(), poolScale(this.poolLeft())),
+      gold: this.shop.gold + earned,
+    };
     this.pairings = [];
     this.phase = 'shop';
   }

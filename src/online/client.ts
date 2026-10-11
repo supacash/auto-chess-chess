@@ -20,8 +20,10 @@ import {
   where,
 } from 'firebase/firestore';
 import { type MatchSettings, matchBoard } from '../multi/match';
+import { isMatchPerkId, type MatchPerkId, type PerkPicks } from '../multi/perks';
+import type { Holdings } from '../multi/pool';
 import { isModeId } from '../rules/mode';
-import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
+import { isAffinity, isPieceType, type Piece, type PieceType } from '../rules/pieces';
 import { type Rng, randomSeed } from '../rules/rng';
 import {
   armyDoc,
@@ -259,6 +261,16 @@ export class RoomClient {
     await updateDoc(doc(this.db, 'rooms', code), { [`preview.${this.uid}`]: types });
   }
 
+  /** Shares the player's perk pick for `round`. */
+  async sharePerk(code: string, round: number, perk: MatchPerkId): Promise<void> {
+    await updateDoc(doc(this.db, 'rooms', code), { [`perks.${this.uid}.${round}`]: perk });
+  }
+
+  /** Shares the player's affinity pawns (for the shared pool). */
+  async shareHeld(code: string, held: Holdings): Promise<void> {
+    await updateDoc(doc(this.db, 'rooms', code), { [`held.${this.uid}`]: held });
+  }
+
   /** Marks the player as finished with the round's battles. */
   async markDone(code: string, round: number): Promise<void> {
     await updateDoc(doc(this.db, 'rooms', code), { [`done.${this.uid}`]: round });
@@ -309,7 +321,37 @@ function fromStored(data: Record<string, unknown>): Room {
     done: (data.done as Record<string, number>) ?? {},
     preview: parsePreviews(data.preview),
     results: parseResults(data.results),
+    perks: parsePerks(data.perks),
+    held: parseHeld(data.held),
   };
+}
+
+/** People's perk picks (round → perk), kept only if well-formed. */
+function parsePerks(data: unknown): Record<string, PerkPicks> {
+  const out: Record<string, PerkPicks> = {};
+  if (typeof data !== 'object' || data === null) return out;
+  for (const [uid, picks] of Object.entries(data)) {
+    if (typeof picks !== 'object' || picks === null) continue;
+    const clean: PerkPicks = {};
+    for (const [round, perk] of Object.entries(picks)) if (isMatchPerkId(perk)) clean[Number(round)] = perk;
+    out[uid] = clean;
+  }
+  return out;
+}
+
+/** People's affinity pawns by kind, kept only if well-formed. */
+function parseHeld(data: unknown): Record<string, Holdings> {
+  const out: Record<string, Holdings> = {};
+  if (typeof data !== 'object' || data === null) return out;
+  for (const [uid, held] of Object.entries(data)) {
+    if (typeof held !== 'object' || held === null) continue;
+    const clean: Holdings = {};
+    for (const [kind, n] of Object.entries(held)) {
+      if (isAffinity(kind) && Number.isInteger(n) && (n as number) >= 0) clean[kind] = n as number;
+    }
+    out[uid] = clean;
+  }
+  return out;
 }
 
 /** The room's rules; anything missing or unknown is Classic with standard pieces. */

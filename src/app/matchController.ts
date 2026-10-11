@@ -3,23 +3,26 @@ import type { Engine } from '../engine/stockfish';
 import { runBattle } from '../game/runBattle';
 import {
   alive,
-  lossDamage,
   type MatchSettings,
   type Pairing,
   type PairingResult,
+  roundDamage,
   START_HP,
   shopSeconds,
   streakBonus,
 } from '../multi/match';
+import { matchPerk, perksUpTo } from '../multi/perks';
 import { type MatchBattle, MatchSession, withKingPlaced } from '../multi/matchSession';
 import { generateName, ordinal } from '../multi/names';
 import type { RoomClient } from '../online/client';
 import { botBattleComputer, canFinishRound, canStartBattle, resultKey, type Room, shopDeadline } from '../online/room';
 import { clearMatch, type SavedMatch, saveMatch } from '../game/storage';
 import { randomSeed, seededRng } from '../rules/rng';
-import { BattleAborted, type BattleScreen } from './battleScreen';
+import { BattleAborted, type BattleScreen, type CardButton } from './battleScreen';
 import { $, escapeHtml, sleep } from './dom';
+import { PerkDialog } from './perkDialog';
 import type { PlacementScreen } from './placementScreen';
+import { ScoutDialog } from './scoutDialog';
 import type { RecordBook } from './recordBook';
 
 export interface MatchDeps {
@@ -70,8 +73,25 @@ export class MatchController {
   private catchUp = false;
   /** Bumped when a match ends, so work still running for an old match knows to stop. */
   private generation = 0;
+  private readonly perkDialog = new PerkDialog();
+  private readonly scout = new ScoutDialog();
+  /** True while the player watches another battle of the round. */
+  private watching = false;
+  /** Knocked out and watching the rest of the match. */
+  private spectating = false;
+  /** Offline spectating: the last round's results. */
+  private spectatorResults: PairingResult[] = [];
+  /** Shows the card the player was on again (after watching a battle). */
+  private lastCard: (() => void) | null = null;
+  /** The match's result has been recorded (once, however often the final card is shown). */
+  private recorded = false;
 
   constructor(private readonly deps: MatchDeps) {
+    // Scouting: tap a player in the health list.
+    $('#match-players').addEventListener('click', (e) => {
+      const row = (e.target as HTMLElement).closest<HTMLElement>('li[data-id]');
+      if (row && this.match) this.scout.open(this.match, row.dataset.id!);
+    });
     // Leaving takes a second tap. Online, the seat stays in the match (its last army keeps fighting).
     const leave = $<HTMLButtonElement>('#match-leave');
     let armed = 0;
@@ -114,6 +134,7 @@ export class MatchController {
   startOnline(client: RoomClient, room: Room, saved: SavedMatch | null = null): void {
     const m = new MatchSession(room.seed, client.uid, room.players, room.settings, Math.random);
     m.players = room.players;
+    this.syncShared(m, room);
     if (saved) m.resume(saved, room.round);
     this.match = m;
     const o: Online = {
@@ -141,6 +162,14 @@ export class MatchController {
         if (this.match === m && this.online) void this.online.client.sharePreview(room.code, types).catch(console.warn);
       }, 800);
     };
+    // Perk picks and affinity pawns (for the shared pool) go to the room as they happen.
+    m.onPerkPick = (round, perk) => {
+      if (this.match === m && this.online)
+        void this.online.client.sharePerk(room.code, round, perk).catch(console.warn);
+    };
+    m.onHeldChange = (held) => {
+      if (this.match === m && this.online) void this.online.client.shareHeld(room.code, held).catch(console.warn);
+    };
     this.begin();
     if (finished) {
       m.lockArmies();
@@ -153,6 +182,26 @@ export class MatchController {
       this.deps.placement.setBusy(true);
       this.deps.placement.setMessage('Ready! Waiting for the other players…');
     }
+  }
+
+  /** Online: takes other people's perk picks and affinity pawns from the room (the player's own stay local). */
+  private syncShared(m: MatchSession, room: Room): void {
+    const mine = { ...room.perks[m.myId], ...m.picks.get(m.myId) };
+    m.picks = new Map(Object.entries({ ...room.perks, [m.myId]: mine }));
+    m.held = new Map(Object.entries(room.held).filter(([id]) => id !== m.myId));
+  }
+
+  /** Opens the perk pick when this round has one the player hasn't made. */
+  private offerPerk(): void {
+    const m = this.match;
+    const choices = m?.perkChoices();
+    if (!m || !choices) return;
+    const owned = perksUpTo(m.picksOf(m.myId), m.round - 1).map(matchPerk);
+    this.perkDialog.open(choices, owned, (perk) => {
+      if (this.match !== m || !m.choosePerk(perk)) return;
+      this.deps.placement.refresh();
+      this.renderHud();
+    });
   }
 
   /** Online: keeps this device's side of the match (shop, streak) so a reload can rejoin it. */
@@ -183,6 +232,12 @@ export class MatchController {
     this.generation++;
     this.deps.battle.abort();
     this.stopTimer();
+    this.perkDialog.close();
+    this.watching = false;
+    this.spectating = false;
+    this.spectatorResults = [];
+    this.lastCard = null;
+    this.recorded = false;
     this.online?.stopWatching();
     this.online = null;
     this.match = null;
@@ -198,6 +253,7 @@ export class MatchController {
     battle.hide();
     placement.show();
     placement.setMessage('');
+    this.offerPerk();
     if (this.online) {
       this.save();
       // Pieces carry over between rounds: share them right away for the new round's opponent.
@@ -211,6 +267,7 @@ export class MatchController {
   private async ready(): Promise<void> {
     const m = this.match;
     if (!m || m.phase !== 'shop') return;
+    this.perkDialog.pickFirst(); // time's up (or Ready) with the perk still to pick
     if (!this.online) {
       await this.fight();
       return;
@@ -276,7 +333,16 @@ export class MatchController {
     if (!o || !m || !room) return;
     o.room = room;
     m.previews = new Map(Object.entries(room.preview));
-    if (m.phase === 'shop') this.deps.placement.refreshOpponent();
+    if (this.spectating) {
+      void this.onSpectatedRoom(room);
+      return;
+    }
+    const poolBefore = JSON.stringify(m.poolLeft());
+    this.syncShared(m, room);
+    if (m.phase === 'shop') {
+      this.deps.placement.refreshOpponent();
+      if (JSON.stringify(m.poolLeft()) !== poolBefore) this.deps.placement.refreshShop();
+    }
     if (room.phase === 'battle' && room.round === m.round && m.phase === 'shop' && o.fought < room.round) {
       o.fought = room.round;
       void this.fight();
@@ -304,6 +370,7 @@ export class MatchController {
     // A battle from a match the player just left may still be winding down: let it finish first.
     while (this.busy) await sleep(100);
     if (this.match !== m || m.phase !== 'shop') return;
+    this.perkDialog.pickFirst();
     const generation = this.generation;
     const stale = () => generation !== this.generation;
     this.busy = true;
@@ -480,7 +547,14 @@ export class MatchController {
     const myResult = full.find((r) => r.pairing === mine) ?? null;
     m.finishRound(full);
     m.players = o.room.players;
+    m.noteHealth((m.phase as string) === 'over' ? m.round : m.round - 1);
     this.renderHud();
+    if (this.watching) {
+      // Watching another battle: stop it and come back to this round's card, now final.
+      this.lastCard = () => this.showRoundCard(myResult, true, full);
+      this.deps.battle.abort();
+      return;
+    }
     if ((m.phase as string) === 'over') {
       this.showRoundCard(myResult, true, full);
       return;
@@ -503,7 +577,7 @@ export class MatchController {
     const lost =
       final || !myResult || outcome !== 'b'
         ? (m.lastDamage.get(m.myId) ?? 0)
-        : lossDamage(m.round, myResult.material[myResult.winner as 'w' | 'b']);
+        : (roundDamage(m.round, [myResult], (id) => m.picksOf(id)).get(m.myId) ?? 0);
     const hpLeft = final ? Math.max(0, m.me.hp) : Math.max(0, m.me.hp - lost);
     const damageText =
       final || outcome === 'b'
@@ -512,21 +586,29 @@ export class MatchController {
           : 'You took no damage.'
         : 'You took no damage.';
     const detail = () => [damageText, ...this.otherResults(myResult, results)].join(' ');
+    this.lastCard = () => this.showRoundCard(myResult, final, results);
+    const watch = this.watchButtons(m.lockedPairings.filter((p) => p !== myResult?.pairing));
 
     if (final && m.phase === 'over') {
       const place = m.me.place ?? 1;
-      // An online match only counts as online with at least one other person in it: a quick play
-      // room that filled up with bots is recorded as a match against bots.
-      const withPeople = m.players.some((p) => !p.bot && p.id !== m.myId);
-      this.deps.records.matchEnd(this.online !== null && withPeople, m.settings.blitz, place);
-      if (this.online) clearMatch();
-      if (this.online) void this.online.client.markDone(this.online.code, this.online.fought).catch(console.warn);
+      if (!this.recorded) {
+        this.recorded = true;
+        // An online match only counts as online with at least one other person in it: a quick play
+        // room that filled up with bots is recorded as a match against bots.
+        const withPeople = m.players.some((p) => !p.bot && p.id !== m.myId);
+        this.deps.records.matchEnd(this.online !== null && withPeople, m.settings.blitz, place);
+        if (this.online) clearMatch();
+        if (this.online) void this.online.client.markDone(this.online.code, this.online.fought).catch(console.warn);
+      }
+      // Knocked out while others play on: they can stay and watch the rest.
+      const goesOn = this.online ? this.online.room.status !== 'over' : alive(m.players).length > 1;
       this.deps.battle.showCard({
         title: place === 1 ? 'You win the match!' : `You finished ${ordinal(place)}`,
         detail: detail(),
         tone: place === 1 ? 'w' : 'b',
         button: 'Back to menu',
         onButton: () => this.exit(),
+        extras: [...watch, ...(goesOn ? [{ label: 'Keep watching the match', onClick: () => this.spectate() }] : [])],
       });
       return;
     }
@@ -537,6 +619,163 @@ export class MatchController {
       tone: outcome,
       button: final ? `On to round ${m.round}` : 'Continue',
       onButton: () => this.continueToShop(),
+      extras: watch,
+    });
+  }
+
+  // ---- watching other battles ----
+
+  /** A Watch button for each of `pairings`. */
+  private watchButtons(pairings: Pairing[]): CardButton[] {
+    return pairings.map((p) => ({
+      label: `Watch ${this.sideNames(p).join(' vs ')}`,
+      onClick: () => void this.watch(p),
+    }));
+  }
+
+  /** The names of a battle's sides (White first), "a copy of …" for a copied army. */
+  private sideNames(p: Pairing): [string, string] {
+    const m = this.match!;
+    const name = (id: string) => (id === m.myId ? 'You' : m.player(id).name);
+    return [
+      p.copy === 'w' ? `a copy of ${name(p.white)}` : name(p.white),
+      p.copy === 'b' ? `a copy of ${name(p.black)}` : name(p.black),
+    ];
+  }
+
+  /**
+   * Plays another battle of the round on screen. Battles are deterministic from their armies and
+   * seed, so it goes exactly as it did on whichever phone computed it. Afterwards, back to the card.
+   */
+  private async watch(pairing: Pairing): Promise<void> {
+    const m = this.match;
+    if (!m || this.watching || this.busy) return;
+    const { start } = m.battle(pairing);
+    if (!start) return;
+    const o = this.online;
+    // Online: watching mustn't hold the others up, so this player's round counts as finished now.
+    if (o && !this.spectating && m.phase === 'battle' && o.fought === m.round) {
+      void o.client
+        .markDone(o.code, o.fought)
+        .then(() => this.tick())
+        .catch(console.warn);
+    }
+    const generation = this.generation;
+    const [white, black] = this.sideNames(pairing);
+    this.watching = true;
+    this.cardDetail = null;
+    try {
+      const engine = await this.deps.ensureEngine();
+      await this.deps.battle.play(
+        engine,
+        start.fen,
+        start.firstMover,
+        m.lockedBoard ?? m.board,
+        seededRng(pairing.seed),
+        { watching: `Watching ${white} (White) vs ${black} (Black)` },
+      );
+    } catch (err) {
+      if (!(err instanceof BattleAborted)) console.warn(err);
+    } finally {
+      this.watching = false;
+    }
+    if (generation !== this.generation || this.match !== m) return;
+    this.lastCard?.();
+  }
+
+  // ---- watching the rest of the match after being knocked out ----
+
+  private spectate(): void {
+    const m = this.match;
+    if (!m) return;
+    this.spectating = true;
+    this.renderHud();
+    if (this.online) {
+      void this.onSpectatedRoom(this.online.room);
+      return;
+    }
+    void this.spectateRoundOffline();
+  }
+
+  /** Offline: plays the bots' next round (on the background engine), then shows its results. */
+  private async spectateRoundOffline(): Promise<void> {
+    const m = this.match;
+    if (!m || this.busy) return;
+    const generation = this.generation;
+    const stale = () => generation !== this.generation;
+    m.startSpectatorRound();
+    m.lockArmies();
+    this.renderHud();
+    this.deps.battle.showWaiting(`Round ${m.round}: the others are playing their battles…`);
+    this.busy = true;
+    try {
+      const results = await this.computeInBackground(m.pairings, stale);
+      if (stale()) return;
+      m.finishRound(results);
+      this.spectatorResults = results;
+    } catch (err) {
+      if (!(err instanceof BattleAborted)) console.warn(err);
+      return;
+    } finally {
+      this.busy = false;
+    }
+    this.renderHud();
+    this.showSpectatorCard();
+  }
+
+  /** Online: follows the room as a spectator (the armies of each round once its shop closes). */
+  private async onSpectatedRoom(room: Room): Promise<void> {
+    const o = this.online;
+    const m = this.match;
+    if (!o || !m) return;
+    const roundOver = room.round > m.round || room.status === 'over';
+    m.players = room.players;
+    if (roundOver) m.noteHealth(room.status === 'over' ? room.round : room.round - 1);
+    if (room.phase === 'battle' && room.round > (m.lockedRound ?? 0) && !this.busy) {
+      this.busy = true;
+      try {
+        const armies = await o.client.fetchArmies(room);
+        if (this.online !== o) return;
+        m.round = room.round;
+        m.phase = 'shop';
+        m.lockArmies(armies);
+      } finally {
+        this.busy = false;
+      }
+    }
+    this.renderHud();
+    if (!this.watching) this.showSpectatorCard();
+  }
+
+  /** The spectator's card: the latest round's results so far, a Watch button for each battle. */
+  private showSpectatorCard(): void {
+    const m = this.match!;
+    const o = this.online;
+    this.lastCard = () => this.showSpectatorCard();
+    const results = o
+      ? m.lockedPairings.flatMap((pairing, i) => {
+          const r = o.room.results[resultKey(m.lockedRound ?? m.round, i)];
+          return r ? [{ pairing, winner: r.winner, material: r.material }] : [];
+        })
+      : this.spectatorResults;
+    const winner = m.players.find((p) => p.place === 1);
+    const lines = results.map((r) => this.describeResult(r));
+    if (o && !winner) {
+      if (m.lockedPairings.length === 0 || o.room.round > (m.lockedRound ?? m.round))
+        lines.push(`Round ${o.room.round}: the others are shopping…`);
+      else if (results.length < m.lockedPairings.length) lines.push('Other battles are still being played…');
+    }
+    const next = !o && !winner;
+    this.deps.battle.showCard({
+      title: winner ? `${winner.id === m.myId ? 'You' : winner.name} won the match` : `Watching · round ${m.round}`,
+      detail: lines.join(' '),
+      tone: 'draw',
+      button: next ? `On to round ${m.round + 1}` : 'Back to menu',
+      onButton: next ? () => void this.spectateRoundOffline() : () => this.exit(),
+      extras: [
+        ...this.watchButtons(m.lockedPairings),
+        ...(next ? [{ label: 'Back to menu', onClick: () => this.exit() }] : []),
+      ],
     });
   }
 
@@ -550,26 +789,25 @@ export class MatchController {
   /** "X beat Y." for each other battle with a result (online: those reported so far). */
   private otherResults(myResult: PairingResult | null, results?: PairingResult[]): string[] {
     const m = this.match!;
-    const name = (id: string) => (id === m.myId ? 'You' : m.player(id).name);
     const known =
       results ??
       m.pairings.flatMap((pairing, i) => {
         const r = this.online?.room.results[resultKey(m.round, i)];
         return r ? [{ pairing, winner: r.winner, material: r.material }] : [];
       });
-    const lines = known
-      .filter((r) => r.pairing !== myResult?.pairing)
-      .map((r) => {
-        const { white, black, copy } = r.pairing;
-        const whiteName = copy === 'w' ? `a copy of ${name(white)}` : name(white);
-        const blackName = copy === 'b' ? `a copy of ${name(black)}` : name(black);
-        if (r.winner === 'draw') return `${whiteName} drew with ${blackName}.`;
-        const [winner, loser] = r.winner === 'w' ? [whiteName, blackName] : [blackName, whiteName];
-        return `${winner} beat ${loser}.`;
-      });
+    const lines = known.filter((r) => r.pairing !== myResult?.pairing).map((r) => this.describeResult(r));
     const waiting = m.pairings.length - 1 - lines.length;
     if (!results && waiting > 0) lines.push('Other battles are still being played…');
     return lines;
+  }
+
+  /** "X beat Y." or "X drew with Y." */
+  private describeResult(r: PairingResult): string {
+    const [whiteName, blackName] = this.sideNames(r.pairing);
+    const upper = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+    if (r.winner === 'draw') return `${upper(whiteName)} drew with ${blackName}.`;
+    const [winner, loser] = r.winner === 'w' ? [whiteName, blackName] : [blackName, whiteName];
+    return `${upper(winner)} beat ${loser}.`;
   }
 
   /** After the round card: offline, straight to the shop; online, once everyone has finished the round. */
@@ -606,7 +844,13 @@ export class MatchController {
     const m = this.match;
     if (!m) return;
     $('#match-hud').hidden = false;
-    const phase = m.phase === 'shop' ? 'Shop' : m.phase === 'battle' ? 'Battle' : 'Final';
+    const phase = this.spectating
+      ? 'Watching'
+      : m.phase === 'shop'
+        ? 'Shop'
+        : m.phase === 'battle'
+          ? 'Battle'
+          : 'Final';
     const room = this.online ? ` · Room ${this.online.code}` : '';
     $('#match-round').textContent = `Round ${m.round} · ${phase} · ${alive(m.players).length} left${room}`;
     const rows = [...m.players].sort((a, b) => (a.place ?? 0) - (b.place ?? 0) || b.hp - a.hp);
@@ -627,8 +871,12 @@ export class MatchController {
           Math.abs(streak) >= 2
             ? ` <small class="streak ${streak > 0 ? 'hot' : 'cold'}" title="${Math.abs(streak)} ${streak > 0 ? 'wins' : 'losses'} in a row: +${streakBonus(streak)} gold">${streak > 0 ? '🔥' : '❄️'}${Math.abs(streak)}</small>`
             : '';
-        const tag = (p.bot ? ' <small>bot</small>' : isReady) + streakTag;
-        return `<li class="${classes}">
+        const perks = m.perksOf(p.id).map(matchPerk);
+        const perkTag = perks.length
+          ? ` <small class="perks" title="${escapeHtml(perks.map((x) => x.name).join(', '))}">${perks.map((x) => x.icon).join('')}</small>`
+          : '';
+        const tag = (p.bot ? ' <small>bot</small>' : isReady) + streakTag + perkTag;
+        return `<li class="${classes}" data-id="${escapeHtml(p.id)}" title="Scout ${p.id === m.myId ? 'yourself' : escapeHtml(p.name)}">
           <span class="name">${p.id === m.myId ? 'You' : escapeHtml(p.name)}${tag}</span>
           <span class="hp-bar ${hp > START_HP / 2 ? 'good' : hp > START_HP / 4 ? 'warn' : 'low'}"><span style="width:${(hp / START_HP) * 100}%"></span></span>
           <span class="hp">${hp}</span><span class="extra">${hit || badge}</span>

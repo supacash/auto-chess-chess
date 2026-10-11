@@ -1,7 +1,7 @@
 import type { BoardSpec } from '../chess/boardSpec';
 import type { Color } from '../chess/fen';
 import type { BattleRecord } from '../game/record';
-import type { Shop, ShopResult } from '../rules/economy';
+import type { Offer, Shop, ShopResult } from '../rules/economy';
 import type { Piece } from '../rules/pieces';
 
 /**
@@ -27,6 +27,8 @@ export interface PlacementSession {
   rerollOffers(): ShopResult;
   /** What the next reroll costs (REROLL_COST unless a perk makes it free). */
   rerollCost?(): number;
+  /** How many of an offer are left in a shared pool (multiplayer), or null when it isn't pooled. */
+  offerLeft?(offer: Offer): number | null;
   /** Repairs squares that don't fit the current board (older saves). */
   fitPiecesToBoard(): void;
 }

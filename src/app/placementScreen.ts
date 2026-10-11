@@ -130,6 +130,10 @@ export class PlacementScreen {
       const index = this.selectedOffer;
       this.selectedOffer = null;
       const offer = this.session.run.shop.offers?.[index];
+      if (offer && this.session.offerLeft?.(offer) === 0) {
+        this.applyShop({ ok: false, error: 'Sold out: every one is taken. Merging or selling puts them back.' });
+        return;
+      }
       this.applyShop(buyOffer(this.session.run.shop, index), offer && (isAffinityOffer(offer) ? 'P' : offer));
     });
     $('#tip-close').addEventListener('click', () => {
@@ -188,6 +192,18 @@ export class PlacementScreen {
 
   hide(): void {
     this.section.hidden = true;
+  }
+
+  /** Redraws just the shop (offers left in the shared pool changed). */
+  refreshShop(): void {
+    if (!this.section.hidden) this.renderShop();
+  }
+
+  /** Redraws the pieces and shop after the session changed them (a perk). */
+  refresh(): void {
+    if (this.section.hidden) return;
+    this.board.setPieces(this.session.run.shop.pieces);
+    this.piecesChanged(this.session.run.shop.pieces);
   }
 
   /** A new run's first board isn't "growth", and nothing is selected. */
@@ -312,10 +328,17 @@ export class PlacementScreen {
       ? offers
           .map((o, i) => {
             const price = offerPrice(o);
-            const cls = ['offer', i === this.selectedOffer ? 'selected' : '', gold < price ? 'pricey' : '']
+            const left = this.session.offerLeft?.(o) ?? null;
+            const cls = [
+              'offer',
+              i === this.selectedOffer ? 'selected' : '',
+              gold < price || left === 0 ? 'pricey' : '',
+            ]
               .filter(Boolean)
               .join(' ');
-            return `<button type="button" class="${cls}" data-offer="${i}" aria-pressed="${i === this.selectedOffer}">${offerIcon(o)}<span class="offer-name">${offerName(o)}</span><span class="offer-price">${price}g</span></button>`;
+            const stock =
+              left === null ? '' : `<span class="offer-left">${left === 0 ? 'sold out' : `${left} left`}</span>`;
+            return `<button type="button" class="${cls}" data-offer="${i}" aria-pressed="${i === this.selectedOffer}">${offerIcon(o)}<span class="offer-name">${offerName(o)}</span><span class="offer-price">${price}g</span>${stock}</button>`;
           })
           .join('')
       : '<span class="hint">Sold out. Reroll for more.</span>';
@@ -326,11 +349,12 @@ export class PlacementScreen {
     if (!offer) return;
     const price = offerPrice(offer);
     const full = benchCount(pieces) >= BENCH_SIZE;
-    const disabled = gold < price || full ? 'disabled' : '';
+    const soldOut = this.session.offerLeft?.(offer) === 0;
+    const disabled = gold < price || full || soldOut ? 'disabled' : '';
     const about = isAffinityOffer(offer)
       ? affinityText(offer[1] as Affinity, pieces)
       : `${PIECE_VALUE[offer]} pts. ${PIECES[offer].description}`;
-    detail.innerHTML = `<p><strong>${offerName(offer)}</strong> · ${about}</p><button type="button" class="primary" data-buy ${disabled}>${full ? 'Bench full' : `Buy · ${price}g`}</button>`;
+    detail.innerHTML = `<p><strong>${offerName(offer)}</strong> · ${about}</p><button type="button" class="primary" data-buy ${disabled}>${soldOut ? 'Sold out' : full ? 'Bench full' : `Buy · ${price}g`}</button>`;
   }
 
   /** Gold, the buy button, offers, and upgrade/fuse/sell buttons for the selected piece. */

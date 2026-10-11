@@ -12,7 +12,7 @@ import type { Rng } from '../rules/rng';
 import { PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
 import { BattleView } from '../ui/battleView';
 import { displayColor, inlinePiece, setPlayerColor } from '../ui/boardDom';
-import { $, sleep } from './dom';
+import { $, escapeHtml, sleep } from './dom';
 import type { BattleOutcome } from './session';
 
 /** Base playback time per move at 1× speed. */
@@ -52,6 +52,12 @@ export interface ReviewAnalysis {
   save(evals: (number | null)[]): void;
 }
 
+/** An extra button on a custom result card. */
+export interface CardButton {
+  label: string;
+  onClick: () => void;
+}
+
 /** Thrown by play() when the battle was stopped with abort(). */
 export class BattleAborted extends Error {
   constructor() {
@@ -89,6 +95,8 @@ export class BattleScreen {
 
   /** Overrides what the result card's main button does while a custom card is showing (see showCard). */
   private nextOverride: (() => void) | null = null;
+  /** The custom card's extra buttons (see showCard). */
+  private extras: CardButton[] = [];
 
   constructor(onNext: () => void, onReplay: () => void, onPrestige?: () => void) {
     $('#replay').addEventListener('click', onReplay);
@@ -113,6 +121,10 @@ export class BattleScreen {
       this.renderPlaybackButtons();
     });
     $('#prestige').addEventListener('click', () => onPrestige?.());
+    $('#card-extras').addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-extra]');
+      if (btn) this.extras[Number(btn.dataset.extra)]?.onClick();
+    });
     $('#next').addEventListener('click', () => {
       const override = this.nextOverride;
       this.nextOverride = null;
@@ -141,11 +153,14 @@ export class BattleScreen {
       flip = false,
       opponent = '',
       announceSide = false,
-    }: { flip?: boolean; opponent?: string; announceSide?: boolean } = {},
+      watching = '',
+    }: { flip?: boolean; opponent?: string; announceSide?: boolean; watching?: string } = {},
   ): Promise<Playback> {
     // In a match the player's pieces are drawn in their real colour (black when they're Black); the
     // mirrored position puts them at the bottom either way.
     if (announceSide) setPlayerColor(flip ? 'b' : 'w');
+    // Watching someone else's battle: real colours, White at the bottom.
+    if (watching) setPlayerColor('w');
     this.aborted = false;
     const show = (f: string) => (flip ? mirrorFen(f, spec.files) : f);
     const square = (s: string) => (flip ? mirrorSquare(s, spec.ranks) : s);
@@ -167,7 +182,10 @@ export class BattleScreen {
     $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
     this.showEval(0);
     const against = opponent ? ` against ${opponent}` : '';
-    if (announceSide) {
+    if (watching) {
+      this.status.textContent = watching;
+      await sleep(INTRO_MS);
+    } else if (announceSide) {
       // Multiplayer: sides are random each battle, so say which one before the first move.
       const side = mine === 'w' ? 'White' : 'Black';
       const first = firstMover === mine ? 'you move first' : 'they move first';
@@ -564,6 +582,8 @@ export class BattleScreen {
     tone: 'w' | 'b' | 'draw';
     button: string;
     onButton: () => void;
+    /** More buttons under the main ones (e.g. Watch for each other battle). */
+    extras?: CardButton[];
   }): void {
     this.playback.hidden = true;
     this.manual.hidden = true;
@@ -578,6 +598,17 @@ export class BattleScreen {
     $('#run-summary').hidden = true;
     $('#next').textContent = card.button;
     this.nextOverride = card.onButton;
+    this.setCardExtras(card.extras ?? []);
+  }
+
+  /** Replaces the custom card's extra buttons. */
+  setCardExtras(extras: CardButton[]): void {
+    this.extras = extras;
+    const box = $('#card-extras');
+    box.hidden = extras.length === 0;
+    box.innerHTML = extras
+      .map((b, i) => `<button type="button" data-extra="${i}">${escapeHtml(b.label)}</button>`)
+      .join('');
   }
 
   /** True while the result card is on screen. */
@@ -598,6 +629,7 @@ export class BattleScreen {
 
   /** Shows how the battle ended and what it did to the run. `spec` is the board it was played on. */
   showResult(result: BattleResult, outcome: BattleOutcome, spec: BoardSpec, lives: number, best: number): void {
+    this.setCardExtras([]);
     const { winner, reason, material } = result;
     $('#replay').hidden = false;
     $('#prestige').hidden = true;

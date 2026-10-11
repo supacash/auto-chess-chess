@@ -159,6 +159,7 @@ export function renderLayout(root: HTMLElement): void {
         <button type="button" id="replay">Review</button>
         <button type="button" id="next" class="primary">Next round</button>
       </div>
+      <div class="card-extras" id="card-extras" hidden></div>
       <button type="button" id="prestige" class="prestige-button" hidden></button>
     </div>
   </section>
@@ -199,6 +200,24 @@ export function renderLayout(root: HTMLElement): void {
       </div>
       <p class="dialog-text error" id="mp-error"></p>
       <button type="submit" value="cancel" class="link-button" formnovalidate>Cancel</button>
+    </form>
+  </dialog>
+
+  <dialog id="scout-dialog" aria-labelledby="scout-title">
+    <form method="dialog" class="new-run-form scout">
+      <h2 id="scout-title"></h2>
+      <p class="dialog-text muted" id="scout-status"></p>
+      <div id="scout-body"></div>
+      <button type="submit" value="close" class="primary">Close</button>
+    </form>
+  </dialog>
+
+  <dialog id="perk-dialog" aria-labelledby="perk-title">
+    <form method="dialog" class="new-run-form">
+      <h2 id="perk-title">Pick a perk</h2>
+      <p class="dialog-text">Keep one for the rest of the match. The shop timer keeps running.</p>
+      <div class="prestige-choices" id="perk-choices"></div>
+      <p class="dialog-text muted" id="perk-owned" hidden></p>
     </form>
   </dialog>
 

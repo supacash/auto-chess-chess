@@ -4,12 +4,15 @@ import {
   type MatchPlayer,
   type MatchSettings,
   MATCH_SIZE,
+  matchPicksOf,
   newPlayers,
   type Pairing,
   type PairingResult,
   pairRound,
   shopSeconds,
 } from '../multi/match';
+import type { PerkPicks } from '../multi/perks';
+import type { Holdings } from '../multi/pool';
 import type { Winner } from '../rules/battle';
 import { isPieceType, makePiece, type Piece, type PieceType } from '../rules/pieces';
 import { armyErrors } from '../rules/placement';
@@ -73,6 +76,10 @@ export interface Room {
    * pairing). Each phone computes only its own battle; bot-vs-bot battles are computed by one person.
    */
   results: Record<string, ReportedResult>;
+  /** Each person's perk picks (bots' come from the seed). */
+  perks: Record<string, PerkPicks>;
+  /** Each person's affinity pawns, for the shared pool. */
+  held: Record<string, Holdings>;
 }
 
 /** A battle's outcome as reported to the room. */
@@ -122,6 +129,8 @@ export function newRoom(code: string, host: string, hostName: string, settings: 
     done: {},
     preview: {},
     results: {},
+    perks: {},
+    held: {},
   };
 }
 
@@ -224,6 +233,8 @@ export function startRoom(room: Room, seed: number, botNames: string[]): Room {
     done: {},
     preview: {},
     results: {},
+    perks: {},
+    held: {},
   };
 }
 
@@ -291,7 +302,8 @@ export function startBattle(room: Room): Room {
  * the match. Worked out from the room alone, so it's the same whoever writes it.
  */
 export function finishRound(room: Room): Room {
-  const players = applyRound(room.players, room.round, completeResults(room));
+  const picksOf = matchPicksOf(room.players, room.seed, room.round, room.perks);
+  const players = applyRound(room.players, room.round, completeResults(room), picksOf);
   const over = players.filter((p) => p.place === null).length <= 1;
   return {
     ...room,

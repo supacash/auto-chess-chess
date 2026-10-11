@@ -6,6 +6,7 @@ import { makePiece, PIECES } from '../rules/pieces';
 import { armyErrors } from '../rules/placement';
 import { seededRng } from '../rules/rng';
 import { BLACK_GOLD, botArmy, pairRound, START_HP } from './match';
+import { POOL_SIZE } from './pool';
 import { MatchSession, withKingPlaced } from './matchSession';
 
 beforeAll(loadRulesForNode);
@@ -163,5 +164,83 @@ describe('MatchSession.resume', () => {
     expect(m.shop.pieces).toEqual(shop.pieces);
     expect(m.shop.offers).not.toEqual(['N']);
     expect(m.streaks.get('me')).toBe(0);
+  });
+
+  it('perk rounds: three choices, a pick applies once (War chest gold, Squire knight) and is shared', () => {
+    const m = match();
+    expect(m.perkChoices()).toBeNull(); // round 1
+    m.round = 3;
+    const choices = m.perkChoices()!;
+    expect(choices).toHaveLength(3);
+    const shared: string[] = [];
+    m.onPerkPick = (round, perk) => shared.push(`${round}:${perk}`);
+    const gold = m.shop.gold;
+    const pieces = m.shop.pieces.length;
+    expect(m.choosePerk(choices[0])).toBe(true);
+    expect(m.perkChoices()).toBeNull();
+    expect(m.choosePerk(choices[1])).toBe(false); // one pick per perk round
+    expect(shared).toEqual([`3:${choices[0]}`]);
+    expect(m.perksOf('me')).toEqual([choices[0]]);
+    if (choices[0] === 'chest') expect(m.shop.gold).toBe(gold + 5);
+    if (choices[0] === 'squire') expect(m.shop.pieces.length).toBe(pieces + 1);
+    // Bots have picked too.
+    expect(m.perksOf('bot1')).toHaveLength(1);
+  });
+
+  it('Haggler makes the first reroll each round free', () => {
+    const m = match();
+    m.round = 3;
+    m.picks.set('me', { 3: 'haggler' });
+    expect(m.rerollCost()).toBe(0);
+    const gold = m.shop.gold;
+    const r = m.rerollOffers();
+    expect(r.ok && r.shop.gold).toBe(gold);
+    expect(m.rerollCost()).toBe(1);
+  });
+
+  it('shares the player’s affinity pawns and counts everyone’s against the pool', () => {
+    const m = match();
+    const shared: unknown[] = [];
+    m.onHeldChange = (h) => shared.push(h);
+    const bots = m.players.filter((p) => p.bot).length;
+    const before = m.poolLeft();
+    const used = Object.values(POOL_SIZE).reduce((a, b) => a + b) - Object.values(before).reduce((a, b) => a + b);
+    expect(used).toBe(bots * 2); // each bot holds a couple
+    m.setShop({ ...m.shop, pieces: [...m.shop.pieces, makePiece('P', null, 'R')] });
+    expect(shared).toEqual([{ R: 1 }]);
+    expect(m.poolLeft().R).toBe(before.R - 1);
+    m.held.set('friend', { R: 50 }); // not in the match: doesn't count
+    expect(m.poolLeft().R).toBe(before.R - 1);
+  });
+
+  it('keeps what scouting shows: health by round, bots’ pawns and armies, and the locked board', () => {
+    const m = match();
+    expect(m.healthOf('bot1')).toEqual([START_HP]);
+    expect(Object.values(m.holdingsOf('bot1'))).toEqual([2]);
+    expect(m.currentTypes('bot1')).toEqual(botArmy(m.seed, 1, 'bot1').map((p) => p.type));
+    m.lockArmies();
+    expect(m.lockedBoard).toBe(BOARD_8);
+    const mine = m.myPairing()!;
+    m.finishRound([{ pairing: mine, winner: mine.white === 'me' ? 'b' : 'w', material: { w: 0, b: 0 } }]);
+    expect(m.healthOf('me')).toEqual([START_HP, START_HP - 1]);
+    // The round moved on, but its battles can still be rebuilt (to watch them).
+    expect(m.battle(mine).start).not.toBeNull();
+  });
+
+  it('plays on without the player once they are knocked out (to watch)', () => {
+    const m = match();
+    m.players = m.players.map((p) => (p.id === 'me' ? { ...p, hp: 1 } : p));
+    m.lockArmies();
+    const mine = m.myPairing()!;
+    m.finishRound([{ pairing: mine, winner: mine.white === 'me' ? 'b' : 'w', material: { w: 0, b: 0 } }]);
+    expect(m.phase).toBe('over');
+    m.startSpectatorRound();
+    m.lockArmies();
+    expect(m.round).toBe(2);
+    expect(m.myPairing()).toBeNull();
+    expect(m.pairings.flatMap((p) => [p.white, p.black])).not.toContain('me');
+    m.finishRound(m.pairings.map((pairing) => ({ pairing, winner: 'w' as const, material: { w: 10, b: 0 } })));
+    expect(m.phase).toBe('over');
+    expect(m.healthOf('bot1').length).toBe(3);
   });
 });
