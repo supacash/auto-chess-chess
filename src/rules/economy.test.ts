@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canHaveStackman,
   canMakeHeir,
+  STACKMAN_MERGE_COST,
   AFFINITY_PRICE,
   buyOffer,
   fuseDefaultSet,
@@ -172,15 +174,31 @@ describe('no piece-count limit', () => {
 });
 
 describe('shop offers', () => {
-  it('sells the Stackman for 8 gold, rarely, from round 3 and only with fairy pieces on', () => {
-    expect(offerPrice('Y')).toBe(8);
+  it('sells the Stackman for 9 gold, rarely, from round 4 and only with fairy pieces on', () => {
+    expect(offerPrice('Y')).toBe(9);
     const seen = (round: number, fairy: boolean) =>
       Array.from({ length: 400 }, (_, i) => rollOffers(round, seededRng(i), fairy))
         .flat()
         .includes('Y');
-    expect(seen(2, true)).toBe(false);
-    expect(seen(3, true)).toBe(true);
+    expect(seen(3, true)).toBe(false);
+    expect(seen(4, true)).toBe(true);
     expect(seen(8, false)).toBe(false);
+  });
+
+  it('stacks three Men into one Stackman for 3 gold, and only one per army', () => {
+    const men = (gold: number, extra: PieceType[] = []): Shop => ({
+      gold,
+      pieces: [...(['K', 'M', 'M', 'M', ...extra] as PieceType[]).map((t) => makePiece(t))],
+    });
+    const shop = men(5);
+    const result = fuseDefaultSet(shop, shop.pieces[1].id, 'Y', true);
+    expect(result.ok && result.shop.gold).toBe(5 - STACKMAN_MERGE_COST);
+    expect(result.ok && result.shop.pieces.filter((p) => p.type === 'Y')).toHaveLength(1);
+    expect(fuseDefaultSet(men(2), men(2).pieces[1].id, 'Y', true).ok).toBe(false); // can't pay
+    const has = men(9, ['Y']);
+    expect(canHaveStackman(has)).toBe(false);
+    expect(fuseDefaultSet(has, has.pieces[1].id, 'Y', true).ok).toBe(false);
+    expect(buyOffer({ ...has, offers: ['Y'] }, 0)).toMatchObject({ ok: false });
   });
 
   it('rolls OFFER_COUNT affordable-tier pieces, never kings or fusion pieces (but the Stackman)', () => {

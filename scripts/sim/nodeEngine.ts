@@ -67,7 +67,16 @@ export class NodeEngine implements MoveSource {
       this.variant = variant;
     }
     this.send('ucinewgame');
-    await this.sync();
+    try {
+      await this.sync();
+    } catch {
+      // The engine died after its last search (on 9×9, a WASM thread can overflow its stack right
+      // after bestmove). Start a fresh one, as the browser's Engine.newGame does.
+      this.restarts++;
+      await this.restart();
+      this.send('ucinewgame');
+      await this.sync();
+    }
   }
 
   async candidates(fen: string, depth: number, history?: History): Promise<Candidate[]> {

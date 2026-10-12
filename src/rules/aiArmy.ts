@@ -250,8 +250,10 @@ export function draftAiArmy(
     ? { ...style.weights, ...style.fairyWeights }
     : style.weights;
   const options = (Object.keys(weights) as PieceType[]).filter((t) => (weights[t] ?? 0) > 0 && !isPawnLike(t));
+  // One Stackman per army, as for the player (MAX_STACKMEN).
+  const allowed = (t: PieceType) => t !== 'Y' || !types.includes('Y');
   while (types.length < capacity) {
-    const affordable = options.filter((t) => PIECE_VALUE[t] <= pieceBudget);
+    const affordable = options.filter((t) => PIECE_VALUE[t] <= pieceBudget && allowed(t));
     if (affordable.length === 0) break;
     const pick = weightedPick(affordable, (t) => weights[t]!, rng);
     types.push(pick);
@@ -265,7 +267,7 @@ export function draftAiArmy(
   // Pawns capped out with squares still free: more of the style's pieces before any upgrades, so
   // armies keep their character as budgets grow (upgrades turn everything into rooks and queens).
   while (types.length < capacity) {
-    const affordable = options.filter((t) => PIECE_VALUE[t] <= left);
+    const affordable = options.filter((t) => PIECE_VALUE[t] <= left && allowed(t));
     if (affordable.length === 0) break;
     const pick = weightedPick(affordable, (t) => weights[t]!, rng);
     types.push(pick);

@@ -10,6 +10,7 @@ import { dismissTip, seenTips } from '../game/storage';
 import { nextTip, TIPS, type TipId } from '../game/tips';
 import {
   buyOffer,
+  canHaveStackman,
   canMakeHeir,
   fusePieces,
   INTEREST_STEP,
@@ -25,6 +26,7 @@ import {
   pieceName,
   REROLL_COST,
   SET_MERGE_SIZE,
+  setMergeCost,
   setMergePartners,
   setMergeResults,
   type ShopResult,
@@ -447,11 +449,13 @@ export class PlacementScreen {
     const { shop, settings } = this.session.run;
     const heirs = this.maxHeirs();
     const partners = setMergePartners(shop, piece.id, settings.fairy, heirs);
-    const setResults = partners ? setMergeResults([piece, ...partners], canMakeHeir(shop, settings.fairy, heirs)) : [];
+    const setResults = (
+      partners ? setMergeResults([piece, ...partners], canMakeHeir(shop, settings.fairy, heirs)) : []
+    ).filter((to) => to !== 'Y' || canHaveStackman(shop));
     const pawnFusions = setResults
       .map(
         (to) =>
-          `<button type="button" class="fuse" data-merge-set="${to}" title="Uses up ${SET_MERGE_SIZE} ${pieceName(piece).toLowerCase()}s">Merge ${SET_MERGE_SIZE} → ${inlinePiece(to)} ${to === 'J' ? 'Heir (a second king)' : PIECE_NAME[to]}</button>`,
+          `<button type="button" class="fuse" data-merge-set="${to}" title="Uses up ${SET_MERGE_SIZE} ${pieceName(piece).toLowerCase()}s">Merge ${SET_MERGE_SIZE} → ${inlinePiece(to)} ${to === 'J' ? 'Heir (a second king)' : PIECE_NAME[to]}${setMergeCost(to) ? ` · ${setMergeCost(to)}g` : ''}</button>`,
       )
       .join('');
     const info = piece.affinity

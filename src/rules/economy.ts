@@ -1,5 +1,5 @@
 import type { Winner } from './battle';
-import { BENCH_SIZE, benchCount, MAX_HEIRS } from './placement';
+import { BENCH_SIZE, benchCount, MAX_HEIRS, MAX_STACKMEN } from './placement';
 import {
   type Affinity,
   AFFINITIES,
@@ -163,7 +163,7 @@ export const OFFER_WEIGHTS: Partial<Record<Offer, number>> = {
   B: 0.5,
   R: 0.3,
   Q: 0.15,
-  Y: 0.15, // the Stackman: the one fusion piece the shop sells (fairy, from round 3 at 8 gold)
+  Y: 0.15, // the Stackman: the one fusion piece the shop sells (fairy, from round 4 at 9 gold)
 };
 
 /** Queens and queen-pawns are offered from this round on. */
@@ -203,6 +203,7 @@ export function buyOffer(shop: Shop, index: number): ShopResult {
   }
   const price = offerPrice(offer);
   if (shop.gold < price) return { ok: false, error: 'Not enough gold' };
+  if (offer === 'Y' && !canHaveStackman(shop)) return { ok: false, error: 'An army can have only one Stackman' };
   return {
     ok: true,
     shop: {
@@ -349,6 +350,19 @@ export function canMakeHeir(shop: Shop, fairy: boolean, maxHeirs = MAX_HEIRS): b
   return fairy && shop.pieces.filter((p) => p.type === 'J').length < maxHeirs;
 }
 
+/** Gold a three-Men merge into a Stackman costs (the other merges are free): it was too cheap to stack. */
+export const STACKMAN_MERGE_COST = 3;
+
+/** True while the army has room for a Stackman (MAX_STACKMEN). */
+export function canHaveStackman(shop: Shop): boolean {
+  return shop.pieces.filter((p) => p.type === 'Y').length < MAX_STACKMEN;
+}
+
+/** What a three-piece merge into `result` costs in gold. */
+export function setMergeCost(result: PieceType): number {
+  return result === 'Y' ? STACKMAN_MERGE_COST : 0;
+}
+
 /** What three pieces can merge into (empty if they can't). `heir`: three Queens may become an Heir (canMakeHeir). */
 export function setMergeResults(parts: MergePart[], heir = false): PieceType[] {
   if (parts.length !== SET_MERGE_SIZE) return [];
@@ -417,12 +431,16 @@ export function fuseSet(shop: Shop, ids: string[], result: PieceType, fairy = fa
   const pieces = chosen as Piece[];
   if (!setMergeResults(pieces, canMakeHeir(shop, fairy, maxHeirs)).includes(result))
     return { ok: false, error: `Those pieces can't become a ${PIECE_NAME[result]}` };
+  if (result === 'Y' && !canHaveStackman(shop)) return { ok: false, error: 'An army can have only one Stackman' };
+  const cost = setMergeCost(result);
+  if (shop.gold < cost) return { ok: false, error: `Stacking three Men costs ${cost} gold` };
   const pieceId = (pieces.find((p) => p.square) ?? pieces[0]).id;
   const used = new Set(ids.filter((id) => id !== pieceId));
   return {
     ok: true,
     shop: {
       ...shop,
+      gold: shop.gold - cost,
       pieces: shop.pieces
         .filter((p) => !used.has(p.id))
         .map((p) => (p.id === pieceId ? { id: p.id, type: result, square: result === 'J' ? null : p.square } : p)),

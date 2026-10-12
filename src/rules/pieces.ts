@@ -113,7 +113,7 @@ export const PIECES: Record<PieceType, PieceDef> = {
   },
   Y: {
     name: 'Stackman',
-    value: 8,
+    value: 9,
     group: 'fusion',
     betza: 'KNAD',
     description: 'Three men stacked up: jumps to any square up to two away, over anything in between.',

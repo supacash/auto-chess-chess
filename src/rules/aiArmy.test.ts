@@ -277,3 +277,14 @@ describe('placeForBattle', () => {
     }
   });
 });
+
+describe('the Stackman in AI armies', () => {
+  it('is drafted at most once per army', () => {
+    const rng = seededRng(5);
+    const fortress = AI_STYLES.find((s) => s.id === 'fortress')!;
+    for (let i = 0; i < 300; i++) {
+      const types = draftAiArmy(60 + (i % 70), fortress, rng, BOARDS.at(-2), true);
+      expect(types.filter((t) => t === 'Y').length).toBeLessThanOrEqual(1);
+    }
+  });
+});
