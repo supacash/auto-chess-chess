@@ -19,7 +19,8 @@
     "check:determinism": "tsx scripts/check/determinism.ts",
     "e2e": "playwright test",
     "test:rules": "firebase emulators:exec --only firestore --project auto-chess-chess \"vitest run --config vitest.rules.config.ts\"",
-    "e2e:online": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.online.config.ts\""
+    "e2e:online": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.online.config.ts\"",
+    "e2e:fullmatch": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.fullmatch.config.ts\""
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

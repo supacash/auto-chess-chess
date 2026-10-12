@@ -557,6 +557,7 @@ export class BattleScreen {
 
   /** Hides the result card and shows `text` while waiting on other players (online matches). */
   showWaiting(text: string): void {
+    this.section.hidden = false;
     this.result.hidden = true;
     this.playback.hidden = true;
     this.status.textContent = text;
@@ -589,6 +590,7 @@ export class BattleScreen {
     this.manual.hidden = true;
     this.result.hidden = false;
     this.result.dataset.winner = card.tone;
+    this.section.hidden = false; // a match battle that never started (both kings in check) shows only this card
     this.waiting = false;
     this.status.textContent = 'Final position';
     $('#result-title').textContent = card.title;

@@ -40,7 +40,7 @@ service cloud.firestore {
           && armyId == string(request.resource.data.round) + '_' + request.auth.uid
           && request.resource.data.pieces is list
           && request.resource.data.pieces.size() >= 1
-          && request.resource.data.pieces.size() <= 16
+          && request.resource.data.pieces.size() <= 32
           && isSeated(room())
           && room().status == 'playing'
           && room().phase == 'shop'

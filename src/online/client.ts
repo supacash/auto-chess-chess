@@ -380,7 +380,7 @@ function parsePreviews(data: unknown): Record<string, PieceType[]> {
   const out: Record<string, PieceType[]> = {};
   if (typeof data !== 'object' || data === null) return out;
   for (const [uid, types] of Object.entries(data)) {
-    if (Array.isArray(types) && types.length <= 16 && types.every(isPieceType)) out[uid] = types;
+    if (Array.isArray(types) && types.length <= 32 && types.every(isPieceType)) out[uid] = types;
   }
   return out;
 }

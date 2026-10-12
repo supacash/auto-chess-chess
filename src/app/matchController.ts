@@ -25,6 +25,9 @@ import type { PlacementScreen } from './placementScreen';
 import { ScoutDialog } from './scoutDialog';
 import type { RecordBook } from './recordBook';
 
+/** How long the other phones wait before moving the room along themselves (see MatchController.tick). */
+const FALLBACK_MS = 2_000;
+
 export interface MatchDeps {
   placement: PlacementScreen;
   battle: BattleScreen;
@@ -322,9 +325,20 @@ export class MatchController {
     const o = this.online;
     if (!o) return;
     const now = o.client.serverNow();
-    if (canStartBattle(o.room, now)) void o.client.tryStartBattle(o.code).catch(console.warn);
-    if (canFinishRound(o.room, now)) void o.client.tryFinishRound(o.code, o.room.round).catch(console.warn);
+    const step = `${o.room.round}:${o.room.phase}`;
+    const due = canStartBattle(o.room, now) || canFinishRound(o.room, now);
+    if (!due) return;
+    // One phone moves the room along (the first person still in); the others step in only if it
+    // hasn't a moment later (it left, or is slow). Fewer clashing transactions that way.
+    if (this.dueSince?.step !== step) this.dueSince = { step, at: Date.now() };
+    const lead = botBattleComputer(o.room) === this.match?.myId;
+    if (!lead && Date.now() - this.dueSince.at < FALLBACK_MS) return;
+    if (o.room.phase === 'shop') void o.client.tryStartBattle(o.code).catch(console.warn);
+    else void o.client.tryFinishRound(o.code, o.room.round).catch(console.warn);
   }
+
+  /** When this phone first saw the room's current step due (see tick). */
+  private dueSince: { step: string; at: number } | null = null;
 
   /** Online: reacts to the room changing (shop closed → fight; round over → next shop). */
   private onRoom(room: Room | null): void {
@@ -621,12 +635,19 @@ export class MatchController {
       onButton: () => this.continueToShop(),
       extras: watch,
     });
+    // Both kings would have started in check: nothing was played (the board shows an earlier game).
+    if (myResult && !m.battle(myResult.pairing).start) {
+      this.deps.battle.setStatus('Both kings would start in check, so this battle is a draw');
+    }
   }
 
   // ---- watching other battles ----
 
-  /** A Watch button for each of `pairings`. */
+  /** A Watch button for each of `pairings` that was played. */
   private watchButtons(pairings: Pairing[]): CardButton[] {
+    const m = this.match!;
+    // A battle that never started (both kings in check) has nothing to watch.
+    pairings = pairings.filter((p) => m.battle(p).start !== null);
     return pairings.map((p) => ({
       label: `Watch ${this.sideNames(p).join(' vs ')}`,
       onClick: () => void this.watch(p),
@@ -638,8 +659,8 @@ export class MatchController {
     const m = this.match!;
     const name = (id: string) => (id === m.myId ? 'You' : m.player(id).name);
     return [
-      p.copy === 'w' ? `a copy of ${name(p.white)}` : name(p.white),
-      p.copy === 'b' ? `a copy of ${name(p.black)}` : name(p.black),
+      p.copy === 'w' ? `a copy of ${p.white === m.myId ? 'you' : name(p.white)}` : name(p.white),
+      p.copy === 'b' ? `a copy of ${p.black === m.myId ? 'you' : name(p.black)}` : name(p.black),
     ];
   }
 
@@ -664,6 +685,8 @@ export class MatchController {
     const [white, black] = this.sideNames(pairing);
     this.watching = true;
     this.cardDetail = null;
+    // Hide the card at once: its buttons mustn't be usable while the replay starts up.
+    this.deps.battle.showWaiting(`Watching ${white} (White) vs ${black} (Black)`);
     try {
       const engine = await this.deps.ensureEngine();
       await this.deps.battle.play(

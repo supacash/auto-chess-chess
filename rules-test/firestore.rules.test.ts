@@ -124,6 +124,15 @@ describe('armies', () => {
     await assertFails(setDoc(doc(as('p2'), 'rooms/ABCD/armies/2_p2'), army('p2', 2)));
   });
 
+  it('may be as big as a full Growing 9×9 army (18 pieces), but not huge', async () => {
+    await seed(playing(2, 'shop'));
+    const pieces = (n: number) => Array.from({ length: n }, (_, i) => ({ type: 'P', file: i % 9, rank: 1 }));
+    await assertSucceeds(setDoc(doc(as('p2'), 'rooms/ABCD/armies/2_p2'), { uid: 'p2', round: 2, pieces: pieces(18) }));
+    await assertFails(
+      setDoc(doc(as('host'), 'rooms/ABCD/armies/2_host'), { uid: 'host', round: 2, pieces: pieces(33) }),
+    );
+  });
+
   it('are refused once the shop has closed', async () => {
     await seed(playing(2, 'battle'));
     await assertFails(setDoc(doc(as('p2'), 'rooms/ABCD/armies/2_p2'), army('p2', 2)));
