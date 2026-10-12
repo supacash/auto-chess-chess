@@ -1930,3 +1930,18 @@ button.tip-close {
   width: 90%;
   height: 90%;
 }
+
+/* A King or Heir captured: a short notice over the board. */
+.battle-announce {
+  margin: 0 0 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--gold);
+  color: #1d1f24;
+  font-weight: 700;
+  text-align: center;
+}
+
+.battle-announce[hidden] {
+  display: none;
+}

@@ -2,7 +2,7 @@ import { type BoardSpec, plyLimit } from '../chess/boardSpec';
 import { FINAL_ROUND, bestStreak, type RoundLog } from '../rules/run';
 import type { Color } from '../chess/fen';
 import { Game, type Move } from '../chess/rules';
-import { mirrorFen, mirrorSquare, parsePlacement } from '../chess/fen';
+import { mirrorFen, mirrorSquare, parsePlacement, royalCaptured } from '../chess/fen';
 import { checkmateEval, evalShare, formatEval, whiteEval, type History } from '../engine/pick';
 import type { ManualBattle, ManualState } from '../game/manualBattle';
 import { type BattleRecord, recordBoard } from '../game/record';
@@ -52,6 +52,20 @@ export interface ReviewAnalysis {
   save(evals: (number | null)[]): void;
 }
 
+/**
+ * What to announce when a move captured a King or an Heir (only possible with an Heir on the board),
+ * or null. `mine` is the player's side (null when watching someone else's battle).
+ */
+function royalCaptureText(before: string, after: string, mine: Color | null): string | null {
+  const capture = royalCaptured(before, after);
+  if (!capture) return null;
+  const { side, lost } = capture;
+  const whose = mine === null ? (side === 'w' ? "White's" : "Black's") : side === mine ? 'Your' : 'Their';
+  return lost === 'King'
+    ? `${whose} King was captured! ${whose} Heir takes the crown.`
+    : `${whose} Heir was captured! Only the King is left.`;
+}
+
 /** An extra button on a custom result card. */
 export interface CardButton {
   label: string;
@@ -97,6 +111,19 @@ export class BattleScreen {
   private nextOverride: (() => void) | null = null;
   /** The custom card's extra buttons (see showCard). */
   private extras: CardButton[] = [];
+  private announceTimer = 0;
+
+  /** Flashes `text` over the board for a few seconds (a King or Heir captured). */
+  private announce(text: string | null): void {
+    if (!text) return;
+    const el = $('#battle-announce');
+    el.textContent = text;
+    el.hidden = false;
+    clearTimeout(this.announceTimer);
+    this.announceTimer = window.setTimeout(() => {
+      el.hidden = true;
+    }, 3500);
+  }
 
   constructor(onNext: () => void, onReplay: () => void, onPrestige?: () => void) {
     $('#replay').addEventListener('click', onReplay);
@@ -199,6 +226,8 @@ export class BattleScreen {
     const moves: string[] = [];
     const evals: (number | null)[] = [];
     let worstDeficit = 0;
+    let before = fen;
+    $('#battle-announce').hidden = true;
     const result = await runBattle(
       fen,
       engine,
@@ -207,6 +236,9 @@ export class BattleScreen {
         if (this.aborted) throw new BattleAborted();
         moves.push(move.uci);
         evals.push(evalScore);
+        const after = game.fen();
+        this.announce(royalCaptureText(before, after, watching ? null : mine));
+        before = after;
         const now = material(game.fen());
         worstDeficit = Math.max(worstDeficit, now[mine === 'w' ? 'b' : 'w'] - now[mine]);
         const ms = this.skipping ? 0 : MOVE_MS / this.speed;
@@ -389,7 +421,12 @@ export class BattleScreen {
     $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
     await engine.newGame(game.variant);
 
+    let before = game.fen;
+    $('#battle-announce').hidden = true;
     const draw = (last?: Move) => {
+      // In a Play it game the player is White in the FEN.
+      this.announce(royalCaptureText(before, game.fen, 'w'));
+      before = game.fen;
       this.view.render(game.fen, game.spec, {
         last,
         animateMs: last && !this.reduceMotion ? 150 : 0,

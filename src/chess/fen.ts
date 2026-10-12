@@ -80,3 +80,16 @@ export function mirrorSquare(name: string, ranks: number): string {
   const m = /^([a-z])(\d+)$/.exec(name);
   return m ? `${m[1]}${ranks + 1 - Number(m[2])}` : name;
 }
+
+/** The King or Heir a move captured (comparing the positions before and after it), or null. */
+export function royalCaptured(before: string, after: string): { side: Color; lost: 'King' | 'Heir' } | null {
+  const count = (fen: string, ch: string) => fen.split(' ')[0].split(ch).length - 1;
+  for (const [side, king, heir] of [
+    ['w', 'K', 'J'],
+    ['b', 'k', 'j'],
+  ] as const) {
+    if (count(after, king) < count(before, king)) return { side, lost: 'King' };
+    if (count(after, heir) < count(before, heir)) return { side, lost: 'Heir' };
+  }
+  return null;
+}

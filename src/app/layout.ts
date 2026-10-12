@@ -120,6 +120,7 @@ export function renderLayout(root: HTMLElement): void {
 
   <section id="battle" hidden>
     <p class="battle-status" id="battle-status" aria-live="polite"></p>
+    <p class="battle-announce" id="battle-announce" role="status" hidden></p>
     <div class="eval" id="eval">
       <div class="eval-bar" id="eval-bar" role="meter" aria-label="Engine evaluation" aria-valuemin="0" aria-valuemax="100">
         <div class="eval-fill" id="eval-fill"></div>

@@ -61,7 +61,7 @@ const TWO_KINGS = [
   'extinctionValue = loss',
   'extinctionPieceTypes = k',
   'extinctionPseudoRoyal = true',
-  'dupleCheck = true',
+  'dupleCheck = false', // both attacked at once isn't mate: one has to be captured first
 ];
 
 /** A FEN as the engine and ffish take it: an Heir ('J') is a second king. */

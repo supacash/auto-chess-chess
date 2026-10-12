@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { material, mirrorFen, mirrorSquare } from './fen';
+import { material, mirrorFen, mirrorSquare, royalCaptured } from './fen';
 
 describe('mirrorFen', () => {
   it('reverses ranks, swaps colours and the side to move, and keeps files', () => {
@@ -16,5 +16,23 @@ describe('mirrorFen', () => {
   it('mirrors square names', () => {
     expect(mirrorSquare('e2', 8)).toBe('e7');
     expect(mirrorSquare('a1', 5)).toBe('a5');
+  });
+});
+
+describe('royalCaptured', () => {
+  it('reports a captured King or Heir, and nothing for other captures', () => {
+    expect(royalCaptured('r6k/8/8/8/8/8/8/K6J b - - 0 1', '7k/8/8/8/8/8/8/r6J w - - 0 1')).toEqual({
+      side: 'w',
+      lost: 'King',
+    });
+    expect(royalCaptured('r6k/8/8/8/8/8/8/J6K b - - 0 1', '7k/8/8/8/8/8/8/r6K w - - 0 1')).toEqual({
+      side: 'w',
+      lost: 'Heir',
+    });
+    expect(royalCaptured('j6k/8/8/8/8/8/8/R6K w - - 0 1', 'R6k/8/8/8/8/8/8/7K b - - 0 1')).toEqual({
+      side: 'b',
+      lost: 'Heir',
+    });
+    expect(royalCaptured('r6k/8/8/8/8/8/8/R6K w - - 0 1', 'R6k/8/8/8/8/8/8/7K b - - 0 1')).toBeNull();
   });
 });

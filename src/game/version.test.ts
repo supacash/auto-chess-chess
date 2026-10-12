@@ -11,6 +11,7 @@ const FINGERPRINTS: Record<number, string> = {
   3: 'ad8348a3', // Dragon King, Dragon Horse, Wildebeest and Siege Cannon
   4: 'e6af633a', // the Stackman
   5: '69f2ac38', // the Heir (two kings), and the engine rules (variants.ini) in the fingerprint
+  6: '88c4e465', // two kings: both attacked at once isn't mate (one must be captured first)
 };
 
 describe('rules version', () => {

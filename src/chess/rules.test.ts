@@ -202,6 +202,11 @@ describe('fairy pieces', () => {
     follow.undo();
     expect(follow.fen().split(' ')[0]).toContain('J');
     follow.delete();
+    // Both attacked at once isn't check (let alone mate): one of them has to be captured first.
+    const both = new Game(BOARD_8, '7k/8/8/8/8/8/8/K2r3J w - - 0 1'); // the rook on d1 attacks both
+    expect(both.isCheck()).toBe(false);
+    expect(both.terminal()).toBeNull();
+    both.delete();
     // A single-king game is still plain chess, on the plain variant.
     expect(new Game(BOARD_8, '7k/8/8/8/8/8/8/K7 w - - 0 1').variant).toBe('acc8');
   });
