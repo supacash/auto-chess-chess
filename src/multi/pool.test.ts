@@ -15,9 +15,21 @@ describe('shared pawn pool', () => {
     ];
     expect(holdingsOf(pieces)).toEqual({ R: 2 });
     const left = poolLeft([{ R: 2 }, { R: 3, N: 1 }, { Q: 99 }]);
-    expect(left).toEqual({ N: POOL_SIZE.N - 1, B: POOL_SIZE.B, R: POOL_SIZE.R - 5, Q: 0 });
+    expect(left).toEqual({ ...POOL_SIZE, N: POOL_SIZE.N - 1, R: POOL_SIZE.R - 5, Q: 0 });
     expect(offerLeft(left, 'PR')).toBe(POOL_SIZE.R - 5);
     expect(offerLeft(left, 'R')).toBeNull();
+  });
+
+  it('counts loose Ferzes and Wazirs too (a Man made from them is back in the pool)', () => {
+    const pieces = [makePiece('F'), makePiece('F'), makePiece('W'), makePiece('M')];
+    expect(holdingsOf(pieces)).toEqual({ F: 2, W: 1 });
+    const left = poolLeft([holdingsOf(pieces)]);
+    expect(offerLeft(left, 'F')).toBe(POOL_SIZE.F - 2);
+    expect(offerLeft(left, 'W')).toBe(POOL_SIZE.W - 1);
+    expect(offerLeft(left, 'M')).toBeNull();
+    for (let seed = 0; seed < 50; seed++) {
+      expect(rollOffers(4, seededRng(seed), true, 6, poolScale({ ...left, F: 0 }))).not.toContain('F');
+    }
   });
 
   it('gives bots a couple of one kind, the same on every client, queen-pawns only from round 6', () => {

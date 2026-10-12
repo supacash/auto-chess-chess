@@ -9,6 +9,7 @@ const FINGERPRINTS: Record<number, string> = {
   1: '0031cd6c',
   2: 'f24f4ea6', // a 9×9 board (Growing mode ends on 9×9)
   3: 'ad8348a3', // Dragon King, Dragon Horse, Wildebeest and Siege Cannon
+  4: 'e6af633a', // the Stackman
 };
 
 describe('rules version', () => {

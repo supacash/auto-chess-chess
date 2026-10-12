@@ -156,6 +156,23 @@ describe('fairy pieces', () => {
     return out;
   };
 
+  it('jumps the Stackman to any square up to two away, over pieces in between', () => {
+    const moves = (fen: string) =>
+      new Game(BOARD_8, fen)
+        .legalMoves()
+        .filter((m) => m.startsWith('d4'))
+        .map((m) => m.slice(2));
+    // Alone on d4: every square of the 5×5 box around it (24), nothing further.
+    const box = ['b', 'c', 'd', 'e', 'f'].flatMap((f) => [2, 3, 4, 5, 6].map((r) => f + r)).filter((s) => s !== 'd4');
+    const open = moves('7k/8/8/8/3Y4/8/8/K7 w - - 0 1');
+    expect(open.sort()).toEqual(box.sort());
+    // Its own pawn on d5 can't be taken, but d6 beyond it is still in reach (a jump, not a slide).
+    const jumping = moves('7k/8/8/3P4/3Y4/8/8/K7 w - - 0 1');
+    expect(jumping).not.toContain('d5');
+    expect(jumping).toContain('d6');
+    expect(jumping).not.toContain('d7');
+  });
+
   it('defines every fairy piece for the engine, with the Berolina pawn promoting', () => {
     const ini = variantsIni([BOARD_8]);
     expect(ini).toContain('e:mfFcfWifmnF2');

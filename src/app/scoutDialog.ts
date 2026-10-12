@@ -3,8 +3,8 @@ import { START_HP, streakBonus } from '../multi/match';
 import type { MatchSession } from '../multi/matchSession';
 import { matchPerk } from '../multi/perks';
 import { ordinal } from '../multi/names';
-import { pieceName } from '../rules/economy';
-import { AFFINITIES, type Piece, type PieceType } from '../rules/pieces';
+import { POOL_KINDS, poolKindName } from '../multi/pool';
+import type { Piece, PieceType } from '../rules/pieces';
 import { inlinePiece } from '../ui/boardDom';
 import { $, escapeHtml } from './dom';
 
@@ -40,12 +40,13 @@ export class ScoutDialog {
     );
 
     const held = m.holdingsOf(id);
-    const pawns = AFFINITIES.filter((a) => (held[a] ?? 0) > 0).map(
-      (a) =>
-        `${inlinePiece('P', 'w', a)} ${held[a]} ${pieceName({ type: 'P', affinity: a }).toLowerCase()}${held[a] === 1 ? '' : 's'}`,
-    );
+    const pooled = POOL_KINDS.filter((k) => (held[k] ?? 0) > 0).map((k) => {
+      const icon = k === 'F' || k === 'W' ? inlinePiece(k) : inlinePiece('P', 'w', k);
+      const n = held[k] ?? 0;
+      return `${icon} ${n} ${poolKindName(k).toLowerCase()}${n === 1 ? '' : 's'}`;
+    });
     sections.push(
-      section('Pawns from the pool', pawns.length ? `<p>${pawns.join(' · ')}</p>` : '<p class="muted">None.</p>'),
+      section('From the shared pool', pooled.length ? `<p>${pooled.join(' · ')}</p>` : '<p class="muted">None.</p>'),
     );
 
     const now = m.phase === 'shop' && p.place === null ? m.currentTypes(id) : null;

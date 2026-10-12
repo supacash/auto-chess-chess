@@ -21,9 +21,9 @@ import {
 } from 'firebase/firestore';
 import { type MatchSettings, matchBoard } from '../multi/match';
 import { isMatchPerkId, type MatchPerkId, type PerkPicks } from '../multi/perks';
-import type { Holdings } from '../multi/pool';
+import { type Holdings, isPoolKind } from '../multi/pool';
 import { isModeId } from '../rules/mode';
-import { isAffinity, isPieceType, type Piece, type PieceType } from '../rules/pieces';
+import { isPieceType, type Piece, type PieceType } from '../rules/pieces';
 import { type Rng, randomSeed } from '../rules/rng';
 import {
   armyDoc,
@@ -347,7 +347,7 @@ function parseHeld(data: unknown): Record<string, Holdings> {
     if (typeof held !== 'object' || held === null) continue;
     const clean: Holdings = {};
     for (const [kind, n] of Object.entries(held)) {
-      if (isAffinity(kind) && Number.isInteger(n) && (n as number) >= 0) clean[kind] = n as number;
+      if (isPoolKind(kind) && Number.isInteger(n) && (n as number) >= 0) clean[kind] = n as number;
     }
     out[uid] = clean;
   }

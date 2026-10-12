@@ -68,7 +68,7 @@ describe('records', () => {
     expect(parseRecords(JSON.parse(JSON.stringify(r)))).toEqual(r);
     expect(parseRecords(null)).toEqual(emptyRecords());
     expect(
-      parseRecords({ version: 1, runs: { x: { runs: -1 } }, history: [{ at: 'x' }], fun: { bought: { Y: 3 } } }),
+      parseRecords({ version: 1, runs: { x: { runs: -1 } }, history: [{ at: 'x' }], fun: { bought: { V: 3 } } }),
     ).toEqual(emptyRecords());
   });
 });

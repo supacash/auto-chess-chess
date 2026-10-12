@@ -162,6 +162,7 @@ export const OFFER_WEIGHTS: Partial<Record<Offer, number>> = {
   B: 0.5,
   R: 0.3,
   Q: 0.15,
+  Y: 0.15, // the Stackman: the one fusion piece the shop sells (fairy, from round 3 at 8 gold)
 };
 
 /** Queens and queen-pawns are offered from this round on. */
@@ -347,12 +348,19 @@ export function setMergeResults(parts: MergePart[]): PieceType[] {
   if (!parts.every((p) => p.type === first.type && !p.affinity)) return [];
   if (isPawnLike(first.type)) return ['N', 'B'];
   if (first.type === 'N' || first.type === 'B') return ['Q'];
+  if (first.type === 'M') return ['Y']; // three men stack into a Stackman
   return [];
 }
 
 /** Pieces that can take part in a three-piece merge (what the picker lets you circle). */
 export function canSetMerge(piece: MergePart): boolean {
-  return piece.affinity !== undefined || isPawnLike(piece.type) || piece.type === 'N' || piece.type === 'B';
+  return (
+    piece.affinity !== undefined ||
+    isPawnLike(piece.type) ||
+    piece.type === 'N' ||
+    piece.type === 'B' ||
+    piece.type === 'M'
+  );
 }
 
 /** True when two pieces are the same kind for a three-piece merge (same affinity, or both plain of one type). */

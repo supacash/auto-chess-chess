@@ -47,7 +47,7 @@ describe('army snapshots', () => {
       { ...good, format: 2 },
       { ...good, board: 'acc11' },
       { ...good, mode: 'huge' },
-      { ...good, pieces: [...good.pieces, { type: 'Y', file: 1, rank: 0 }] },
+      { ...good, pieces: [...good.pieces, { type: 'V', file: 1, rank: 0 }] },
       { ...good, pieces: good.pieces.filter((p) => p.type !== 'K') }, // no king
       { ...good, pieces: [...good.pieces, { type: 'P', file: 1, rank: 0 }] }, // pawn on the back row
       { ...good, board: BOARDS[0].variant, pieces: [...good.pieces, { type: 'R', file: 7, rank: 0 }] }, // off a 5×5 board

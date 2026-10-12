@@ -130,7 +130,18 @@ describe('no piece-count limit', () => {
 });
 
 describe('shop offers', () => {
-  it('rolls OFFER_COUNT affordable-tier pieces, never kings or fusion pieces', () => {
+  it('sells the Stackman for 8 gold, rarely, from round 3 and only with fairy pieces on', () => {
+    expect(offerPrice('Y')).toBe(8);
+    const seen = (round: number, fairy: boolean) =>
+      Array.from({ length: 400 }, (_, i) => rollOffers(round, seededRng(i), fairy))
+        .flat()
+        .includes('Y');
+    expect(seen(2, true)).toBe(false);
+    expect(seen(3, true)).toBe(true);
+    expect(seen(8, false)).toBe(false);
+  });
+
+  it('rolls OFFER_COUNT affordable-tier pieces, never kings or fusion pieces (but the Stackman)', () => {
     const rng = seededRng(7);
     for (let round = 1; round <= 8; round++) {
       for (let i = 0; i < 30; i++) {
@@ -139,7 +150,7 @@ describe('shop offers', () => {
         for (const o of offers) {
           expect(offerPrice(o)).toBeLessThanOrEqual(maxOfferCost(round));
           expect(o).not.toBe('K');
-          if (!isAffinityOffer(o)) expect(PIECES[o].group).not.toBe('fusion');
+          if (!isAffinityOffer(o) && o !== 'Y') expect(PIECES[o].group).not.toBe('fusion');
         }
       }
     }
@@ -314,6 +325,7 @@ describe('three-piece merges', () => {
     const plain = (t: PieceType) => ({ type: t });
     expect(setMergeResults([plain('N'), plain('N'), plain('N')])).toEqual(['Q']);
     expect(setMergeResults([plain('B'), plain('B'), plain('B')])).toEqual(['Q']);
+    expect(setMergeResults([plain('M'), plain('M'), plain('M')])).toEqual(['Y']); // three men stack into a Stackman
     expect(setMergeResults([plain('N'), plain('N'), plain('B')])).toEqual([]);
     expect(setMergeResults([plain('R'), plain('R'), plain('R')])).toEqual([]);
     expect(setMergeResults([plain('P'), plain('P'), plain('P')])).toEqual(['N', 'B']); // three plain pawns
