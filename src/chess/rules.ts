@@ -1,6 +1,6 @@
 import type { Board, FairyStockfish } from 'ffish-es6';
-import type { BoardSpec } from './boardSpec';
-import { type Color, fenTurn } from './fen';
+import { type BoardSpec, battleVariant, engineFen, parseSquare, squareName } from './boardSpec';
+import { type Color, fenTurn, parsePlacement, placementField } from './fen';
 
 /**
  * Chess rules for any board size, backed by ffish (Fairy-Stockfish's move generator as WASM).
@@ -43,16 +43,37 @@ export function parseUci(uci: string): Move | null {
  */
 export class Game {
   private readonly board: Board;
+  /** The engine variant it's played under (the board's, or its two-kings form; see battleVariant). */
+  readonly variant: string;
+  /** Where each side's Heir stands (ffish only knows it as a second king), and its earlier squares for undo. */
+  private heirs: Partial<Record<Color, string>> = {};
+  private heirHistory: Partial<Record<Color, string>>[] = [];
 
   constructor(
     readonly spec: BoardSpec,
     fen: string,
   ) {
-    this.board = new (rules().Board)(spec.variant, fen);
+    this.variant = battleVariant(spec, fen);
+    const grid = parsePlacement(fen, spec.files);
+    grid.forEach((row, i) => {
+      row.forEach((cell, file) => {
+        if (cell?.type === 'J') this.heirs[cell.color] = squareName(file, spec.ranks - 1 - i);
+      });
+    });
+    this.board = new (rules().Board)(this.variant, engineFen(fen));
   }
 
+  /** The position, with each Heir written as 'J'. */
   fen(): string {
-    return this.board.fen();
+    const fen = this.board.fen();
+    if (!this.heirs.w && !this.heirs.b) return fen;
+    const grid = parsePlacement(fen, this.spec.files).reverse(); // [rank][file], rank 0 at the bottom
+    for (const [color, square] of Object.entries(this.heirs)) {
+      if (!square) continue;
+      const { file, rank } = parseSquare(square);
+      if (grid[rank]?.[file]) grid[rank][file] = { type: 'J', color: color as Color };
+    }
+    return [placementField(grid), ...fen.split(' ').slice(1)].join(' ');
   }
 
   turn(): Color {
@@ -70,7 +91,12 @@ export class Game {
   /** Plays a UCI move; null if it's illegal here. */
   play(uci: string): Move | null {
     const move = parseUci(uci);
+    const mover = this.turn();
     if (!move || !this.board.push(uci)) return null;
+    this.heirHistory.push({ ...this.heirs });
+    const other: Color = mover === 'w' ? 'b' : 'w';
+    if (this.heirs[other] === move.to) delete this.heirs[other]; // the Heir was captured
+    if (this.heirs[mover] === move.from) this.heirs[mover] = move.to;
     return move;
   }
 
@@ -86,6 +112,7 @@ export class Game {
   /** Takes back the last move. */
   undo(): void {
     this.board.pop();
+    this.heirs = this.heirHistory.pop() ?? this.heirs;
   }
 
   delete(): void {

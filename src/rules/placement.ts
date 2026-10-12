@@ -5,6 +5,8 @@ export const BACK_RANK = 0;
 
 /** Most pieces that can wait on the bench at once (bought pieces arrive there). */
 export const BENCH_SIZE = 8;
+/** Heirs an army may have (three Queens merged into a second king, fairy mode). */
+export const MAX_HEIRS = 1;
 
 /**
  * Most pieces on the board: a chess side's worth, two per file (16 on 8×8, 10 on 5×5), and never
@@ -32,7 +34,7 @@ export function placementError(type: PieceType, sq: Square, spec: BoardSpec = BO
   if (sq.file < 0 || sq.file >= spec.files || sq.rank < 0 || sq.rank >= spec.homeRows) {
     return 'Outside your home rows';
   }
-  if (type === 'K' && sq.rank === frontRank(spec)) return "King can't be placed on the front row";
+  if ((type === 'K' || type === 'J') && sq.rank === frontRank(spec)) return "King can't be placed on the front row";
   if (isPawnLike(type) && sq.rank === BACK_RANK) return "Pawns can't be placed on the back row";
   return null;
 }
@@ -120,6 +122,7 @@ export function armyErrors(pieces: Piece[], spec: BoardSpec = BOARD_8): string[]
   const kings = pieces.filter((p) => p.type === 'K');
   if (kings.length !== 1) errors.push('Army must have exactly one king');
   else if (!kings[0].square) errors.push('Place your king on the board');
+  if (pieces.filter((p) => p.type === 'J').length > MAX_HEIRS) errors.push('An army can have only one Heir');
 
   const cap = armyCap(spec);
   if (placedCount(pieces) > cap) errors.push(`Too many pieces on the board (at most ${cap})`);

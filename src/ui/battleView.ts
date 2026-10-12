@@ -118,7 +118,8 @@ export class BattleView {
         if (last && (name === last.from || name === last.to)) cell.classList.add('last');
         const occupant = rows[r]?.[file];
         if (occupant) {
-          if (occupant.type === 'K' && occupant.color === checkedColor) cell.classList.add('check');
+          const royal = occupant.type === 'K' || occupant.type === 'J'; // an Heir left alone is the king
+          if (royal && occupant.color === checkedColor) cell.classList.add('check');
           const el = document.createElement('div');
           el.className = `piece ${displayColor(occupant.color) === 'w' ? 'white' : 'black'}`;
           fillPiece(el, occupant.type, occupant.color);

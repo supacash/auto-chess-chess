@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { BOARD_8, BOARDS } from '../chess/boardSpec';
 import { makePiece, type Square } from './pieces';
-import { armyCap, armyErrors, BENCH_SIZE, canPlace, capacityError, fitToBoard, movePiece, pieceAt } from './placement';
+import {
+  armyCap,
+  armyErrors,
+  BENCH_SIZE,
+  canPlace,
+  capacityError,
+  fitToBoard,
+  movePiece,
+  pieceAt,
+  placementError,
+} from './placement';
 
 const sq = (file: number, rank: number): Square => ({ file, rank });
 
@@ -72,6 +82,18 @@ describe('armyErrors', () => {
   it('requires a placed king', () => {
     expect(armyErrors([makePiece('P', sq(0, 1))])).toContain('Army must have exactly one king');
     expect(armyErrors([makePiece('K')])).toContain('Place your king on the board');
+  });
+
+  it('allows one Heir, placed or benched (not on the front row), but not two', () => {
+    expect(armyErrors([makePiece('K', sq(4, 0)), makePiece('J', sq(2, 0))])).toEqual([]);
+    expect(armyErrors([makePiece('K', sq(4, 0)), makePiece('J')])).toEqual([]);
+    expect(armyErrors([makePiece('K', sq(4, 0)), makePiece('J'), makePiece('J')])).toContain(
+      'An army can have only one Heir',
+    );
+    expect(armyErrors([makePiece('K', sq(4, 0)), makePiece('K', sq(2, 0))])).toContain(
+      'Army must have exactly one king',
+    );
+    expect(placementError('J', sq(2, 2))).toBe("King can't be placed on the front row");
   });
 
   it('accepts a valid army with benched pieces', () => {

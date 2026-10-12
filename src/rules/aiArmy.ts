@@ -368,6 +368,7 @@ const PLACEMENT_ANALOG: Record<PieceType, 'K' | 'Q' | 'R' | 'B' | 'N' | 'P'> = {
   U: 'N',
   S: 'R',
   Y: 'N',
+  J: 'K',
 };
 
 /** Maps a file on an 8-wide board to the nearest file on `spec`. */

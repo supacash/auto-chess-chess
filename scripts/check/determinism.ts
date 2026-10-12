@@ -11,6 +11,8 @@ import { NodeEngine } from '../sim/nodeEngine';
 const POSITIONS = [
   { spec: BOARDS[0], fen: 'r1k2/ppep1/5/1PXP1/1NK2 w - - 0 1' },
   { spec: BOARDS[BOARDS.length - 1], fen: 'r1bqk1nr/pppp1ppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1' },
+  // White has an Heir: played under the two-kings rules.
+  { spec: BOARDS[3], fen: 'r1bqk1nr/pppp1ppp/8/8/8/8/PPPPPPPP/RNBQKBJR w - - 0 1' },
 ];
 
 await loadRulesForNode();
@@ -21,7 +23,7 @@ for (const { spec, fen } of POSITIONS) {
     const runs: string[] = [];
     for (let i = 0; i < 2; i++) {
       const moves: string[] = [];
-      await runBattle(
+      const result = await runBattle(
         fen,
         engine,
         seededRng(seed),
@@ -30,6 +32,7 @@ for (const { spec, fen } of POSITIONS) {
         spec,
       );
       runs.push(moves.join(' '));
+      if (i === 0) console.log(`  ${spec.variant} seed ${seed}: ${result.winner} by ${result.reason}`);
     }
     const same = runs[0] === runs[1];
     ok &&= same;

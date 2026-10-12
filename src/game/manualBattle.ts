@@ -43,6 +43,11 @@ export class ManualBattle {
     }
   }
 
+  /** The engine variant the game is played under (see Game.variant). */
+  get variant(): string {
+    return this.game.variant;
+  }
+
   get fen(): string {
     return this.game.fen();
   }

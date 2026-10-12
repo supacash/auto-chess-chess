@@ -173,6 +173,39 @@ describe('fairy pieces', () => {
     expect(jumping).not.toContain('d7');
   });
 
+  it('plays two kings (an Heir) by the Spartan rules: either can be taken, the last can be mated', () => {
+    // White's King (a1) and Heir (h1); the King is attacked by a rook: not check, and Black may take it.
+    const twoKings = new Game(BOARD_8, 'r6k/8/8/8/8/8/8/K6J w - - 0 1');
+    expect(twoKings.variant).toBe('acc8k2');
+    expect(twoKings.isCheck()).toBe(false);
+    expect(twoKings.legalMoves()).toContain('h1h2');
+    twoKings.delete();
+    const capture = new Game(BOARD_8, 'r6k/8/8/8/8/8/8/K6J b - - 0 1');
+    expect(capture.legalMoves()).toContain('a8a1');
+    expect(capture.play('a8a1')).not.toBeNull();
+    // Only the Heir left: it's the king now. Here it's in check and must deal with it.
+    expect(capture.isCheck()).toBe(true);
+    capture.delete();
+    // Taking the Heir instead leaves the King royal, in check the same way.
+    const heirTaken = new Game(BOARD_8, 'r6k/8/8/8/8/8/8/J6K b - - 0 1');
+    expect(heirTaken.play('a8a1')).not.toBeNull();
+    expect(heirTaken.isCheck()).toBe(true);
+    heirTaken.delete();
+    // The Heir is followed through the moves: shown as J where it stands, gone once captured, back on undo.
+    const follow = new Game(BOARD_8, 'r6k/8/8/8/8/8/8/K6J w - - 0 1');
+    follow.play('h1g2');
+    expect(follow.fen().split(' ')[0]).toBe('r6k/8/8/8/8/8/6J1/K7');
+    follow.play('a8g8');
+    follow.play('a1b1');
+    expect(follow.play('g8g2')).not.toBeNull(); // the rook takes the Heir
+    expect(follow.fen().split(' ')[0]).not.toContain('J');
+    follow.undo();
+    expect(follow.fen().split(' ')[0]).toContain('J');
+    follow.delete();
+    // A single-king game is still plain chess, on the plain variant.
+    expect(new Game(BOARD_8, '7k/8/8/8/8/8/8/K7 w - - 0 1').variant).toBe('acc8');
+  });
+
   it('defines every fairy piece for the engine, with the Berolina pawn promoting', () => {
     const ini = variantsIni([BOARD_8]);
     expect(ini).toContain('e:mfFcfWifmnF2');

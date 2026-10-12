@@ -1,5 +1,5 @@
 import type { Winner } from './battle';
-import { BENCH_SIZE, benchCount } from './placement';
+import { BENCH_SIZE, benchCount, MAX_HEIRS } from './placement';
 import {
   type Affinity,
   AFFINITIES,
@@ -92,6 +92,7 @@ export function sellPiece(shop: Shop, pieceId: string): ShopResult {
   const piece = shop.pieces.find((p) => p.id === pieceId);
   if (!piece) return { ok: false, error: 'No such piece' };
   if (piece.type === 'K') return { ok: false, error: "The king can't be sold" };
+  if (piece.type === 'J') return { ok: false, error: "The Heir can't be sold" };
   return {
     ok: true,
     shop: { ...shop, gold: shop.gold + sellValue(piece), pieces: shop.pieces.filter((p) => p.id !== pieceId) },
@@ -340,8 +341,16 @@ export const SET_MERGE_SIZE = 3;
 
 type MergePart = Pick<Piece, 'type' | 'affinity'>;
 
-/** What three pieces can merge into (empty if they can't). */
-export function setMergeResults(parts: MergePart[]): PieceType[] {
+/**
+ * True when three Queens may merge into an Heir (a second king): fairy pieces on, and the army has
+ * no Heir yet.
+ */
+export function canMakeHeir(shop: Shop, fairy: boolean): boolean {
+  return fairy && shop.pieces.filter((p) => p.type === 'J').length < MAX_HEIRS;
+}
+
+/** What three pieces can merge into (empty if they can't). `heir`: three Queens may become an Heir (canMakeHeir). */
+export function setMergeResults(parts: MergePart[], heir = false): PieceType[] {
   if (parts.length !== SET_MERGE_SIZE) return [];
   const [first] = parts;
   if (first.affinity) return parts.every((p) => p.affinity === first.affinity) ? [first.affinity] : [];
@@ -349,17 +358,19 @@ export function setMergeResults(parts: MergePart[]): PieceType[] {
   if (isPawnLike(first.type)) return ['N', 'B'];
   if (first.type === 'N' || first.type === 'B') return ['Q'];
   if (first.type === 'M') return ['Y']; // three men stack into a Stackman
+  if (first.type === 'Q' && heir) return ['J']; // three queens crown an Heir
   return [];
 }
 
 /** Pieces that can take part in a three-piece merge (what the picker lets you circle). */
-export function canSetMerge(piece: MergePart): boolean {
+export function canSetMerge(piece: MergePart, heir = false): boolean {
   return (
     piece.affinity !== undefined ||
     isPawnLike(piece.type) ||
     piece.type === 'N' ||
     piece.type === 'B' ||
-    piece.type === 'M'
+    piece.type === 'M' ||
+    (piece.type === 'Q' && heir)
   );
 }
 
@@ -372,9 +383,9 @@ function sameKind(a: MergePart, b: MergePart): boolean {
  * The two pieces circled with `pieceId` when a three-piece merge starts: the same kind (same
  * affinity, or the same minor piece), benched ones first. Null if there aren't enough.
  */
-export function setMergePartners(shop: Shop, pieceId: string): Piece[] | null {
+export function setMergePartners(shop: Shop, pieceId: string, fairy = false): Piece[] | null {
   const piece = shop.pieces.find((p) => p.id === pieceId);
-  if (!piece || !canSetMerge(piece)) return null;
+  if (!piece || !canSetMerge(piece, canMakeHeir(shop, fairy))) return null;
   const others = shop.pieces
     .filter((p) => p.id !== pieceId && sameKind(piece, p))
     .sort((x, y) => Number(x.square !== null) - Number(y.square !== null));
@@ -382,22 +393,23 @@ export function setMergePartners(shop: Shop, pieceId: string): Piece[] | null {
 }
 
 /** Merges `pieceId` and its default partners (see setMergePartners) into `result`. */
-export function fuseDefaultSet(shop: Shop, pieceId: string, result: PieceType): ShopResult {
-  const partners = setMergePartners(shop, pieceId);
+export function fuseDefaultSet(shop: Shop, pieceId: string, result: PieceType, fairy = false): ShopResult {
+  const partners = setMergePartners(shop, pieceId, fairy);
   if (!partners) return { ok: false, error: `Merging needs ${SET_MERGE_SIZE} matching pieces` };
-  return fuseSet(shop, [pieceId, ...partners.map((p) => p.id)], result);
+  return fuseSet(shop, [pieceId, ...partners.map((p) => p.id)], result, fairy);
 }
 
 /**
  * Merges exactly the pieces `ids` (the player's pick) into `result`. It takes the place of the first
- * picked piece on the board (or the first one, if all are benched).
+ * picked piece on the board (or the first one, if all are benched). An Heir goes to the bench instead
+ * (a queen's square may be on the front row, where a king can't stand).
  */
-export function fuseSet(shop: Shop, ids: string[], result: PieceType): ShopResult {
+export function fuseSet(shop: Shop, ids: string[], result: PieceType, fairy = false): ShopResult {
   const chosen = ids.map((id) => shop.pieces.find((p) => p.id === id));
   if (new Set(ids).size !== SET_MERGE_SIZE || chosen.some((p) => !p))
     return { ok: false, error: `Pick ${SET_MERGE_SIZE} pieces to merge` };
   const pieces = chosen as Piece[];
-  if (!setMergeResults(pieces).includes(result))
+  if (!setMergeResults(pieces, canMakeHeir(shop, fairy)).includes(result))
     return { ok: false, error: `Those pieces can't become a ${PIECE_NAME[result]}` };
   const pieceId = (pieces.find((p) => p.square) ?? pieces[0]).id;
   const used = new Set(ids.filter((id) => id !== pieceId));
@@ -407,7 +419,7 @@ export function fuseSet(shop: Shop, ids: string[], result: PieceType): ShopResul
       ...shop,
       pieces: shop.pieces
         .filter((p) => !used.has(p.id))
-        .map((p) => (p.id === pieceId ? { id: p.id, type: result, square: p.square } : p)),
+        .map((p) => (p.id === pieceId ? { id: p.id, type: result, square: result === 'J' ? null : p.square } : p)),
     },
   };
 }

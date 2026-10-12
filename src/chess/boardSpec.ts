@@ -48,12 +48,43 @@ function customPieceLines(): string[] {
   ];
 }
 
-/** variants.ini content defining every board in `boards` for Fairy-Stockfish and ffish. */
+/**
+ * Two kings (fairy mode's Heir): while a side has its King and its Heir, neither is royal, so either
+ * can be captured; the last one left is a real king and can be checkmated (Fairy-Stockfish's
+ * Spartan-chess rules). Battles with an Heir on the board are played on the board's two-kings variant.
+ * The rules only pair up kings of one type, so the engine and ffish see the Heir as a second king;
+ * our FENs write it 'J' (see engineFen, and Game, which follows it through the moves).
+ */
+const TWO_KINGS = [
+  'king = -',
+  'commoner = k',
+  'extinctionValue = loss',
+  'extinctionPieceTypes = k',
+  'extinctionPseudoRoyal = true',
+  'dupleCheck = true',
+];
+
+/** A FEN as the engine and ffish take it: an Heir ('J') is a second king. */
+export function engineFen(fen: string): string {
+  const [placement, ...rest] = fen.split(' ');
+  return [placement.replace(/J/g, 'K').replace(/j/g, 'k'), ...rest].join(' ');
+}
+
+/** The engine variant for a battle from `fen` on `spec`: the two-kings rules when there's an Heir. */
+export function battleVariant(spec: BoardSpec, fen: string): string {
+  return /[jJ]/.test(fen.split(' ')[0]) ? `${spec.variant}k2` : spec.variant;
+}
+
+/** variants.ini content defining every board in `boards` for Fairy-Stockfish and ffish, each also in its two-kings form. */
 export function variantsIni(boards: BoardSpec[] = BOARDS): string {
   return boards
-    .map((b) =>
+    .flatMap((b) => [
+      { name: b.variant, b, extra: [] as string[] },
+      { name: `${b.variant}k2`, b, extra: TWO_KINGS },
+    ])
+    .map(({ name, b, extra }) =>
       [
-        `[${b.variant}:chess]`,
+        `[${name}:chess]`,
         ...customPieceLines(),
         `maxFile = ${fileLetter(b.files - 1)}`,
         `maxRank = ${b.ranks}`,
@@ -62,6 +93,7 @@ export function variantsIni(boards: BoardSpec[] = BOARDS): string {
         'promotionRegionBlack = *1',
         'doubleStepRegionWhite = *2',
         `doubleStepRegionBlack = *${b.ranks - 1}`,
+        ...extra,
       ].join('\n'),
     )
     .join('\n\n')

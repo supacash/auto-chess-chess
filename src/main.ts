@@ -1,5 +1,6 @@
 import type { MatchSettings } from './multi/match';
 import './style.css';
+import { battleVariant } from './chess/boardSpec';
 import { whiteEval } from './engine/pick';
 import { SEARCH_DEPTH } from './game/runBattle';
 import { BattleScreen, GamePaused } from './app/battleScreen';
@@ -379,9 +380,9 @@ async function watchReplay(): Promise<void> {
   hideMenu();
   placement.hide();
   await battle.replay(record, fromMenu ? () => showMenu() : showPlacement, {
-    prepare: async (spec) => {
+    prepare: async (spec, fen) => {
       const engine = await ensureEngine();
-      await engine.newGame(spec.variant);
+      await engine.newGame(battleVariant(spec, fen));
     },
     evaluate: async (fen, history) => {
       const engine = await ensureEngine();

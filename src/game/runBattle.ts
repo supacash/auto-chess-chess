@@ -45,7 +45,7 @@ export async function runBattle(
 ): Promise<BattleResult> {
   const game = new Game(spec, fen);
   try {
-    await engine.newGame(spec.variant);
+    await engine.newGame(game.variant);
 
     let plies = 0;
     let streak = NO_STREAK;

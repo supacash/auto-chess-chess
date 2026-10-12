@@ -45,7 +45,7 @@ export interface Playback {
 /** Works out evals for a review of a game that recorded none (manual games). */
 export interface ReviewAnalysis {
   /** Gets the engine ready for this board. */
-  prepare(spec: BoardSpec): Promise<void>;
+  prepare(spec: BoardSpec, fen: string): Promise<void>;
   /** The position's eval from White's side, or null if the engine couldn't search it. */
   evaluate(fen: string, history: History): Promise<number | null>;
   /** Keeps the evals worked out so far (so the next review needn't redo them). */
@@ -291,7 +291,7 @@ export class BattleScreen {
             wanted = null;
             if (evals[k - 1] !== null) continue;
             if (!started) {
-              await analyse.prepare(spec);
+              await analyse.prepare(spec, record.fen);
               started = true;
             }
             evals[k - 1] = await analyse.evaluate(frames[k].fen, { fen: record.fen, moves: record.moves.slice(0, k) });
@@ -387,7 +387,7 @@ export class BattleScreen {
     this.manual.hidden = false;
     $('#eval').hidden = true;
     $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
-    await engine.newGame(game.spec.variant);
+    await engine.newGame(game.variant);
 
     const draw = (last?: Move) => {
       this.view.render(game.fen, game.spec, {

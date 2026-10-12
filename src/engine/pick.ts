@@ -1,3 +1,4 @@
+import { engineFen } from '../chess/boardSpec';
 import { type Rng, randomInt } from '../rules/rng';
 
 /** One engine line: a UCI move and its score in centipawns for the side to move. */
@@ -51,8 +52,8 @@ export interface History {
 
 /** The UCI `position` command for a search: with history when there is one. */
 export function positionCommand(fen: string, history?: History): string {
-  if (!history || history.moves.length === 0) return `position fen ${history?.fen ?? fen}`;
-  return `position fen ${history.fen} moves ${history.moves.join(' ')}`;
+  if (!history || history.moves.length === 0) return `position fen ${engineFen(history?.fen ?? fen)}`;
+  return `position fen ${engineFen(history.fen)} moves ${history.moves.join(' ')}`;
 }
 
 // ---- evaluation display ----

@@ -156,6 +156,24 @@ function drawFusion([behind, inFront], color) {
   return `${HEADER}${back}${front}</svg>\n`;
 }
 
+// ---- the Heir: the Chessnut king without its cross, a size smaller ----
+
+/** Where the cross is in each Chessnut king, and what replaces it (nothing / the outline closed across). */
+const KING_CROSS = {
+  w: ['<path stroke-width="30.2" d="M404.3 94.6v189m-61.5-124.2H468"/>', ''],
+  b: ['v-80.7h49.7v-30.2h-49.7V94.6h-30.2v49.7h-46.4v30.2h46.4v78.9', 'l-30.2-1.8'],
+};
+
+function drawHeir(color) {
+  const [cross, instead] = KING_CROSS[color];
+  const king = inner(`${color}K.svg`);
+  if (!king.includes(cross)) throw new Error(`The ${color} king's cross wasn't found`);
+  // 80% size, standing on the same base line (y 700) and centred like the king.
+  return `${HEADER}<g transform="translate(80 140) scale(0.8)">${king.replace(cross, instead)}</g></svg>\n`;
+}
+
+for (const color of ['w', 'b']) writeFileSync(join(dir, `${color}J.svg`), drawHeir(color));
+
 for (const color of ['w', 'b']) {
   for (const [type, shape] of Object.entries(SHAPES))
     writeFileSync(join(dir, `${color}${type}.svg`), drawShape(shape, color));

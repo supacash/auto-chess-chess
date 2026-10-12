@@ -1,4 +1,4 @@
-import { BOARDS, plyLimit } from '../chess/boardSpec';
+import { BOARDS, plyLimit, variantsIni } from '../chess/boardSpec';
 import { MULTI_PV, PICK_MARGIN } from '../engine/pick';
 import { PIECE_TYPES, PIECES } from '../rules/pieces';
 import { SEARCH_DEPTH } from './runBattle';
@@ -11,7 +11,7 @@ import { SEARCH_DEPTH } from './runBattle';
  * Bump it whenever the rules change. version.test.ts fails when the fingerprint below changes
  * without a bump; rule changes it can't see (such as how battleResult decides a game) need a manual bump.
  */
-export const RULES_VERSION = 4;
+export const RULES_VERSION = 5;
 
 /** Everything about the rules that can be read as data, as one stable string. */
 export function rulesFingerprint(): string {
@@ -21,7 +21,9 @@ export function rulesFingerprint(): string {
   });
   const boards = BOARDS.map((b) => [b.variant, b.files, b.ranks, b.homeRows, plyLimit(b)].join(':'));
   const engine = [SEARCH_DEPTH, MULTI_PV, PICK_MARGIN].join(':');
-  return [pieces.join(','), boards.join(','), engine].join('|');
+  // The engine rules as written for Fairy-Stockfish (custom pieces, the two-kings variants, …).
+  const ini = shortHash(variantsIni());
+  return [pieces.join(','), boards.join(','), engine, ini].join('|');
 }
 
 /** A short hash of a string (FNV-1a, 32-bit, hex). */

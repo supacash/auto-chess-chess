@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canMakeHeir,
   AFFINITY_PRICE,
   buyOffer,
   fuseDefaultSet,
@@ -39,6 +40,39 @@ const ok = (r: ShopResult): Shop => {
   return r.shop;
 };
 const points = (shop: Shop) => shop.pieces.reduce((s, p) => s + PIECE_VALUE[p.type], 0);
+
+describe('the Heir (three Queens → a second king)', () => {
+  const queens = (heirs: number): Shop => ({
+    gold: 0,
+    pieces: [
+      makePiece('K', { file: 4, rank: 0 }),
+      ...Array.from({ length: heirs }, () => makePiece('J')),
+      makePiece('Q', { file: 3, rank: 2 }), // on the front row, where a king can't stand
+      makePiece('Q'),
+      makePiece('Q'),
+    ],
+  });
+
+  it('merges three Queens into a benched Heir, with fairy pieces on', () => {
+    const shop = queens(0);
+    const q = shop.pieces[1].id;
+    expect(canMakeHeir(shop, true)).toBe(true);
+    const result = fuseDefaultSet(shop, q, 'J', true);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const heir = result.shop.pieces.filter((p) => p.type === 'J');
+    expect(heir).toHaveLength(1);
+    expect(heir[0].square).toBeNull(); // benched: the queen stood on the front row
+    expect(result.shop.pieces.filter((p) => p.type === 'Q')).toHaveLength(0);
+  });
+
+  it('is refused without fairy pieces, or with an Heir already', () => {
+    expect(fuseDefaultSet(queens(0), queens(0).pieces[1].id, 'J', false).ok).toBe(false);
+    const one = queens(1);
+    expect(canMakeHeir(one, true)).toBe(false);
+    expect(fuseDefaultSet(one, one.pieces[2].id, 'J', true).ok).toBe(false);
+  });
+});
 
 describe('startingShop', () => {
   it('starts with King + 3 pawns and 3 gold', () => {
@@ -326,6 +360,8 @@ describe('three-piece merges', () => {
     expect(setMergeResults([plain('N'), plain('N'), plain('N')])).toEqual(['Q']);
     expect(setMergeResults([plain('B'), plain('B'), plain('B')])).toEqual(['Q']);
     expect(setMergeResults([plain('M'), plain('M'), plain('M')])).toEqual(['Y']); // three men stack into a Stackman
+    expect(setMergeResults([plain('Q'), plain('Q'), plain('Q')])).toEqual([]); // only when an Heir is allowed
+    expect(setMergeResults([plain('Q'), plain('Q'), plain('Q')], true)).toEqual(['J']);
     expect(setMergeResults([plain('N'), plain('N'), plain('B')])).toEqual([]);
     expect(setMergeResults([plain('R'), plain('R'), plain('R')])).toEqual([]);
     expect(setMergeResults([plain('P'), plain('P'), plain('P')])).toEqual(['N', 'B']); // three plain pawns

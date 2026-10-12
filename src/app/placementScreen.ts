@@ -2,6 +2,7 @@ import { dismissTip, seenTips } from '../game/storage';
 import { nextTip, TIPS, type TipId } from '../game/tips';
 import {
   buyOffer,
+  canMakeHeir,
   fusePieces,
   INTEREST_STEP,
   interest,
@@ -109,7 +110,7 @@ export class PlacementScreen {
         this.applyShop(fusePieces(shop, this.selected, btn.dataset.fuse, to, this.session.run.settings.fairy), to);
       } else if (btn.dataset.mergeSet) {
         const to = btn.dataset.mergeSet as PieceType;
-        this.applyShop(fuseDefaultSet(shop, this.selected, to), to);
+        this.applyShop(fuseDefaultSet(shop, this.selected, to, this.session.run.settings.fairy), to);
       } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
     });
     // Tapping an opponent piece in the list explains what it does (the board reports taps via onFoeTap).
@@ -390,7 +391,9 @@ export class PlacementScreen {
       })
       .join('');
     const sell =
-      piece.type === 'K' ? '' : `<button type="button" class="sell" data-sell>Sell · +${sellValue(piece)}g</button>`;
+      piece.type === 'K' || piece.type === 'J'
+        ? ''
+        : `<button type="button" class="sell" data-sell>Sell · +${sellValue(piece)}g</button>`;
     // Merging is free: the selected piece becomes the result where it stands, and the partner is used up.
     const fusions = fusionOptions(this.session.run.shop, piece.id, this.session.run.settings.fairy)
       .map(({ partnerId, result }) => {
@@ -400,18 +403,23 @@ export class PlacementScreen {
       .join('');
     // Three of a kind merge in one tap (the set is all the same kind, so there's nothing to pick):
     // one button per result (three plain pawns can become a Knight or a Bishop).
-    const partners = setMergePartners(this.session.run.shop, piece.id);
-    const setResults = partners ? setMergeResults([piece, ...partners]) : [];
+    const { shop, settings } = this.session.run;
+    const partners = setMergePartners(shop, piece.id, settings.fairy);
+    const setResults = partners ? setMergeResults([piece, ...partners], canMakeHeir(shop, settings.fairy)) : [];
     const pawnFusions = setResults
       .map(
         (to) =>
-          `<button type="button" class="fuse" data-merge-set="${to}" title="Uses up ${SET_MERGE_SIZE} ${pieceName(piece).toLowerCase()}s">Merge ${SET_MERGE_SIZE} → ${inlinePiece(to)} ${PIECE_NAME[to]}</button>`,
+          `<button type="button" class="fuse" data-merge-set="${to}" title="Uses up ${SET_MERGE_SIZE} ${pieceName(piece).toLowerCase()}s">Merge ${SET_MERGE_SIZE} → ${inlinePiece(to)} ${to === 'J' ? 'Heir (a second king)' : PIECE_NAME[to]}</button>`,
       )
       .join('');
     const info = piece.affinity
       ? affinityText(piece.affinity, pieces)
       : `${PIECE_VALUE[piece.type]} pts. ${PIECES[piece.type].description}${
-          isPawnLike(piece.type) ? ` Three of them merge into a Knight or Bishop.` : ''
+          isPawnLike(piece.type)
+            ? ' Three of them merge into a Knight or Bishop.'
+            : piece.type === 'Q' && canMakeHeir(shop, settings.fairy)
+              ? ' Three Queens merge into an Heir: a second king, so one must be captured before the other can be mated.'
+              : ''
         }`;
     actions.innerHTML =
       `<p class="piece-info"><strong>${pieceName(piece)}</strong> · ${info}</p>` +

@@ -26,7 +26,8 @@ export type PieceType =
   | 'H' // Dragon Horse (bishop + wazir)
   | 'U' // Wildebeest (knight + camel)
   | 'S' // Siege Cannon (cannon + bishop)
-  | 'Y'; // Stackman (three men)
+  | 'Y' // Stackman (three men)
+  | 'J'; // Heir (three queens): a second king
 
 export type PieceGroup = 'standard' | 'pawn' | 'utility' | 'chaos' | 'fusion';
 
@@ -116,6 +117,13 @@ export const PIECES: Record<PieceType, PieceDef> = {
     group: 'fusion',
     betza: 'KNAD',
     description: 'Three men stacked up: jumps to any square up to two away, over anything in between.',
+  },
+  J: {
+    name: 'Heir',
+    value: 0,
+    group: 'fusion',
+    betza: 'K',
+    description: 'A second king: one of the two must be captured before the other can be checkmated.',
   },
 };
 
