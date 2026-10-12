@@ -4,7 +4,7 @@ import { Game } from '../chess/rules';
 import type { BattleResult } from '../rules/battle';
 import type { RunSettings } from '../rules/difficulty';
 import { FUSIONS } from '../rules/economy';
-import { type Piece, PIECE_VALUE, type PieceType } from '../rules/pieces';
+import { armyPoints, type Piece, type PieceType } from '../rules/pieces';
 import { armyCap } from '../rules/placement';
 
 // Achievements: easy, fun goals that unlock once and stay unlocked (kept in the records, so they sync
@@ -221,7 +221,7 @@ export function armyAchievements(pieces: readonly Piece[], spec?: BoardSpec): Ac
   const has = (t: PieceType) => placed.includes(t);
   if (has('D') && has('H')) out.push('dragons');
   if (has('L') && has('U') && has('T')) out.push('barnyard');
-  if (placed.reduce((sum, t) => sum + PIECE_VALUE[t], 0) >= ABSOLUTE_UNIT_POINTS) out.push('absoluteUnit');
+  if (armyPoints(placed) >= ABSOLUTE_UNIT_POINTS) out.push('absoluteUnit');
   if (spec && placed.length >= spec.files * spec.homeRows && armyCap(spec) >= spec.files * spec.homeRows) {
     out.push('allHands');
   }

@@ -1,5 +1,4 @@
 import type { BoardSpec } from '../chess/boardSpec';
-import { PIECE_VALUE } from '../rules/pieces';
 import type { BattleRecord } from '../game/record';
 import { snapshotArmy } from '../game/snapshot';
 import {
@@ -28,7 +27,7 @@ import { difficulty, type RunSettings } from '../rules/difficulty';
 import { REROLL_COST, rerollOffers, restock, rollOffers, type Shop, type ShopResult } from '../rules/economy';
 import { maxHeirs, type PerkId, PRESTIGE_STEP, queenOfferRound } from '../rules/prestige';
 import { gameMode } from '../rules/mode';
-import type { Piece } from '../rules/pieces';
+import { armyPoints, type Piece } from '../rules/pieces';
 import type { ManualState } from '../game/manualBattle';
 import type { PlacementSession } from './placementSession';
 import { armyErrors, fitToBoard } from '../rules/placement';
@@ -310,7 +309,7 @@ export class Session implements PlacementSession {
   finishBattle(result: BattleResult): BattleOutcome {
     const playedRound = this.run.round;
     const income = battleIncome(this.run, result.winner);
-    const points = (pieces: Piece[]) => pieces.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0);
+    const points = (pieces: Piece[]) => armyPoints(pieces.map((p) => p.type));
     const log: RoundLog = {
       you: points(this.run.shop.pieces.filter((p) => p.square)),
       them: points(this.aiPieces),

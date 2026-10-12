@@ -1,5 +1,5 @@
 import { BOARD_8, type BoardSpec, pawnSquares } from '../chess/boardSpec';
-import { isPawnLike, makePiece, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
+import { HEIR_WORTH, isPawnLike, makePiece, type Piece, type PieceType, type Square, PIECE_VALUE } from './pieces';
 import { armyCap, BACK_RANK, canPlace, frontRank, pieceAt } from './placement';
 import { type StartPosition, startPosition } from './position';
 import { type Rng, randomInt, weightedPick } from './rng';
@@ -237,7 +237,7 @@ function upgradesFor(type: PieceType, fairy: boolean): PieceType[] {
 export const AI_HEIR_ROUND = 20;
 export const AI_HEIR_CHANCE = 0.12;
 /** What an Heir costs the AI's budget: the three Queens a player merges into one. */
-export const AI_HEIR_COST = 3 * PIECE_VALUE.Q;
+export const AI_HEIR_COST = HEIR_WORTH;
 
 export function draftAiArmy(
   budget: number,

@@ -38,6 +38,7 @@ import {
 } from '../rules/economy';
 import {
   type Affinity,
+  armyPoints,
   isPawnLike,
   type Piece,
   PIECE_NAME,
@@ -271,7 +272,7 @@ export class PlacementScreen {
     const fairy = pieces.filter((p) => p.square && SHOP_FAIRY.includes(p.type)).map((p) => p.type);
     if (fairy.length) this.onCollect?.('fielded', fairy);
     const placed = pieces.filter((p) => p.square);
-    const points = placed.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0);
+    const points = armyPoints(placed.map((p) => p.type));
     $('#points').textContent =
       `On the board ${placed.length}/${armyCap(this.session.board)} · bench ${benchCount(pieces)}/${BENCH_SIZE} · ${points} pts`;
     this.updateFight();
@@ -305,7 +306,7 @@ export class PlacementScreen {
       return;
     }
     const types = opponent.pieces.map((p) => p.type).sort(pieceOrder);
-    const points = types.reduce((s, t) => s + PIECE_VALUE[t], 0);
+    const points = armyPoints(types);
     // One glyph per piece type, with a count for repeats ("♛×14"), so big armies stay on one line.
     const counts = new Map<PieceType, number>();
     for (const t of types) counts.set(t, (counts.get(t) ?? 0) + 1);

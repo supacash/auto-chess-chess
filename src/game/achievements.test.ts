@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { BOARD_8, BOARDS } from '../chess/boardSpec';
 import { loadRulesForNode } from '../chess/testRules';
-import { makePiece, type PieceType } from '../rules/pieces';
+import { armyPoints, HEIR_WORTH, makePiece, type PieceType } from '../rules/pieces';
 import {
   ACHIEVEMENTS,
   armyAchievements,
@@ -165,5 +165,12 @@ describe('run achievements', () => {
     expect(runAchievements(true, 1, { ...settings, reveal: true })).toEqual([]);
     expect(runAchievements(true, 1, { ...settings, difficulty: 'normal' })).toEqual([]);
     expect(runAchievements(false, 0, settings)).toEqual([]);
+  });
+});
+
+describe('army points with an Heir', () => {
+  it('count the Heir as the three Queens it was made from', () => {
+    expect(armyPoints(['K', 'J', 'R'])).toBe(HEIR_WORTH + 5);
+    expect(HEIR_WORTH).toBe(27);
   });
 });

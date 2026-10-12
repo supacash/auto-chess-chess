@@ -138,6 +138,18 @@ export const PIECE_VALUE = Object.fromEntries(PIECE_TYPES.map((t) => [t, PIECES[
   number
 >;
 
+/**
+ * What an Heir is worth in an army's points: the three Queens merged into it. In battle it counts 0
+ * (like the King), so hiding it can't win a game on points; the army totals shown to the player (and
+ * the AI's budget) count what it cost.
+ */
+export const HEIR_WORTH = 3 * PIECE_VALUE.Q;
+
+/** An army's points as shown to the player: piece values, with an Heir at HEIR_WORTH. */
+export function armyPoints(types: readonly PieceType[]): number {
+  return types.reduce((sum, t) => sum + (t === 'J' ? HEIR_WORTH : PIECE_VALUE[t]), 0);
+}
+
 export const PIECE_NAME = Object.fromEntries(PIECE_TYPES.map((t) => [t, PIECES[t].name])) as Record<PieceType, string>;
 
 export function isPawnLike(type: PieceType): boolean {
