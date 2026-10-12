@@ -1957,7 +1957,7 @@ button.tip-close {
 /* Achievements: the unlock notice and the Profile list. */
 .toast {
   position: fixed;
-  top: 12px;
+  top: calc(12px + env(safe-area-inset-top));
   left: 50%;
   z-index: 50;
   display: flex;
