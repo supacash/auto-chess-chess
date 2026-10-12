@@ -289,6 +289,20 @@ Difficulty Easy 5.35 / Normal 5.5 / Hard 6 per round; the Growing board ends on 
 
 The stand-in builds worse than people (it rerolls rather than saving for interest), so real players finish runs more often.
 
+### 18. Late-game ramp without the round-21 step (fairy pieces, shop player, 40 runs × 25 rounds per row)
+
+`npm run sim -- --player shop --rounds 25 --games 40 --fairy both --difficulty <d> --board 8|schedule`. With the ramp easing to 0.95 from round 16 and again to 0.9 from round 21, every Easy and Normal suite won clearly more in rounds 21–25 than in 16–20 (the stand-in coasted to the finish, as a hand-played run did). Now it holds at 0.95 from round 16:
+
+| Mode, difficulty | R16–20 | R21–25 before | R21–25 after | All after |
+|---|---|---|---|---|
+| Classic Easy | 56% | 69% | 58% | 56% |
+| Classic Normal | 48% | 61% | 51% | 46% |
+| Classic Hard | 26% | 41% | 41% | 26% |
+| Growing Easy | 63% | 70% | 64% | 62% |
+| Growing Hard | 19% | 37% | 32% | 28% |
+
+Classic Hard is unchanged: its AI budget is already at the cap (a full board of queens) by then, so the ramp doesn't reach it; the late climb there is the player catching up. Growing Normal was cut short twice by an engine crash on 9×9 (a WASM thread's stack overflow after `bestmove`; see Problems found).
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.
