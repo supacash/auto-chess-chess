@@ -1,2 +1,3 @@
 # LF everywhere, whatever the local core.autocrlf setting (editors and tools on Windows mixed CRLF/LF).
 * text=auto eol=lf
+*.bat text eol=crlf
