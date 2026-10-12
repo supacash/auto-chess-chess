@@ -7,7 +7,7 @@ import { type Piece, PIECE_VALUE, type PieceType } from '../rules/pieces';
 import { armyCap } from '../rules/placement';
 
 // Achievements: easy, fun goals that unlock once and stay unlocked (kept in the records, so they sync
-// with the rest). Piece "families" count fusions too: an Archbishop is a bishop for Vatican, a
+// with the rest). Piece "families" count fusions too: an Archbishop is a bishop for Synod, a
 // Centaur a knight for Call the Cavalry, and so on.
 
 export type AchievementId =
@@ -93,7 +93,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'secondSon', name: 'The infamous second son', description: 'Create a second Heir.', secret: true },
   { id: 'pawns', name: 'Oops, all pawns', description: `Have ${CROWD} pawns on the board.` },
   { id: 'sausage', name: 'Sausage Party', description: `Have ${CROWD} men on the board.` },
-  { id: 'vatican', name: 'Vatican', description: `Have ${CROWD} bishops on the board.` },
+  { id: 'vatican', name: 'Synod', description: `Have ${CROWD} bishops on the board.` },
   { id: 'dragons', name: 'Dragons now?', description: 'Field a Dragon King and a Dragon Horse in the same army.' },
   { id: 'stackman', name: 'I’m the Stackman', description: 'Create a Stackman by merging three Men.' },
   // Battles
