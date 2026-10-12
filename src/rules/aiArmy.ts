@@ -233,16 +233,29 @@ function upgradesFor(type: PieceType, fairy: boolean): PieceType[] {
  * left once the board or the pawn cap is full goes into upgrades. With `fairy`, the style's fairy
  * pieces join the draft, some pawns are Berolina pawns, and upgrades include fusions.
  */
+/** From this round (fairy runs), an AI army may include an Heir: rarely, with AI_HEIR_CHANCE. */
+export const AI_HEIR_ROUND = 20;
+export const AI_HEIR_CHANCE = 0.12;
+/** What an Heir costs the AI's budget: the three Queens a player merges into one. */
+export const AI_HEIR_COST = 3 * PIECE_VALUE.Q;
+
 export function draftAiArmy(
   budget: number,
   style: AiStyle,
   rng: Rng,
   spec: BoardSpec = BOARD_8,
   fairy = false,
+  round = 0,
 ): PieceType[] {
   // Budget past a full board of queens can't be spent; capping it keeps the numbers honest.
   budget = Math.min(budget, maxArmyValue(spec));
   const types: PieceType[] = ['K'];
+  // Late in a fairy run the AI sometimes crowns an Heir, paying for it as a player does (three
+  // Queens). The rng is only drawn from AI_HEIR_ROUND on, so earlier armies are unchanged.
+  if (fairy && round >= AI_HEIR_ROUND && rng() < AI_HEIR_CHANCE && budget >= AI_HEIR_COST * 2) {
+    types.push('J');
+    budget -= AI_HEIR_COST;
+  }
   const capacity = armyCap(spec);
   const pawnCap = Math.min(MAX_PAWNS, pawnSquares(spec));
   let pieceBudget = budget - Math.round(budget * style.pawnShare);
@@ -320,7 +333,10 @@ export function placeAiArmy(types: PieceType[], style: AiStyle, rng: Rng, spec: 
   }
   const kingSq = placed[0]?.square ?? null;
 
-  const rest = types.filter((t) => t !== 'K').sort((a, b) => PIECE_VALUE[b] - PIECE_VALUE[a]);
+  // An Heir goes first after the King (it's worth 0 points but cost three Queens), then the rest by value.
+  const rest = types
+    .filter((t) => t !== 'K')
+    .sort((a, b) => Number(b === 'J') - Number(a === 'J') || PIECE_VALUE[b] - PIECE_VALUE[a]);
   // Pawns go last and can't use the back row, so other pieces leave enough other squares for them.
   let pawnsLeft = rest.filter(isPawnLike).length;
   const pawnRoom = () => allSquares(spec).filter((sq) => sq.rank !== BACK_RANK && !pieceAt(placed, sq)).length;

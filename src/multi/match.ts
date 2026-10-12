@@ -300,7 +300,7 @@ export function botArmy(
   const spec = mode.board(round);
   const style = pickStyle(rng, fairy);
   const budget = aiBudget(round, rng, undefined, mode.roundOneDiscount, mode.aiBonus);
-  return placeAiArmy(draftAiArmy(budget, style, rng, spec, fairy), style, rng, spec);
+  return placeAiArmy(draftAiArmy(budget, style, rng, spec, fairy, round), style, rng, spec);
 }
 
 export function hashId(id: string): number {

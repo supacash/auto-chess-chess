@@ -195,7 +195,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       }
       shop = { ...shop, pieces: unplaced };
     }
-    const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec, AI_FAIRY);
+    const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec, AI_FAIRY, round);
 
     // As in the game: the AI re-places (falling back to other layouts) until both kings aren't in check.
     const { start } = placeForBattle(player, aiTypes, aiStyle, rng, spec, first);

@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadRulesForNode } from '../chess/testRules';
 import {
+  AI_HEIR_ROUND,
   AI_STYLES,
   type AiStyle,
   aiBudget,
@@ -286,5 +287,34 @@ describe('the Stackman in AI armies', () => {
       const types = draftAiArmy(60 + (i % 70), fortress, rng, BOARDS.at(-2), true);
       expect(types.filter((t) => t === 'Y').length).toBeLessThanOrEqual(1);
     }
+  });
+});
+
+describe('Heirs in AI armies', () => {
+  const heirs = (round: number, fairy: boolean) => {
+    const rng = seededRng(11);
+    let withHeir = 0;
+    for (let i = 0; i < 400; i++) {
+      const style = pickStyle(rng, fairy);
+      const spec = BOARDS[BOARDS.length - 2]; // 8×8
+      const types = draftAiArmy(110, style, rng, spec, fairy, round);
+      if (types.includes('J')) {
+        withHeir++;
+        expect(types.filter((t) => t === 'J')).toHaveLength(1);
+        // Always placed (it goes right after the King), never on the front row.
+        const placed = placeAiArmy(types, style, rng, spec);
+        expect(placed.filter((p) => p.type === 'J')).toHaveLength(1);
+        expect(armyErrors(placed, spec)).toEqual([]);
+      }
+    }
+    return withHeir / 400;
+  };
+
+  it('appear rarely from AI_HEIR_ROUND in fairy runs, and never before or without fairy pieces', () => {
+    expect(heirs(AI_HEIR_ROUND - 1, true)).toBe(0);
+    expect(heirs(AI_HEIR_ROUND + 3, false)).toBe(0);
+    const share = heirs(AI_HEIR_ROUND, true);
+    expect(share).toBeGreaterThan(0.05);
+    expect(share).toBeLessThan(0.2);
   });
 });
