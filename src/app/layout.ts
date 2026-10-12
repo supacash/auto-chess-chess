@@ -163,6 +163,7 @@ export function renderLayout(root: HTMLElement): void {
         <button type="button" id="replay">Review</button>
         <button type="button" id="next" class="primary">Next round</button>
       </div>
+      <button type="button" id="revive" class="revive-button" hidden>▶ Watch an ad for an extra life</button>
       <div class="card-extras" id="card-extras" hidden></div>
       <button type="button" id="prestige" class="prestige-button" hidden></button>
     </div>

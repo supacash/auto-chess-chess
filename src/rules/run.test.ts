@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { seededRng } from './rng';
 import {
   applyResult,
+  canRevive,
   FINAL_ROUND,
   hasStarted,
   isRunOver,
   isRunWon,
   newRun,
   nextRound,
+  revive,
   rollColor,
   runScore,
   START_LIVES,
@@ -134,5 +136,34 @@ describe('winning a run', () => {
     const run = { ...newRun(), round: 26, record: { w: 23, l: 2, d: 0 } };
     expect(isRunOver(run)).toBe(false);
     expect(isRunWon(applyResult(run, 'w'))).toBe(true);
+  });
+});
+
+describe('reviving a run', () => {
+  const lost = () => {
+    let run = newRun();
+    for (let i = 0; i < START_LIVES; i++) run = applyResult(run, 'b');
+    return run;
+  };
+
+  it('gives one life back, once per run', () => {
+    const run = lost();
+    expect(isRunOver(run)).toBe(true);
+    expect(canRevive(run)).toBe(true);
+    const revived = revive(run);
+    expect(revived.lives).toBe(1);
+    expect(isRunOver(revived)).toBe(false);
+    expect(revived.record).toEqual(run.record);
+    expect(canRevive(revived)).toBe(false);
+
+    const lostAgain = applyResult(revived, 'b');
+    expect(isRunOver(lostAgain)).toBe(true);
+    expect(canRevive(lostAgain)).toBe(false);
+    expect(revive(lostAgain)).toBe(lostAgain);
+  });
+
+  it("isn't offered while lives are left or after a won run", () => {
+    expect(canRevive(newRun())).toBe(false);
+    expect(canRevive({ ...lost(), won: true })).toBe(false);
   });
 });

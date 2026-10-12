@@ -33,6 +33,8 @@ export interface Run {
   freeRerollRound?: number;
   /** One entry per battle fought, for the end-of-run summary. */
   history?: RoundLog[];
+  /** True once the run has been revived (an extra life for a rewarded ad); it can't be again. */
+  revived?: boolean;
 }
 
 /** A battle in the run's history: the armies' points and how it went. */
@@ -139,6 +141,17 @@ export function isRunWon(run: Run): boolean {
 /** True when the run has ended: out of lives, or won. */
 export function isRunOver(run: Run): boolean {
   return run.lives <= 0 || isRunWon(run);
+}
+
+/** True when a run lost on lives can be revived once with an extra life (a rewarded ad). */
+export function canRevive(run: Run): boolean {
+  return run.lives <= 0 && !isRunWon(run) && !run.revived;
+}
+
+/** Revives a run lost on lives: one life back, once per run. The round advances separately. */
+export function revive(run: Run): Run {
+  if (!canRevive(run)) return run;
+  return { ...run, lives: 1, revived: true };
 }
 
 /** The score is the number of rounds won. */

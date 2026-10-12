@@ -37,11 +37,13 @@ import { type Rng, randomSeed } from '../rules/rng';
 import {
   applyResult,
   battleIncome,
+  canRevive,
   isRunOver,
   isRunWon,
   newRun,
   nextRound,
   type PrestigeCarry,
+  revive,
   type RoundLog,
   type Run,
   runScore,
@@ -336,6 +338,23 @@ export class Session implements PlacementSession {
       income,
       history: this.run.history ?? [],
     };
+  }
+
+  /** True when the run just lost on lives can still be revived (see canRevive). */
+  canRevive(): boolean {
+    return canRevive(this.run);
+  }
+
+  /**
+   * Revives the run just lost on lives with one life (after a rewarded ad) and moves on to the next
+   * round. False if it can't be revived.
+   */
+  revive(): boolean {
+    if (!canRevive(this.run)) return false;
+    this.run = nextRound(revive(this.run), this.rng);
+    this.draftOpponent();
+    this.persist();
+    return true;
   }
 
   private loadBest(): number {

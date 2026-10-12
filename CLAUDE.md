@@ -11,6 +11,7 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - `npm run e2e` — Playwright browser smoke tests (whole runs in Chromium against the production build; CI runs them before deploying)
 - `npm run test:rules` — Firestore security rules tests on the emulator (needs Java)
 - `npm run e2e:online` — two-browser online room tests against the Firebase emulators
+- `npm run android` — production build synced into the Capacitor Android project (`android/`); `npm run android:open` opens it in Android Studio. `node scripts/make-android-icons.mjs` regenerates its icons and splash from `public/icon.svg`
 - `npm run check:determinism` — plays battles twice with the same seed and checks the moves match
 
 ## Layout
@@ -23,6 +24,7 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - `src/online/` — online rooms: `room.ts` (pure room rules, tested) and `client.ts` (Firestore; loaded lazily). `firestore.rules` guards the data (tests in `rules-test/`).
 - `src/ui/` — reusable board widgets (Pointer Events, touch-first): the placement board, the battle view, and shared piece/square helpers in `boardDom.ts`.
 - `src/main.ts` — wires the session to the screens and runs the fight sequence (placement → battle → result).
+- `android/` — the Capacitor Android app. `MainActivity.java` adds the COOP/COEP headers the engine needs; `src/app/ads.ts` shows rewarded ads there (AdMob, test IDs until release).
 - `scripts/copy-engine.mjs` copies Fairy-Stockfish, ffish and coi-serviceworker into `public/` (gitignored). It runs automatically before `dev` and `build`.
 
 ## Conventions

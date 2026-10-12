@@ -82,6 +82,24 @@ describe('Session', () => {
     expect(new Session(seededRng(3)).restore().firstVisit).toBe(true);
   });
 
+  it('revives a lost run once: a life back, the next round and a saved run again', () => {
+    const s = ready();
+    s.finishBattle(result('w'));
+    for (let i = 0; i < START_LIVES; i++) s.finishBattle(result('b'));
+    expect(isRunOver(s.run)).toBe(true);
+    expect(s.canRevive()).toBe(true);
+    expect(s.revive()).toBe(true);
+    expect(s.run).toMatchObject({ lives: 1, round: START_LIVES + 2, revived: true });
+    expect(s.aiPieces.some((p) => p.type === 'K')).toBe(true);
+    // Saved again, so the menu offers Resume.
+    expect(new Session(seededRng(3)).restore().firstVisit).toBe(false);
+
+    s.setPieces(s.run.shop.pieces.map((p) => (p.type === 'K' ? { ...p, square: { file: 2, rank: 0 } } : p)));
+    expect(s.finishBattle(result('b'))).toMatchObject({ over: true });
+    expect(s.canRevive()).toBe(false);
+    expect(s.revive()).toBe(false);
+  });
+
   it('counts a battle left unfinished as a loss on the next visit', () => {
     const s = ready();
     s.resolveStart();

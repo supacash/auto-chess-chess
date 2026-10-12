@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!public", "!dist", "!docs", "!**/*.md", "!src/assets"]
+    "includes": ["**", "!public", "!dist", "!docs", "!**/*.md", "!src/assets", "!android"]
   },
   "formatter": {
     "enabled": true,

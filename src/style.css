@@ -1623,6 +1623,12 @@ body.in-menu .credits {
 }
 
 /* The victory card's Prestige button, and the perk choices. */
+.revive-button {
+  width: 100%;
+  margin-top: 8px;
+  font-weight: 700;
+}
+
 .prestige-button {
   width: 100%;
   margin-top: 8px;

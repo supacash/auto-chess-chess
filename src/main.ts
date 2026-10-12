@@ -1,6 +1,7 @@
 import type { MatchSettings } from './multi/match';
 import './style.css';
 import { achievement, battleAchievements, PRESTIGIOUS_LEVEL } from './game/achievements';
+import { adsAvailable, showRewardedAd } from './app/ads';
 import { showToast } from './app/toast';
 import { battleVariant } from './chess/boardSpec';
 import { whiteEval } from './engine/pick';
@@ -219,6 +220,33 @@ async function rejoinMatch(): Promise<void> {
 let engine: Engine | null = null;
 let busy = false;
 
+/** The end of a run that could still be revived, recorded once the player moves on (or leaves). */
+let pendingRunEnd: (() => void) | null = null;
+
+function recordPendingRunEnd(): void {
+  pendingRunEnd?.();
+  pendingRunEnd = null;
+}
+window.addEventListener('pagehide', recordPendingRunEnd);
+
+/** Game over: watch a rewarded ad for one more life (once per run), then carry on with the next round. */
+$('#revive').addEventListener('click', async () => {
+  const button = $<HTMLButtonElement>('#revive');
+  if (busy || !session.canRevive()) return;
+  button.disabled = true;
+  button.textContent = 'Loading ad…';
+  const watched = await showRewardedAd();
+  if (watched && session.revive()) {
+    pendingRunEnd = null;
+    renderHeader(session, session.run.round, session.run.color);
+    showPlacement();
+    showToast('❤️ Extra life', 'One more life: the run goes on.');
+    return;
+  }
+  button.disabled = false;
+  button.textContent = watched ? '▶ Watch an ad for an extra life' : 'No ad right now. Tap to try again';
+});
+
 function showPlacement(): void {
   hideMenu();
   battle.hide();
@@ -227,6 +255,7 @@ function showPlacement(): void {
 
 /** The main menu: resume the single-player run, start a new one, or play multiplayer. */
 function showMenu(notice = ''): void {
+  recordPendingRunEnd();
   battle.hide();
   placement.hide();
   document.body.classList.add('in-menu');
@@ -310,10 +339,19 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
     const result = await play(loaded);
     const settings = session.run.settings;
     const outcome = session.finishBattle(result);
-    if (outcome.over) records.runEnd(settings, outcome.score, outcome.won, outcome.prestige);
+    // A run lost on lives can be revived once with a rewarded ad (Android app): it's only recorded
+    // as ended once the player moves on without reviving.
+    const offerRevive = outcome.over && session.canRevive() && adsAvailable();
+    const endRun = () => records.runEnd(settings, outcome.score, outcome.won, outcome.prestige);
+    if (offerRevive) pendingRunEnd = endRun;
+    else if (outcome.over) endRun();
     if (outcome.won && outcome.record.l === 0) records.unlock(['undefeated']);
     renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
+    const revive = $<HTMLButtonElement>('#revive');
+    revive.hidden = !offerRevive;
+    revive.disabled = false;
+    revive.textContent = '▶ Watch an ad for an extra life';
   } catch (err) {
     if (err instanceof GamePaused) {
       showMenu();

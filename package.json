@@ -11,6 +11,8 @@
     "prebuild": "npm run copy-engine",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "android": "npm run build && cap sync android",
+    "android:open": "cap open android",
     "typecheck": "tsc --noEmit && tsc --noEmit -p scripts",
     "test": "vitest run",
     "sim": "tsx scripts/sim/sim.ts",
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
+    "@capacitor/cli": "^8.5.3",
     "@firebase/rules-unit-testing": "^5.0.2",
     "@playwright/test": "^1.64.0",
     "@types/node": "^22.20.5",
@@ -34,6 +37,9 @@
     "vitest": "^5.0.3"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^8.2.1",
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "coi-serviceworker": "^0.1.7",
     "fairy-stockfish-nnue.wasm": "^1.1.12",
     "ffish-es6": "^0.7.10",

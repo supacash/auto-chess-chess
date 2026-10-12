@@ -163,6 +163,7 @@ export class BattleScreen {
   hide(): void {
     this.waiting = false;
     this.section.hidden = true;
+    $('#revive').hidden = true;
   }
 
   /**

@@ -8,7 +8,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 
 ## Scope today
 - Single player against AI-drafted armies.
-- Mobile-first web app with touch drag-and-drop, live on GitHub Pages. It can be wrapped as an app later (e.g. Capacitor).
+- Mobile-first web app with touch drag-and-drop, live on GitHub Pages, and an Android app (Capacitor, `android/`) with rewarded ads (AdMob test ads for now).
 - No accounts or server. The run in progress and best scores live in the browser (localStorage).
 
 ## Core loop
@@ -20,6 +20,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
 
 ## Runs
 - **3 lives.** A loss costs one; a draw costs none. The score is rounds won.
+- **Extra life (Android app):** the game-over card of a run lost on lives offers *Watch an ad for an extra life*: a rewarded ad brings the run back with 1 life at the next round, once per run. The run's end is only recorded on the Profile once the player moves on without reviving. No ads on the web (ad networks can't load in the cross-origin-isolated page) and none in multiplayer.
 - **25 rounds.** Getting through round 25 with a life left wins the run: a victory card (record, and the end-of-run summary) and a "completed" count on the Profile. By then both armies are a full board of queens, so the run ends on a high instead of fading out. The header shows "Round 12/25". 
 - **End-of-run summary:** the victory and game-over cards chart your army's points against your opponents' for each round (losses marked), with the run's best win streak and biggest army.
 - **First-run tips:** one short tip at a time above the opponent line on the shop screen (how to play, a set ready to merge, affinity pawns, interest and the lock, the opponent list), each dismissed for good with ×. Kept per device.
