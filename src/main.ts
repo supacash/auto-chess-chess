@@ -1,6 +1,6 @@
 import type { MatchSettings } from './multi/match';
 import './style.css';
-import { achievement, battleAchievements } from './game/achievements';
+import { achievement, battleAchievements, PRESTIGIOUS_LEVEL } from './game/achievements';
 import { showToast } from './app/toast';
 import { battleVariant } from './chess/boardSpec';
 import { whiteEval } from './engine/pick';
@@ -56,12 +56,14 @@ function openPrestige(): void {
   const owned = session.run.perks.map(perk);
   prestigeDialog.open(session.run.prestige + 1, perkChoices(session.run.perks, rng), owned, (id) => {
     session.startPrestige(id);
+    if (session.run.prestige >= PRESTIGIOUS_LEVEL) records.unlock(['prestigious']);
     placement.resetForNewRun();
     showPlacement();
   });
 }
 placement.onGained = (type) => records.bought(type);
 placement.onAchievements = (ids) => records.unlock(ids);
+placement.onCollect = (kind, types) => records.collect(kind, types);
 records.onUnlock = (id) => {
   const a = achievement(id);
   showToast(`🏆 Achievement unlocked: ${a.name}`, a.description);
@@ -310,6 +312,7 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
     const settings = session.run.settings;
     const outcome = session.finishBattle(result);
     if (outcome.over) records.runEnd(settings, outcome.score, outcome.won, outcome.prestige);
+    if (outcome.won && outcome.record.l === 0) records.unlock(['undefeated']);
     renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
   } catch (err) {
@@ -346,7 +349,7 @@ function fight(): void {
     );
     session.saveReplay({ ...record, moves, evals, result });
     records.battle(result, 'w', worstDeficit, session.run.settings);
-    records.unlock(battleAchievements(start.fen, moves, session.board, 'w'));
+    records.unlock(battleAchievements({ fen: start.fen, moves, spec: session.board, side: 'w', result, worstDeficit }));
     return result;
   });
 }
@@ -368,7 +371,17 @@ async function playManual(loaded: Engine, game: ManualBattle): Promise<BattleRes
     const result = await battle.playManual(loaded, game, (state) => session.saveManual(state));
     session.saveReplay({ ...record, moves: [...game.moves], evals: [], result });
     records.battle(result, 'w', battle.manualWorstDeficit, session.run.settings);
-    records.unlock(battleAchievements(game.start, game.moves, game.spec, 'w'));
+    records.unlock([
+      ...battleAchievements({
+        fen: game.start,
+        moves: game.moves,
+        spec: game.spec,
+        side: 'w',
+        result,
+        worstDeficit: battle.manualWorstDeficit,
+      }),
+      ...(result.winner === 'w' ? (['diy'] as const) : []),
+    ]);
     return result;
   } finally {
     game.delete();

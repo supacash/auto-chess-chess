@@ -1,4 +1,4 @@
-import type { AchievementId } from '../game/achievements';
+import { type AchievementId, type Collections, collectionAchievements } from '../game/achievements';
 import { loadBest, loadRecords, saveRecords } from '../game/storage';
 import {
   emptyRecords,
@@ -85,6 +85,16 @@ export class RecordBook {
 
   /** Called with each achievement as it's unlocked (the game shows a notice). */
   onUnlock: ((id: AchievementId) => void) | null = null;
+
+  /** Adds `types` to a career collection, unlocking Zoo Keeper / Fusion Chef once it's complete. */
+  collect(kind: keyof Collections, types: readonly PieceType[]): void {
+    const have = this.records.collections[kind];
+    const added = types.filter((t) => !have.includes(t));
+    if (added.length === 0) return;
+    const collections = { ...this.records.collections, [kind]: [...have, ...new Set(added)] };
+    this.update({ ...this.records, collections });
+    this.unlock(collectionAchievements(collections));
+  }
 
   /** Unlocks `ids` (those not unlocked yet). */
   unlock(ids: readonly AchievementId[]): void {

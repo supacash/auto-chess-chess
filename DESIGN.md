@@ -149,12 +149,15 @@ In Growing mode the board opens up during the run:
 
 ## Achievements
 
-Easy, fun goals (src/game/achievements.ts), unlocked once and kept in the records (they sync with them, from the earliest unlock). A notice slides in at the top when one unlocks; the Profile's *Awards* tab lists them all. "On the board" counts placed pieces of a family, fusions included: knights (N, Archbishop, Chancellor, Amazon, Centaur, Wildebeest), rooks (R, Chancellor, Dragon King), queens (Q, Amazon), bishops (B, Archbishop, Dragon Horse, Siege Cannon), camels (Camel, Wildebeest), men (Man, Centaur, Stackman), pawns (pawns of any kind, Berolina pawns).
+Easy, fun goals (src/game/achievements.ts), unlocked once and kept in the records (they sync with them, from the earliest unlock). A notice slides in at the top when one unlocks; the Profile's *Awards* tab lists them by group (unlocked first), with progress for the collections. "On the board" counts placed pieces of a family, fusions included: knights (N, Archbishop, Chancellor, Amazon, Centaur, Wildebeest), rooks (R, Chancellor, Dragon King), queens (Q, Amazon), bishops (B, Archbishop, Dragon Horse, Siege Cannon), camels (Camel, Wildebeest), men (Man, Centaur, Stackman), pawns (pawns of any kind, Berolina pawns).
 
-- Call the Cavalry! / The Wall / Solomon / Silk Road / Oops, all pawns / Sausage Party / Vatican: 15 of the family on the board.
-- It's not a boulder…: merge three rook-pawns into a Rook. I'm the Stackman: merge three Men. Finally a son: merge three Queens into an Heir. The infamous second son: a second Heir (secret until a perk allows it).
-- Holy Diver: a bishop-family piece takes something in a corner, moving from the opposite corner (checked from the battle's moves, for the player's side).
-- Dragons now?: a Dragon King and a Dragon Horse in the same army.
+- **Armies and merges:** 15 of a family on the board (Call the Cavalry!, The Wall, Solomon, Silk Road, Oops all pawns, Sausage Party, Vatican); It's not a boulder… (three rook-pawns into a Rook), I'm the Stackman, Finally a son (an Heir), The infamous second son (secret until a perk allows two Heirs); Dragons now? (Dragon King and Dragon Horse in one army); Barnyard (Camel, Wildebeest and Centaur); Absolute Unit (150+ points on the board); All Hands on Deck (every home square filled: only the small boards' army cap allows it).
+- **Battles** (checked from the battle's moves, for the player's side): Holy Diver (a bishop-family piece takes in a corner from the opposite corner), David and Goliath (beat an army worth twice yours), Comeback Kid (win after being 10+ points behind), Pawn Storm (mate with a pawn), Long Live the King (win after losing the King), Royal Wedding (promote), Photo Finish (win on points by one).
+- **Runs:** The Undefeated (win a run without losing a battle), Prestigious (prestige ★3), Do It Yourself (win a Play it battle), Hoarder (50 gold), Shopaholic (10 rerolls in a round).
+- **Multiplayer:** Last One Standing (win a match), Untouchable (win without losing a battle), Pool Shark (buy the last one in the pool), Kingmaker (finish 2nd with the winner on 1 HP), Specter (watch 5 battles after being knocked out).
+- **Collections** (career, kept in the records): Zoo Keeper (field every fairy piece the shop sells: Berolina pawn, Ferz, Wazir, Man, Camel, Cannon, Stackman), Fusion Chef (make every fusion).
+
+The Profile's Fun tab shows the most-bought piece (not counting pawns, Ferzes and Wazirs, which everyone buys most) and the collections' progress.
 
 ## Look and feel
 - Chessnut SVG pieces (Apache 2.0). The board always shows the player at the bottom, and squares scale so every board size fills the same width.

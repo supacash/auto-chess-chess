@@ -170,7 +170,7 @@ test('the profile shows records from play, by tab', async ({ page }) => {
   await expect(page.locator('#profile-name')).toHaveText(/\w+ \w+ \d+/);
   // The round just played counts in this mode's record.
   await expect(page.locator('#profile-body .record-card h3')).toHaveText('Growing board · Normal');
-  await expect(page.locator('#profile-body')).toContainText('Rounds W/L/D');
+  await expect(page.locator('#profile-body')).toContainText('W/L/D');
   for (const tab of ['multi', 'history', 'fun']) {
     await page.locator(`#profile-tabs [data-tab="${tab}"]`).click();
     await expect(page.locator(`#profile-tabs [data-tab="${tab}"]`)).toHaveAttribute('aria-selected', 'true');

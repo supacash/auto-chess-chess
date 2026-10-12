@@ -82,6 +82,8 @@ export class MatchSession implements PlacementSession {
   /** Called when the player's affinity pawns change (online: shared with the room, for the pool). */
   onHeldChange: ((held: Holdings) => void) | null = null;
   private lastHeld: Holdings = {};
+  /** Battles the player has lost this match. */
+  myLosses = 0;
   /** The round the player last used Haggler's free reroll in. */
   private freeRerollRound = 0;
   /** The board the locked armies were placed on (for showing a player's last army). */
@@ -408,6 +410,7 @@ export class MatchSession implements PlacementSession {
     this.noteHealth(this.round);
     const mine = results.find((r) => r.pairing === this.myPairing());
     const myResult = mine ? fromSide(mine.winner, mine.pairing.white === this.myId ? 'w' : 'b') : 'draw';
+    if (myResult === 'b') this.myLosses++;
     const playedBlack = mine !== undefined && mine.pairing.black === this.myId && mine.pairing.copy !== 'b';
     if (matchOver(this.players) || this.me.place !== null) {
       this.phase = 'over';

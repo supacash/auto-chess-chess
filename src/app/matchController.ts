@@ -1,6 +1,6 @@
 import { plyLimit } from '../chess/boardSpec';
 import type { Engine } from '../engine/stockfish';
-import { battleAchievements } from '../game/achievements';
+import { battleAchievements, matchAchievements, SPECTER_WATCHES } from '../game/achievements';
 import { runBattle } from '../game/runBattle';
 import {
   alive,
@@ -83,6 +83,8 @@ export class MatchController {
   private watching = false;
   /** Knocked out and watching the rest of the match. */
   private spectating = false;
+  /** Battles watched after being knocked out, this match (Specter). */
+  private spectatorWatches = 0;
   /** Offline spectating: the last round's results. */
   private spectatorResults: PairingResult[] = [];
   /** Shows the card the player was on again (after watching a battle). */
@@ -240,6 +242,7 @@ export class MatchController {
     this.watching = false;
     this.spectating = false;
     this.spectatorResults = [];
+    this.spectatorWatches = 0;
     this.lastCard = null;
     this.recorded = false;
     this.online?.stopWatching();
@@ -454,7 +457,9 @@ export class MatchController {
       { flip, opponent, announceSide: true },
     );
     this.deps.records.battle(result, flip ? 'b' : 'w', worstDeficit);
-    this.deps.records.unlock(battleAchievements(start.fen, moves, m.board, flip ? 'b' : 'w'));
+    this.deps.records.unlock(
+      battleAchievements({ fen: start.fen, moves, spec: m.board, side: flip ? 'b' : 'w', result, worstDeficit }),
+    );
     return { pairing, winner: result.winner, material: result.material };
   }
 
@@ -613,6 +618,8 @@ export class MatchController {
         // room that filled up with bots is recorded as a match against bots.
         const withPeople = m.players.some((p) => !p.bot && p.id !== m.myId);
         this.deps.records.matchEnd(this.online !== null && withPeople, m.settings.blitz, place);
+        const winner = m.players.find((p) => p.place === 1);
+        this.deps.records.unlock(matchAchievements(place, m.myLosses, winner ? winner.hp : 0));
         if (this.online) clearMatch();
         if (this.online) void this.online.client.markDone(this.online.code, this.online.fought).catch(console.warn);
       }
@@ -687,6 +694,7 @@ export class MatchController {
     const [white, black] = this.sideNames(pairing);
     this.watching = true;
     this.cardDetail = null;
+    if (this.spectating && ++this.spectatorWatches >= SPECTER_WATCHES) this.deps.records.unlock(['specter']);
     // Hide the card at once: its buttons mustn't be usable while the replay starts up.
     this.deps.battle.showWaiting(`Watching ${white} (White) vs ${black} (Black)`);
     try {

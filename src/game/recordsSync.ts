@@ -46,6 +46,10 @@ export function mergeRecords(cloud: Records, local: Records, base: Records): Rec
   out.fun.winStreak = local.fun.winStreak;
 
   out.history = mergeHistory(cloud.history, local.history);
+  // Collections: everything seen on either side.
+  for (const key of ['fielded', 'fused'] as const) {
+    out.collections[key] = [...new Set([...out.collections[key], ...local.collections[key]])];
+  }
   // Achievements: unlocked anywhere is unlocked, from the earliest time.
   for (const [id, at] of Object.entries(local.achievements) as [keyof Records['achievements'], number][]) {
     const had = out.achievements[id];

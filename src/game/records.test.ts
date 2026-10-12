@@ -54,6 +54,9 @@ describe('records', () => {
     expect(favouritePiece(r.fun)).toBeNull();
     for (const t of ['N', 'B', 'N', 'X'] as const) r = recordBought(r, t);
     expect(favouritePiece(r.fun)).toEqual({ type: 'N', count: 2 });
+    // Pawns, Ferzes and Wazirs are bought most by everyone: they don't count.
+    for (let i = 0; i < 5; i++) for (const t of ['P', 'F', 'W', 'E'] as const) r = recordBought(r, t);
+    expect(favouritePiece(r.fun)).toEqual({ type: 'N', count: 2 });
   });
 
   it('import best scores from before records existed', () => {

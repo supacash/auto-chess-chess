@@ -1,4 +1,4 @@
-import { type AchievementId, isAchievementId } from './achievements';
+import { type AchievementId, type Collections, isAchievementId } from './achievements';
 import type { DifficultyId } from '../rules/difficulty';
 import type { ModeId } from '../rules/mode';
 import { isPieceType, type PieceType } from '../rules/pieces';
@@ -63,6 +63,8 @@ export interface Records {
   fun: FunStats;
   /** Unlocked achievements, with when (ms). Missing in records from before achievements. */
   achievements: Partial<Record<AchievementId, number>>;
+  /** Career collections for Zoo Keeper and Fusion Chef (missing in older records). */
+  collections: Collections;
 }
 
 export function emptyRecords(): Records {
@@ -73,6 +75,7 @@ export function emptyRecords(): Records {
     history: [],
     fun: { bought: {}, winStreak: 0, bestWinStreak: 0, checkmates: 0, biggestComeback: 0 },
     achievements: {},
+    collections: { fielded: [], fused: [] },
   };
 }
 
@@ -202,10 +205,14 @@ export function averagePlace(stats: MatchStats): number | null {
 }
 
 /** The piece the player has gained most often from the shop, or null. */
+/** One-gold building blocks: everyone buys these most, so they don't count as a favourite. */
+const BUILDING_BLOCKS: PieceType[] = ['P', 'E', 'F', 'W'];
+
 export function favouritePiece(fun: FunStats): { type: PieceType; count: number } | null {
   let top: { type: PieceType; count: number } | null = null;
   for (const [type, count] of Object.entries(fun.bought)) {
-    if (isPieceType(type) && count && (!top || count > top.count)) top = { type, count };
+    if (!isPieceType(type) || BUILDING_BLOCKS.includes(type)) continue;
+    if (count && (!top || count > top.count)) top = { type, count };
   }
   return top;
 }
@@ -262,6 +269,12 @@ export function parseRecords(data: unknown): Records {
     }
     if (isObject(f.bought)) {
       for (const [type, n] of Object.entries(f.bought)) if (isPieceType(type) && isCount(n)) out.fun.bought[type] = n;
+    }
+  }
+  if (isObject(data.collections)) {
+    for (const key of ['fielded', 'fused'] as const) {
+      const list = data.collections[key];
+      if (Array.isArray(list)) out.collections[key] = [...new Set(list.filter(isPieceType))];
     }
   }
   if (isObject(data.achievements)) {

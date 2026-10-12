@@ -1,4 +1,11 @@
-import { type AchievementId, armyAchievements, mergeAchievements } from '../game/achievements';
+import {
+  type AchievementId,
+  armyAchievements,
+  type Collections,
+  mergeAchievements,
+  SHOP_FAIRY,
+  shopAchievements,
+} from '../game/achievements';
 import { dismissTip, seenTips } from '../game/storage';
 import { nextTip, TIPS, type TipId } from '../game/tips';
 import {
@@ -74,6 +81,10 @@ export class PlacementScreen {
   onGained: ((type: PieceType) => void) | null = null;
   /** Called with achievements earned on this screen (the army on the board, a merge). */
   onAchievements: ((ids: AchievementId[]) => void) | null = null;
+  /** Called with pieces for a career collection (fairy pieces fielded, fusions made). */
+  onCollect: ((kind: keyof Collections, types: PieceType[]) => void) | null = null;
+  /** Rerolls this round (Shopaholic), and the round they're for. */
+  private rerolls = { round: 0, count: 0 };
 
   constructor(
     private session: PlacementSession,
@@ -110,7 +121,9 @@ export class PlacementScreen {
         this.applyShop(upgradePiece(shop, this.selected, to), to);
       } else if (btn.dataset.fuse && btn.dataset.result) {
         const to = btn.dataset.result as PieceType;
-        this.applyShop(fusePieces(shop, this.selected, btn.dataset.fuse, to, this.session.run.settings.fairy), to);
+        const fused = fusePieces(shop, this.selected, btn.dataset.fuse, to, this.session.run.settings.fairy);
+        this.applyShop(fused, to);
+        if (fused.ok) this.onCollect?.('fused', [to]);
       } else if (btn.dataset.mergeSet) {
         const to = btn.dataset.mergeSet as PieceType;
         const merged = fuseDefaultSet(shop, this.selected, to, this.session.run.settings.fairy);
@@ -140,7 +153,10 @@ export class PlacementScreen {
         this.applyShop({ ok: false, error: 'Sold out: every one is taken. Merging or selling puts them back.' });
         return;
       }
-      this.applyShop(buyOffer(this.session.run.shop, index), offer && (isAffinityOffer(offer) ? 'P' : offer));
+      const lastOne = offer !== undefined && this.session.offerLeft?.(offer) === 1;
+      const bought = buyOffer(this.session.run.shop, index);
+      this.applyShop(bought, offer && (isAffinityOffer(offer) ? 'P' : offer));
+      if (bought.ok && lastOne) this.onAchievements?.(['poolShark']);
     });
     $('#tip-close').addEventListener('click', () => {
       if (this.tip) dismissTip(this.tip);
@@ -151,7 +167,12 @@ export class PlacementScreen {
     });
     $('#reroll').addEventListener('click', () => {
       this.selectedOffer = null;
-      this.applyShop(this.session.rerollOffers());
+      const rerolled = this.session.rerollOffers();
+      if (rerolled.ok) {
+        const round = this.session.run.round;
+        this.rerolls = { round, count: this.rerolls.round === round ? this.rerolls.count + 1 : 1 };
+      }
+      this.applyShop(rerolled);
     });
     this.fightBtn.addEventListener('click', () => (this.mode.onReady ? this.mode.onReady() : onFight()));
     this.playBtn.addEventListener('click', onPlay);
@@ -232,7 +253,14 @@ export class PlacementScreen {
 
   private piecesChanged(pieces: Piece[]): void {
     this.session.setPieces(pieces);
-    this.onAchievements?.(armyAchievements(pieces));
+    const { gold } = this.session.run.shop;
+    const { round } = this.session.run;
+    this.onAchievements?.([
+      ...armyAchievements(pieces, this.session.board),
+      ...shopAchievements(gold, this.rerolls.round === round ? this.rerolls.count : 0),
+    ]);
+    const fairy = pieces.filter((p) => p.square && SHOP_FAIRY.includes(p.type)).map((p) => p.type);
+    if (fairy.length) this.onCollect?.('fielded', fairy);
     const placed = pieces.filter((p) => p.square);
     const points = placed.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0);
     $('#points').textContent =

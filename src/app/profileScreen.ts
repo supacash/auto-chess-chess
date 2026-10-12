@@ -1,5 +1,5 @@
 import { averagePlace, averageScore, favouritePiece, matchKey, type Records, runKey } from '../game/records';
-import { ACHIEVEMENTS } from '../game/achievements';
+import { ACHIEVEMENT_GROUPS, ACHIEVEMENTS, achievementGroup, FUSION_RESULTS, SHOP_FAIRY } from '../game/achievements';
 import { FINAL_ROUND } from '../rules/run';
 import { ordinal } from '../multi/names';
 import { DIFFICULTIES } from '../rules/difficulty';
@@ -85,7 +85,7 @@ function single(r: Records): string {
             stat('Runs', String(s.runs)) +
               stat('Best', String(s.best)) +
               stat('Average', fmt(averageScore(s))) +
-              stat('Rounds W/L/D', `${w}/${l}/${draws}`),
+              stat('W/L/D', `${w}/${l}/${draws}`),
             (s.completed > 0
               ? `<p class="record-note">🏆 Completed all ${FINAL_ROUND} rounds ${s.completed} time${s.completed === 1 ? '' : 's'}</p>`
               : '') + (s.prestige > 0 ? `<p class="record-note">★ Highest prestige: ${s.prestige}</p>` : ''),
@@ -138,7 +138,9 @@ function history(r: Records): string {
     .map((h) => {
       const result =
         h.kind === 'run'
-          ? `Won ${h.result} round${h.result === 1 ? '' : 's'}`
+          ? h.result >= FINAL_ROUND
+            ? '<span class="win">🏆 Completed</span>'
+            : `Won ${h.result} round${h.result === 1 ? '' : 's'}`
           : `<span class="${h.result === 1 ? 'win' : ''}">${ordinal(h.result)} place</span>`;
       return `<li><span class="history-mode">${escapeHtml(h.mode)}</span><span class="history-result">${result}</span><span class="history-when">${when(h.at)}</span></li>`;
     })
@@ -152,7 +154,16 @@ function fun(r: Records): string {
     ? `${inlinePiece(top.type)} ${PIECE_NAME[top.type]} <small>×${top.count}</small>`
     : '<small>none yet</small>';
   return (
-    card('Most-bought piece', `<div class="favourite">${favourite}</div>`) +
+    card(
+      'Most-bought piece',
+      `<div class="favourite">${favourite}</div>`,
+      '<p class="profile-note">Not counting pawns, Ferzes and Wazirs.</p>',
+    ) +
+    card(
+      'Collections',
+      stat('Fairy pieces fielded', `${r.collections.fielded.length}/${SHOP_FAIRY.length}`) +
+        stat('Fusions made', `${r.collections.fused.length}/${FUSION_RESULTS.length}`),
+    ) +
     card(
       'Battles',
       stat('Best win streak', String(f.bestWinStreak)) +
@@ -167,14 +178,32 @@ function fun(r: Records): string {
 function achievementsTab(r: Records): string {
   const open = ACHIEVEMENTS.filter((a) => !a.secret || r.achievements[a.id] !== undefined);
   const got = open.filter((a) => r.achievements[a.id] !== undefined).length;
-  const items = ACHIEVEMENTS.map((a) => {
+  // Collection progress, shown under Zoo Keeper and Fusion Chef until they're done.
+  const progress: Partial<Record<string, string>> = {
+    zooKeeper: `${r.collections.fielded.length}/${SHOP_FAIRY.length} so far`,
+    fusionChef: `${r.collections.fused.length}/${FUSION_RESULTS.length} so far`,
+  };
+  const item = (a: (typeof ACHIEVEMENTS)[number]) => {
     const at = r.achievements[a.id];
     if (at === undefined && a.secret) {
       return '<li class="achievement locked"><span class="achievement-name">???</span><span class="achievement-text">A secret, for later.</span></li>';
     }
-    const when = at === undefined ? '' : `<span class="achievement-date">${new Date(at).toLocaleDateString()}</span>`;
+    const when =
+      at === undefined
+        ? progress[a.id]
+          ? `<span class="achievement-date">${progress[a.id]}</span>`
+          : ''
+        : `<span class="achievement-date">${new Date(at).toLocaleDateString()}</span>`;
     const name = `${at === undefined ? '' : '🏆 '}${escapeHtml(a.name)}`;
     return `<li class="achievement ${at === undefined ? 'locked' : 'unlocked'}"><span class="achievement-name">${name}</span><span class="achievement-text">${escapeHtml(a.description)}</span>${when}</li>`;
+  };
+  // By group, unlocked ones first within each.
+  const groups = ACHIEVEMENT_GROUPS.map((g) => {
+    const list = ACHIEVEMENTS.filter((a) => achievementGroup(a.id) === g.id).sort(
+      (x, y) => Number(r.achievements[y.id] !== undefined) - Number(r.achievements[x.id] !== undefined),
+    );
+    const done = list.filter((a) => r.achievements[a.id] !== undefined).length;
+    return `<h3 class="achievement-group">${g.name} <small>${done}/${list.filter((a) => !a.secret || r.achievements[a.id] !== undefined).length}</small></h3><ul class="achievements">${list.map(item).join('')}</ul>`;
   }).join('');
-  return `<p class="achievement-count">Achievements: ${got} of ${open.length} unlocked</p><ul class="achievements">${items}</ul>`;
+  return `<p class="achievement-count">Achievements: ${got} of ${open.length} unlocked</p>${groups}`;
 }
