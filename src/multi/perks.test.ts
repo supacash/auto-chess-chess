@@ -25,9 +25,18 @@ describe('match perks', () => {
     }
   });
 
+  it('replaces an excluded perk (Second wind at full health) with another, and bots never take it', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const choices = perkChoices(seed, 3, 'a', [], ['mend']);
+      expect(choices).toHaveLength(PERK_CHOICES);
+      expect(choices).not.toContain('mend');
+      expect(Object.values(botPicks(seed, 'bot1', 99))).not.toContain('mend');
+    }
+  });
+
   it('counts picks up to a round, and bots pick at every perk round', () => {
-    expect(perksUpTo({ 3: 'edge', 8: 'tithe' }, 7)).toEqual(['edge']);
-    expect(perksUpTo({ 3: 'edge', 8: 'tithe' }, 8)).toEqual(['edge', 'tithe']);
+    expect(perksUpTo({ 3: 'edge', 6: 'tithe' }, 5)).toEqual(['edge']);
+    expect(perksUpTo({ 3: 'edge', 6: 'tithe' }, 6)).toEqual(['edge', 'tithe']);
     expect(Object.keys(botPicks(5, 'bot1', 99)).map(Number)).toEqual(PERK_ROUNDS);
     expect(botPicks(5, 'bot1', 2)).toEqual({});
   });

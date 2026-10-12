@@ -63,8 +63,8 @@ export const MATCH_PERKS: MatchPerk[] = [
   },
 ];
 
-/** The rounds whose shop opens with a perk pick. */
-export const PERK_ROUNDS = [3, 8, 13];
+/** The rounds whose shop opens with a perk pick (matches usually end by rounds 8–11). */
+export const PERK_ROUNDS = [3, 6, 9];
 export const PERK_CHOICES = 3;
 
 /** A player's picks: the perk picked in each perk round. */
@@ -91,24 +91,33 @@ export function countPerk(perks: readonly MatchPerkId[], id: MatchPerkId): numbe
   return perks.filter((p) => p === id).length;
 }
 
-/** The three perks a player is offered in `round` (seeded: the same on every client). */
+/**
+ * The three perks a player is offered in `round` (seeded: the same on every client). Perks in
+ * `exclude` (e.g. Second wind at full health) aren't offered; another takes their place.
+ */
 export function perkChoices(
   seed: number,
   round: number,
   playerId: string,
   owned: readonly MatchPerkId[],
+  exclude: readonly MatchPerkId[] = [],
 ): MatchPerkId[] {
   const rng: Rng = seededRng((seed ^ Math.imul(round + 7, 0x9e3779b1) ^ hashText(playerId)) >>> 0);
-  const open = MATCH_PERKS.filter((p) => p.stackable || !owned.includes(p.id)).map((p) => p.id);
+  const open = MATCH_PERKS.filter((p) => (p.stackable || !owned.includes(p.id)) && !exclude.includes(p.id)).map(
+    (p) => p.id,
+  );
   return shuffle(open, rng).slice(0, PERK_CHOICES);
 }
 
-/** A bot's picks up to `round`: the first of its choices each time. */
+/**
+ * A bot's picks up to `round`: the first of its choices each time. Bots never take Second wind: whether
+ * it would heal depends on their health back then, which not every client knows (a rejoined one).
+ */
 export function botPicks(seed: number, botId: string, round: number): PerkPicks {
   const picks: PerkPicks = {};
   for (const r of PERK_ROUNDS) {
     if (r > round) break;
-    picks[r] = perkChoices(seed, r, botId, perksUpTo(picks, r))[0];
+    picks[r] = perkChoices(seed, r, botId, perksUpTo(picks, r), ['mend'])[0];
   }
   return picks;
 }

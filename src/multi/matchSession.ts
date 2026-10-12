@@ -38,6 +38,7 @@ import {
   pairingOf,
   pairRound,
   roundDamage,
+  START_HP,
 } from './match';
 import { CHEST_GOLD, countPerk, isPerkRound, type MatchPerkId, type PerkPicks, perkChoices, perksUpTo } from './perks';
 import { botHoldings, type Holdings, holdingsOf, offerLeft, poolLeft, poolScale, sameHoldings } from './pool';
@@ -163,7 +164,9 @@ export class MatchSession implements PlacementSession {
     if (this.phase !== 'shop' || this.me.place !== null || !isPerkRound(this.round)) return null;
     const mine = this.picks.get(this.myId) ?? {};
     if (mine[this.round]) return null;
-    return perkChoices(this.seed, this.round, this.myId, perksUpTo(mine, this.round - 1));
+    // Second wind would do nothing at full health: offer something else instead.
+    const full = this.me.hp >= START_HP;
+    return perkChoices(this.seed, this.round, this.myId, perksUpTo(mine, this.round - 1), full ? ['mend'] : []);
   }
 
   /** Picks one of this round's perk choices and applies what it does now (gold, a Knight). */

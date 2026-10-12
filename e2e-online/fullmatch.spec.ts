@@ -5,7 +5,7 @@ import { type Browser, expect, type Page, test } from '@playwright/test';
 //
 // Each player shops with its own taste (knight-, bishop-, rook-pawns, or anything), merges sets,
 // places everything it can and readies. Along the way it checks that every client agrees on health,
-// perks and the shared pool, that perk picks show up on rounds 3/8/13, that a shop closes on the
+// perks and the shared pool, that perk picks show up on rounds 3/6/9, that a shop closes on the
 // timer when someone never readies, that watching another battle works, and that knocked-out players
 // can keep watching to the end, where everyone agrees on the winner.
 
@@ -234,7 +234,7 @@ test('four people play a whole online match to the end', async ({ browser }) => 
           else merged[kind] = left;
         }
       }
-      const perkRound = [3, 8, 13].includes(round);
+      const perkRound = [3, 6, 9].includes(round);
       for (const p of active) {
         if (perkRound) await expect(p.page.locator('#perk-dialog')).toBeVisible();
         else expect(await p.page.locator('#perk-dialog[open]').count()).toBe(0);

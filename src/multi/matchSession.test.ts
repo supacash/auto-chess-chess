@@ -187,6 +187,23 @@ describe('MatchSession.resume', () => {
     expect(m.perksOf('bot1')).toHaveLength(1);
   });
 
+  it('offers Second wind only when the player has lost health', () => {
+    for (let seed = 1; seed <= 30; seed++) {
+      const m = match(seed);
+      m.round = 3;
+      expect(m.perkChoices()).not.toContain('mend'); // full health
+      m.players = m.players.map((p) => (p.id === 'me' ? { ...p, hp: 20 } : p));
+      expect(m.perkChoices()).toHaveLength(3);
+    }
+    const hurt = Array.from({ length: 30 }, (_, i) => {
+      const m = match(i + 1);
+      m.round = 3;
+      m.players = m.players.map((p) => (p.id === 'me' ? { ...p, hp: 20 } : p));
+      return m.perkChoices()!;
+    });
+    expect(hurt.some((c) => c.includes('mend'))).toBe(true);
+  });
+
   it('Haggler makes the first reroll each round free', () => {
     const m = match();
     m.round = 3;
