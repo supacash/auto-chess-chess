@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p scripts",
     "test": "vitest run",
     "sim": "tsx scripts/sim/sim.ts",
+    "sim:duel": "tsx scripts/sim/duel.ts",
     "lint": "biome check .",
     "format": "biome check --write .",
     "check:determinism": "tsx scripts/check/determinism.ts",
