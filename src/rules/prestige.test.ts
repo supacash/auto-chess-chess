@@ -40,8 +40,14 @@ describe('prestige perks', () => {
     for (let seed = 0; seed < 30; seed++) {
       expect(perkChoices([], seededRng(seed), 3, false).map((p) => p.id)).not.toContain('dynasty');
     }
-    const offered = Array.from({ length: 30 }, (_, seed) => perkChoices([], seededRng(seed)).map((p) => p.id)).flat();
-    expect(offered).toContain('dynasty');
+    // Always among the first prestige's choices in a fairy run; random after that.
+    for (let seed = 0; seed < 30; seed++) {
+      const first = perkChoices([], seededRng(seed)).map((p) => p.id);
+      expect(first).toHaveLength(3);
+      expect(first).toContain('dynasty');
+    }
+    const later = Array.from({ length: 30 }, (_, seed) => perkChoices(['gold'], seededRng(seed)).map((p) => p.id));
+    expect(later.some((c) => !c.includes('dynasty'))).toBe(true);
   });
 
   it('starts a first run with no prestige and no perks', () => {

@@ -57,11 +57,15 @@ export function perkCount(perks: readonly PerkId[], id: PerkId): number {
 
 /**
  * Three perks to choose from at the next prestige: stackable ones, or ones the player doesn't have
- * yet (fairy-only perks only in fairy runs).
+ * yet (fairy-only perks only in fairy runs). The first prestige of a fairy run always offers Dynasty,
+ * so the second Heir is within reach early; the other choices are random.
  */
 export function perkChoices(perks: readonly PerkId[], rng: Rng, count = 3, fairy = true): Perk[] {
   const open = PERKS.filter((p) => (p.stackable || !perks.includes(p.id)) && (fairy || !p.fairyOnly));
-  return shuffle(open, rng).slice(0, count);
+  const shuffled = shuffle(open, rng);
+  if (!fairy || perks.length > 0) return shuffled.slice(0, count);
+  const dynasty = shuffled.filter((p) => p.id === 'dynasty');
+  return [...dynasty, ...shuffled.filter((p) => p.id !== 'dynasty')].slice(0, count);
 }
 
 export function startGold(perks: readonly PerkId[]): number {
