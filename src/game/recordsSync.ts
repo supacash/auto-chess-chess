@@ -46,6 +46,11 @@ export function mergeRecords(cloud: Records, local: Records, base: Records): Rec
   out.fun.winStreak = local.fun.winStreak;
 
   out.history = mergeHistory(cloud.history, local.history);
+  // Achievements: unlocked anywhere is unlocked, from the earliest time.
+  for (const [id, at] of Object.entries(local.achievements) as [keyof Records['achievements'], number][]) {
+    const had = out.achievements[id];
+    out.achievements[id] = had === undefined ? at : Math.min(had, at);
+  }
   return out;
 }
 

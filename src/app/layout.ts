@@ -83,6 +83,8 @@ export function renderLayout(root: HTMLElement): void {
     <button type="button" id="last-replay" class="link-button" hidden>Review your last battle</button>
   </section>
 
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
   <section id="profile" class="profile" hidden>
     <div class="profile-head">
       <img class="profile-logo" src="${import.meta.env.BASE_URL}icon.svg" alt="" width="52" height="52" />
@@ -98,6 +100,7 @@ export function renderLayout(root: HTMLElement): void {
       <button type="button" role="tab" data-tab="multi">Multiplayer</button>
       <button type="button" role="tab" data-tab="history">History</button>
       <button type="button" role="tab" data-tab="fun">Fun</button>
+      <button type="button" role="tab" data-tab="achievements">Awards</button>
     </div>
     <div id="profile-body" class="profile-body"></div>
     <div class="actions">

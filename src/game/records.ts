@@ -1,3 +1,4 @@
+import { type AchievementId, isAchievementId } from './achievements';
 import type { DifficultyId } from '../rules/difficulty';
 import type { ModeId } from '../rules/mode';
 import { isPieceType, type PieceType } from '../rules/pieces';
@@ -60,6 +61,8 @@ export interface Records {
   /** Most recent first. */
   history: HistoryEntry[];
   fun: FunStats;
+  /** Unlocked achievements, with when (ms). Missing in records from before achievements. */
+  achievements: Partial<Record<AchievementId, number>>;
 }
 
 export function emptyRecords(): Records {
@@ -69,7 +72,21 @@ export function emptyRecords(): Records {
     matches: {},
     history: [],
     fun: { bought: {}, winStreak: 0, bestWinStreak: 0, checkmates: 0, biggestComeback: 0 },
+    achievements: {},
   };
+}
+
+/** The records with `ids` unlocked (now, unless they already were), and which of them are new. */
+export function recordAchievements(
+  records: Records,
+  ids: readonly AchievementId[],
+  at: number,
+): { records: Records; unlocked: AchievementId[] } {
+  const unlocked = [...new Set(ids)].filter((id) => records.achievements[id] === undefined);
+  if (unlocked.length === 0) return { records, unlocked };
+  const achievements = { ...records.achievements };
+  for (const id of unlocked) achievements[id] = at;
+  return { records: { ...records, achievements }, unlocked };
 }
 
 /** Play yourself runs keep their own records (".manual"). */
@@ -246,6 +263,10 @@ export function parseRecords(data: unknown): Records {
     if (isObject(f.bought)) {
       for (const [type, n] of Object.entries(f.bought)) if (isPieceType(type) && isCount(n)) out.fun.bought[type] = n;
     }
+  }
+  if (isObject(data.achievements)) {
+    for (const [id, at] of Object.entries(data.achievements))
+      if (isAchievementId(id) && isCount(at)) out.achievements[id] = at;
   }
   return out;
 }

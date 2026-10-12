@@ -1,5 +1,7 @@
 import type { MatchSettings } from './multi/match';
 import './style.css';
+import { achievement, battleAchievements } from './game/achievements';
+import { showToast } from './app/toast';
 import { battleVariant } from './chess/boardSpec';
 import { whiteEval } from './engine/pick';
 import { SEARCH_DEPTH } from './game/runBattle';
@@ -59,6 +61,11 @@ function openPrestige(): void {
   });
 }
 placement.onGained = (type) => records.bought(type);
+placement.onAchievements = (ids) => records.unlock(ids);
+records.onUnlock = (id) => {
+  const a = achievement(id);
+  showToast(`🏆 Achievement unlocked: ${a.name}`, a.description);
+};
 const profile = new ProfileScreen(records, playerName, renamePlayer, () => showMenu());
 $('#menu-profile').addEventListener('click', () => {
   $('#menu').hidden = true;
@@ -339,6 +346,7 @@ function fight(): void {
     );
     session.saveReplay({ ...record, moves, evals, result });
     records.battle(result, 'w', worstDeficit, session.run.settings);
+    records.unlock(battleAchievements(start.fen, moves, session.board, 'w'));
     return result;
   });
 }
@@ -360,6 +368,7 @@ async function playManual(loaded: Engine, game: ManualBattle): Promise<BattleRes
     const result = await battle.playManual(loaded, game, (state) => session.saveManual(state));
     session.saveReplay({ ...record, moves: [...game.moves], evals: [], result });
     records.battle(result, 'w', battle.manualWorstDeficit, session.run.settings);
+    records.unlock(battleAchievements(game.start, game.moves, game.spec, 'w'));
     return result;
   } finally {
     game.delete();

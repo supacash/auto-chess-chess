@@ -1,3 +1,4 @@
+import type { AchievementId } from '../game/achievements';
 import { loadBest, loadRecords, saveRecords } from '../game/storage';
 import {
   emptyRecords,
@@ -8,6 +9,7 @@ import {
   recordBought,
   recordMatchEnd,
   recordRunEnd,
+  recordAchievements,
   runKey,
 } from '../game/records';
 import { DIFFICULTIES, difficulty, type RunSettings } from '../rules/difficulty';
@@ -79,6 +81,18 @@ export class RecordBook {
 
   bought(type: PieceType): void {
     this.update(recordBought(this.records, type));
+  }
+
+  /** Called with each achievement as it's unlocked (the game shows a notice). */
+  onUnlock: ((id: AchievementId) => void) | null = null;
+
+  /** Unlocks `ids` (those not unlocked yet). */
+  unlock(ids: readonly AchievementId[]): void {
+    if (ids.length === 0) return;
+    const { records, unlocked } = recordAchievements(this.records, ids, Date.now());
+    if (unlocked.length === 0) return;
+    this.update(records);
+    for (const id of unlocked) this.onUnlock?.(id);
   }
 
   private update(records: Records): void {

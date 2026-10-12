@@ -1,4 +1,5 @@
 import { averagePlace, averageScore, favouritePiece, matchKey, type Records, runKey } from '../game/records';
+import { ACHIEVEMENTS } from '../game/achievements';
 import { FINAL_ROUND } from '../rules/run';
 import { ordinal } from '../multi/names';
 import { DIFFICULTIES } from '../rules/difficulty';
@@ -8,7 +9,7 @@ import { inlinePiece } from '../ui/boardDom';
 import { $, escapeHtml } from './dom';
 import { matchLabel, type RecordBook, runLabel } from './recordBook';
 
-type Tab = 'single' | 'multi' | 'history' | 'fun';
+type Tab = 'single' | 'multi' | 'history' | 'fun' | 'achievements';
 
 /** The Profile screen: the player's name and their records, by tab. */
 export class ProfileScreen {
@@ -58,7 +59,9 @@ export class ProfileScreen {
           ? multi(r)
           : this.tab === 'history'
             ? history(r)
-            : fun(r);
+            : this.tab === 'fun'
+              ? fun(r)
+              : achievementsTab(r);
   }
 }
 
@@ -158,4 +161,20 @@ function fun(r: Records): string {
         stat('Biggest comeback', f.biggestComeback ? `${f.biggestComeback} pts` : '–'),
     )
   );
+}
+
+/** Every achievement: unlocked ones with the date, the rest greyed out (secret ones hidden). */
+function achievementsTab(r: Records): string {
+  const open = ACHIEVEMENTS.filter((a) => !a.secret || r.achievements[a.id] !== undefined);
+  const got = open.filter((a) => r.achievements[a.id] !== undefined).length;
+  const items = ACHIEVEMENTS.map((a) => {
+    const at = r.achievements[a.id];
+    if (at === undefined && a.secret) {
+      return '<li class="achievement locked"><span class="achievement-name">???</span><span class="achievement-text">A secret, for later.</span></li>';
+    }
+    const when = at === undefined ? '' : `<span class="achievement-date">${new Date(at).toLocaleDateString()}</span>`;
+    const name = `${at === undefined ? '' : '🏆 '}${escapeHtml(a.name)}`;
+    return `<li class="achievement ${at === undefined ? 'locked' : 'unlocked'}"><span class="achievement-name">${name}</span><span class="achievement-text">${escapeHtml(a.description)}</span>${when}</li>`;
+  }).join('');
+  return `<p class="achievement-count">Achievements: ${got} of ${open.length} unlocked</p><ul class="achievements">${items}</ul>`;
 }

@@ -1,5 +1,6 @@
 import { plyLimit } from '../chess/boardSpec';
 import type { Engine } from '../engine/stockfish';
+import { battleAchievements } from '../game/achievements';
 import { runBattle } from '../game/runBattle';
 import {
   alive,
@@ -444,7 +445,7 @@ export class MatchController {
     const otherSide = flip ? 'w' : 'b';
     const other = m.player(flip ? pairing.white : pairing.black);
     const opponent = pairing.copy === otherSide ? `a copy of ${other.name}` : other.name;
-    const { result, worstDeficit } = await this.deps.battle.play(
+    const { result, worstDeficit, moves } = await this.deps.battle.play(
       engine,
       start.fen,
       start.firstMover,
@@ -453,6 +454,7 @@ export class MatchController {
       { flip, opponent, announceSide: true },
     );
     this.deps.records.battle(result, flip ? 'b' : 'w', worstDeficit);
+    this.deps.records.unlock(battleAchievements(start.fen, moves, m.board, flip ? 'b' : 'w'));
     return { pairing, winner: result.winner, material: result.material };
   }
 

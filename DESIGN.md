@@ -147,6 +147,15 @@ In Growing mode the board opens up during the run:
 - **Placement:** each square is scored per piece for the style (tables written for 8×8 and scaled to smaller boards), with random noise and a random left/right flip. Pieces leave room for the pawns placed after them.
 - **Engine safety net:** a search over 10 seconds plays a random legal move instead and restarts the engine.
 
+## Achievements
+
+Easy, fun goals (src/game/achievements.ts), unlocked once and kept in the records (they sync with them, from the earliest unlock). A notice slides in at the top when one unlocks; the Profile's *Awards* tab lists them all. "On the board" counts placed pieces of a family, fusions included: knights (N, Archbishop, Chancellor, Amazon, Centaur, Wildebeest), rooks (R, Chancellor, Dragon King), queens (Q, Amazon), bishops (B, Archbishop, Dragon Horse, Siege Cannon), camels (Camel, Wildebeest), men (Man, Centaur, Stackman), pawns (pawns of any kind, Berolina pawns).
+
+- Call the Cavalry! / The Wall / Solomon / Silk Road / Oops, all pawns / Sausage Party / Vatican: 15 of the family on the board.
+- It's not a boulder…: merge three rook-pawns into a Rook. I'm the Stackman: merge three Men. Finally a son: merge three Queens into an Heir. The infamous second son: a second Heir (secret until a perk allows it).
+- Holy Diver: a bishop-family piece takes something in a corner, moving from the opposite corner (checked from the battle's moves, for the player's side).
+- Dragons now?: a Dragon King and a Dragon Horse in the same army.
+
 ## Look and feel
 - Chessnut SVG pieces (Apache 2.0). The board always shows the player at the bottom, and squares scale so every board size fills the same width.
 - Moves animate at ~0.4 s at 1×, with an eval bar from the player's side.

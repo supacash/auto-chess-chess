@@ -1,3 +1,4 @@
+import { type AchievementId, armyAchievements, mergeAchievements } from '../game/achievements';
 import { dismissTip, seenTips } from '../game/storage';
 import { nextTip, TIPS, type TipId } from '../game/tips';
 import {
@@ -71,6 +72,8 @@ export class PlacementScreen {
   private mode: PlacementMode;
   /** Called with each piece gained in the shop (bought, upgraded into or fused), for records. */
   onGained: ((type: PieceType) => void) | null = null;
+  /** Called with achievements earned on this screen (the army on the board, a merge). */
+  onAchievements: ((ids: AchievementId[]) => void) | null = null;
 
   constructor(
     private session: PlacementSession,
@@ -110,7 +113,9 @@ export class PlacementScreen {
         this.applyShop(fusePieces(shop, this.selected, btn.dataset.fuse, to, this.session.run.settings.fairy), to);
       } else if (btn.dataset.mergeSet) {
         const to = btn.dataset.mergeSet as PieceType;
-        this.applyShop(fuseDefaultSet(shop, this.selected, to, this.session.run.settings.fairy), to);
+        const merged = fuseDefaultSet(shop, this.selected, to, this.session.run.settings.fairy);
+        this.applyShop(merged, to);
+        if (merged.ok) this.onAchievements?.(mergeAchievements(to, merged.shop.pieces));
       } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
     });
     // Tapping an opponent piece in the list explains what it does (the board reports taps via onFoeTap).
@@ -227,6 +232,7 @@ export class PlacementScreen {
 
   private piecesChanged(pieces: Piece[]): void {
     this.session.setPieces(pieces);
+    this.onAchievements?.(armyAchievements(pieces));
     const placed = pieces.filter((p) => p.square);
     const points = placed.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0);
     $('#points').textContent =
