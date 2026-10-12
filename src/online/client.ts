@@ -63,7 +63,29 @@ const CONFIG = {
 /** Set VITE_FIREBASE_EMULATOR=1 to use local emulators (npm run e2e:online, development). */
 const USE_EMULATOR = import.meta.env.VITE_FIREBASE_EMULATOR === '1';
 
+/**
+ * Firebase App Check (reCAPTCHA Enterprise site key, also public): requests carry proof that they
+ * come from this game on its real site, so copies elsewhere can't use the project. Empty = off.
+ * Not used with the emulators or in the Android app (its WebView origin is https://localhost; it
+ * will need Play Integrity through a native plugin once it's on Google Play). On localhost the SDK
+ * prints a debug token to the console, to register in the Firebase console for local testing.
+ */
+const APP_CHECK_SITE_KEY = '';
+
 let app: FirebaseApp | null = null;
+
+async function startAppCheck(firebase: FirebaseApp): Promise<void> {
+  const native = (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
+  if (!APP_CHECK_SITE_KEY || USE_EMULATOR || native) return;
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    (self as { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  }
+  const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import('firebase/app-check');
+  initializeAppCheck(firebase, {
+    provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
+    isTokenAutoRefreshEnabled: true,
+  });
+}
 
 /** A signed-in connection to the rooms database. */
 export class RoomClient {
@@ -76,7 +98,10 @@ export class RoomClient {
   ) {}
 
   static async connect(): Promise<RoomClient> {
-    app ??= initializeApp(CONFIG);
+    if (!app) {
+      app = initializeApp(CONFIG);
+      await startAppCheck(app);
+    }
     const auth = getAuth(app);
     const db = getFirestore(app);
     if (USE_EMULATOR && !(auth as { emulatorConfig?: unknown }).emulatorConfig) {
