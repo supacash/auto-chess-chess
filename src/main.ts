@@ -119,7 +119,6 @@ $('#menu-multiplayer').addEventListener('click', () => {
 matchDialog.querySelector('form')?.addEventListener('submit', (e) => {
   const action = (e.submitter as HTMLButtonElement | null)?.value;
   const blitz = $<HTMLInputElement>('#mp-blitz').checked;
-  // Growing board and Fairy pieces are for rooms the player creates and games vs bots (Quick play is Classic).
   const settings: MatchSettings = {
     blitz,
     mode: $<HTMLInputElement>('#mp-growing').checked ? 'growing' : 'classic',
@@ -175,7 +174,7 @@ async function openRoom(action: 'create' | 'join' | 'quick', settings: MatchSett
       action === 'create'
         ? await client.createRoom(name, settings, Math.random)
         : action === 'quick'
-          ? await client.quickPlay(name, settings.blitz, Math.random)
+          ? await client.quickPlay(name, settings, Math.random)
           : code;
     if (action === 'join') await client.joinRoom(code, name);
     matchDialog.close();

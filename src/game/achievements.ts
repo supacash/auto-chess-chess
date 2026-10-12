@@ -76,7 +76,7 @@ export const HOARD_GOLD = 50;
 export const SHOPAHOLIC_REROLLS = 10;
 export const PRESTIGIOUS_LEVEL = 3;
 export const SPECTER_WATCHES = 5;
-export const ABSOLUTE_UNIT_POINTS = 150;
+export const ABSOLUTE_UNIT_POINTS = 120;
 
 export const ACHIEVEMENTS: Achievement[] = [
   { id: 'cavalry', name: 'Call the Cavalry!', description: `Have ${CROWD} knights on the board.` },

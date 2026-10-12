@@ -41,7 +41,7 @@ describe('achievements', () => {
     expect(armyAchievements(army(['N', 'A', 'T', 'U'], CROWD))).toContain('cavalry');
     expect(armyAchievements(army(['B', 'A', 'H', 'S'], CROWD))).toContain('vatican');
     expect(armyAchievements(army(['N'], CROWD - 1, 5))).toEqual([]); // the bench doesn't count
-    expect(armyAchievements(army(['Q', 'Z'], CROWD))).toEqual(['solomon', 'absoluteUnit']); // 150+ points too
+    expect(armyAchievements(army(['Q', 'Z'], CROWD))).toEqual(['solomon', 'absoluteUnit']); // 120+ points too
     expect(armyAchievements(army(['P', 'E'], CROWD))).toEqual(['pawns']);
     expect(armyAchievements(army(['D', 'H'], 2))).toEqual(['dragons']);
   });
@@ -110,7 +110,8 @@ describe('achievements', () => {
     expect(shopAchievements(HOARD_GOLD, 0)).toEqual(['hoarder']);
     expect(shopAchievements(0, SHOPAHOLIC_REROLLS)).toEqual(['shopaholic']);
     expect(armyAchievements(army(['L', 'U', 'T'], 3))).toContain('barnyard');
-    expect(armyAchievements(army(['Z'], 13))).toContain('absoluteUnit'); // 13 Amazons: 156 points
+    expect(armyAchievements(army(['Z'], 10))).toContain('absoluteUnit'); // 10 Amazons: 120 points
+    expect(armyAchievements(army(['Q'], 13))).not.toContain('absoluteUnit'); // 13 Queens: 117 points
     // A full 5×5 home (two rows of five, the army cap): All Hands on Deck.
     const five = BOARDS[0];
     const full = [

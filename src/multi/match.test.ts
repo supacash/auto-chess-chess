@@ -13,6 +13,7 @@ import {
   type MatchPlayer,
   matchBoard,
   matchOver,
+  matchModeLabel,
   matchRulesLabel,
   mixSeed,
   newPlayers,
@@ -242,6 +243,8 @@ describe('match rules', () => {
     expect(matchBoard(growing, 1).files).toBe(5);
     expect(matchRulesLabel(growing)).toBe('Growing board · Fairy pieces');
     expect(matchRulesLabel({ blitz: true })).toBe('Classic · Standard pieces · Blitz');
+    expect(matchModeLabel({ blitz: false })).toBe('Classic');
+    expect(matchModeLabel({ ...growing, blitz: true })).toBe('Growing Fairy Blitz');
     for (let seed = 1; seed <= 20; seed++) {
       const army = botArmy(seed, 1, 'bot1', growing);
       expect(armyErrors(army, matchBoard(growing, 1))).toEqual([]);

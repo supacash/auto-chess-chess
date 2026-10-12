@@ -137,31 +137,34 @@ export class RoomClient {
     });
   }
 
-  /** Open quick play rooms in a mode, best first (see quickRoomsToTry). */
-  async findQuickRooms(blitz: boolean): Promise<Room[]> {
+  /**
+   * Open quick play rooms with these rules, best first (see quickRoomsToTry). The query narrows by
+   * shop time only (its index); the board and pieces are matched here.
+   */
+  async findQuickRooms(settings: MatchSettings): Promise<Room[]> {
     const fresh = Timestamp.fromMillis(this.serverNow() - QUICK_FRESH_MS);
     const snap = await getDocs(
       query(
         collection(this.db, 'rooms'),
         where('quick', '==', true),
         where('status', '==', 'lobby'),
-        where('settings.blitz', '==', blitz),
+        where('settings.blitz', '==', settings.blitz),
         where('waitingSince', '>=', fresh),
-        limit(20),
+        limit(40),
       ),
     );
     return quickRoomsToTry(
       snap.docs.map((d) => fromStored(d.data())),
       this.uid,
       this.serverNow(),
-      blitz,
+      settings,
     );
   }
 
-  /** Quick play: takes a seat in an open quick room in the mode, or makes one. Returns its code. */
-  async quickPlay(name: string, blitz: boolean, rng: Rng): Promise<string> {
+  /** Quick play: takes a seat in an open quick room with these rules, or makes one. Returns its code. */
+  async quickPlay(name: string, settings: MatchSettings, rng: Rng): Promise<string> {
     // If the search fails (e.g. its index is still building), make a room others can still find later.
-    const rooms = await this.findQuickRooms(blitz).catch((err) => {
+    const rooms = await this.findQuickRooms(settings).catch((err) => {
       console.warn('Quick play search failed', err);
       return [];
     });
@@ -173,7 +176,7 @@ export class RoomClient {
         // Filled up or started meanwhile: try the next one.
       }
     }
-    return this.createRoom(name, { blitz, mode: 'classic', fairy: false }, rng, true);
+    return this.createRoom(name, settings, rng, true);
   }
 
   /** Leaves a room still in the lobby. A host leaving an otherwise empty room deletes it. */

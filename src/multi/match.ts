@@ -43,6 +43,12 @@ export function matchRulesLabel(settings: MatchSettings): string {
     .join(' · ');
 }
 
+/** A short name for the rules, as quick play shows it ("Classic", "Growing Fairy Blitz"). */
+export function matchModeLabel(settings: MatchSettings): string {
+  const board = (settings.mode ?? 'classic') === 'growing' ? 'Growing' : 'Classic';
+  return [board, settings.fairy ? 'Fairy' : '', settings.blitz ? 'Blitz' : ''].filter(Boolean).join(' ');
+}
+
 export function shopSeconds(settings: MatchSettings): number {
   return settings.blitz ? BLITZ_SECONDS : SHOP_SECONDS;
 }

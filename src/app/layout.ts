@@ -178,15 +178,15 @@ export function renderLayout(root: HTMLElement): void {
       <details class="rules">
         <summary>How it works</summary>
         <p class="dialog-text muted">
-          Auto battles, on Classic 8×8 with standard pieces unless the host picks Growing board or Fairy
-          pieces (Quick play is always Classic). The shop lasts 45 seconds (or until everyone is
-          ready). Losing a battle costs the round number plus 1 HP per 5 points the winner has left. Quick play
-          matches you with anyone looking for a game in the same mode; empty seats get bots after 30 seconds.
+          Auto battles, on Classic 8×8 with standard pieces unless you pick Growing board or Fairy
+          pieces. The shop lasts 45 seconds (or until everyone is ready). Losing a battle costs the round
+          number plus 1 HP per 5 points the winner has left. Quick play matches you with anyone looking for a
+          game with the same rules; empty seats get bots after 30 seconds.
         </p>
       </details>
       <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 20-second shop</label>
       <fieldset class="room-rules">
-        <legend>Your room and vs bots</legend>
+        <legend>Rules</legend>
         <label class="check"><input type="checkbox" id="mp-growing" /> Growing board: 5×5 up to 9×9</label>
         <label class="check"><input type="checkbox" id="mp-fairy" /> Fairy pieces and fusion</label>
       </fieldset>

@@ -210,8 +210,26 @@ describe('quick play', () => {
       { ...quick('HHHH', 'h', now - 1_000), settings: { blitz: false, fairy: true } }, // another mode
       { ...quick('IIII', 'i', now - 1_000), settings: { blitz: false, mode: 'growing' as const } }, // another mode
     ];
-    expect(quickRoomsToTry(rooms, 'me', now, false).map((r) => r.code)).toEqual(['BBBB', 'CCCC', 'AAAA']);
-    expect(quickRoomsToTry(rooms, 'a', now, false).map((r) => r.code)).toEqual(['BBBB', 'CCCC']);
+    const classic = { blitz: false };
+    expect(quickRoomsToTry(rooms, 'me', now, classic).map((r) => r.code)).toEqual(['BBBB', 'CCCC', 'AAAA']);
+    expect(quickRoomsToTry(rooms, 'a', now, classic).map((r) => r.code)).toEqual(['BBBB', 'CCCC']);
+    // Explicit Classic settings match rooms that left them out.
+    expect(quickRoomsToTry(rooms, 'me', now, { blitz: false, mode: 'classic', fairy: false })).toHaveLength(3);
+  });
+
+  it('matches Growing and Fairy quick rooms only with the same rules', () => {
+    const now = 100_000;
+    const growingFairy = { blitz: false, mode: 'growing' as const, fairy: true };
+    const rooms = [
+      { ...quick('AAAA', 'a', now - 1_000), settings: growingFairy },
+      { ...quick('BBBB', 'b', now - 1_000), settings: { ...growingFairy, fairy: false } },
+      { ...quick('CCCC', 'c', now - 1_000), settings: { ...growingFairy, blitz: true } },
+      quick('DDDD', 'd', now - 1_000),
+    ];
+    expect(quickRoomsToTry(rooms, 'me', now, growingFairy).map((r) => r.code)).toEqual(['AAAA']);
+    expect(quickRoomsToTry(rooms, 'me', now, { blitz: false, mode: 'growing' }).map((r) => r.code)).toEqual(['BBBB']);
+    expect(shouldMoveTo({ ...quick('ZZZZ', 'me', now), settings: growingFairy }, rooms[0], 'me', now)).toBe(true);
+    expect(shouldMoveTo(quick('ZZZZ', 'me', now), rooms[0], 'me', now)).toBe(false);
   });
 
   it('starts once full, or QUICK_WAIT_MS after the last join', () => {

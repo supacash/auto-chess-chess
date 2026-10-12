@@ -1,4 +1,4 @@
-import { MATCH_SIZE, matchRulesLabel } from '../multi/match';
+import { MATCH_SIZE, matchModeLabel, matchRulesLabel } from '../multi/match';
 import type { RoomClient } from '../online/client';
 import { canQuickStart, peopleSeated, quickStartAt, type Room, shouldMoveTo } from '../online/room';
 import { $, escapeHtml } from './dom';
@@ -79,7 +79,7 @@ export class LobbyScreen {
   private async moveToOlderRoom(client: RoomClient, mine: Room): Promise<void> {
     this.moving = true;
     try {
-      const rooms = await client.findQuickRooms(mine.settings.blitz);
+      const rooms = await client.findQuickRooms(mine.settings);
       const target = rooms.find((r) => shouldMoveTo(mine, r, client.uid, client.serverNow()));
       if (!target || this.room?.code !== mine.code || peopleSeated(this.room) !== 1) return;
       await client.joinRoom(target.code, mine.seats.find((s) => s.uid === client.uid)?.name ?? '');
@@ -117,9 +117,9 @@ export class LobbyScreen {
     const me = this.client!.uid;
     const isHost = room.host === me && !room.quick;
     $('#lobby-label').textContent = room.quick ? 'Quick play' : 'Room code';
-    $('#lobby-code').textContent = room.quick ? (room.settings.blitz ? 'Classic Blitz' : 'Classic') : room.code;
+    $('#lobby-code').textContent = room.quick ? matchModeLabel(room.settings) : room.code;
     $('#lobby-code').classList.toggle('mode', room.quick);
-    $('#lobby-rules').textContent = room.quick ? '' : matchRulesLabel(room.settings);
+    $('#lobby-rules').textContent = matchRulesLabel(room.settings);
     $('#lobby-seats').innerHTML = room.seats
       .map((s, i) => {
         const label = s.uid

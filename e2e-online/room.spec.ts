@@ -170,3 +170,19 @@ test('two players on quick play end up in the same room, which starts by itself'
     await expect(page.locator('#match-players small', { hasText: 'bot' })).toHaveCount(2);
   }
 });
+
+test('quick play keeps different rules apart', async ({ browser }) => {
+  const classic = await player(browser);
+  const fairy = await player(browser);
+  await openMultiplayer(classic);
+  await classic.locator('#match-dialog').getByRole('button', { name: 'Quick play' }).click();
+  await expect(classic.locator('#lobby-code')).toHaveText('Classic', { timeout: 30_000 });
+
+  await openMultiplayer(fairy);
+  await fairy.locator('#mp-growing').check();
+  await fairy.locator('#mp-fairy').check();
+  await fairy.locator('#match-dialog').getByRole('button', { name: 'Quick play' }).click();
+  await expect(fairy.locator('#lobby-code')).toHaveText('Growing Fairy', { timeout: 30_000 });
+  await expect(fairy.locator('#lobby-rules')).toHaveText('Growing board · Fairy pieces');
+  for (const page of [classic, fairy]) await expect(page.locator('#lobby-status')).toContainText('1 of 4');
+});

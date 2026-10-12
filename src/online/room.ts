@@ -152,14 +152,19 @@ export function peopleSeated(room: Room): number {
   return room.seats.filter((s) => s.uid !== null).length;
 }
 
-/** True when a quick room is still open to join: in the lobby, a free seat, someone waiting, and fresh. */
-export function isOpenQuickRoom(room: Room, now: number, blitz: boolean): boolean {
+/** True when two rooms play by the same rules (board, pieces, shop time). */
+export function sameRules(a: MatchSettings, b: MatchSettings): boolean {
+  return (
+    a.blitz === b.blitz && (a.mode ?? 'classic') === (b.mode ?? 'classic') && (a.fairy ?? false) === (b.fairy ?? false)
+  );
+}
+
+/** True when a quick room in these rules is still open to join: in the lobby, a free seat, someone waiting, and fresh. */
+export function isOpenQuickRoom(room: Room, now: number, settings: MatchSettings): boolean {
   return (
     room.quick &&
     room.status === 'lobby' &&
-    room.settings.blitz === blitz &&
-    (room.settings.mode ?? 'classic') === 'classic' &&
-    room.settings.fairy !== true &&
+    sameRules(room.settings, settings) &&
     peopleSeated(room) > 0 &&
     peopleSeated(room) < MATCH_SIZE &&
     room.waitingSince !== null &&
@@ -168,9 +173,9 @@ export function isOpenQuickRoom(room: Room, now: number, blitz: boolean): boolea
 }
 
 /** The order to try joining quick rooms in: fullest first (it starts soonest), then the oldest. */
-export function quickRoomsToTry(rooms: Room[], uid: string, now: number, blitz: boolean): Room[] {
+export function quickRoomsToTry(rooms: Room[], uid: string, now: number, settings: MatchSettings): Room[] {
   return rooms
-    .filter((r) => isOpenQuickRoom(r, now, blitz) && !r.seats.some((s) => s.uid === uid))
+    .filter((r) => isOpenQuickRoom(r, now, settings) && !r.seats.some((s) => s.uid === uid))
     .sort((a, b) => peopleSeated(b) - peopleSeated(a) || olderFirst(a, b));
 }
 
@@ -184,7 +189,7 @@ export function shouldMoveTo(mine: Room, other: Room, uid: string, now: number):
     mine.status === 'lobby' &&
     peopleSeated(mine) === 1 &&
     mine.seats.some((s) => s.uid === uid) &&
-    isOpenQuickRoom(other, now, mine.settings.blitz) &&
+    isOpenQuickRoom(other, now, mine.settings) &&
     olderFirst(other, mine) < 0
   );
 }
