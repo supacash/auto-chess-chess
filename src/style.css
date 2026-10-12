@@ -1972,6 +1972,14 @@ button.tip-close {
   transform: translateX(-50%);
 }
 
+/* Installed on a phone, the status bar (and any camera cutout) sits over the page: keep the notice
+   below it even where the safe-area inset reads 0. */
+@media (display-mode: standalone) {
+  .toast {
+    top: max(calc(12px + env(safe-area-inset-top)), 64px);
+  }
+}
+
 .toast[hidden] {
   display: none;
 }
