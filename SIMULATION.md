@@ -299,9 +299,10 @@ The stand-in builds worse than people (it rerolls rather than saving for interes
 | Classic Normal | 48% | 61% | 51% | 46% |
 | Classic Hard | 26% | 41% | 41% | 26% |
 | Growing Easy | 63% | 70% | 64% | 62% |
+| Growing Normal | 52% | 67% | 53% | 50% |
 | Growing Hard | 19% | 37% | 32% | 28% |
 
-Classic Hard is unchanged: its AI budget is already at the cap (a full board of queens) by then, so the ramp doesn't reach it; the late climb there is the player catching up. Growing Normal was cut short twice by an engine crash on 9×9 (a WASM thread's stack overflow after `bestmove`; see Problems found).
+Classic Hard is unchanged: its AI budget is already at the cap (a full board of queens) by then, so the ramp doesn't reach it; the late climb there is the player catching up. Growing Normal was cut short twice by an engine crash on 9×9 (a WASM thread's stack overflow right after `bestmove`): the simulator now restarts an engine that dies between games, as the browser does, and the third run finished (8 stalled searches restarted, 3 of 1000 battles left out as hung).
 
 ## Problems found
 
