@@ -117,12 +117,13 @@ export function fitToBoard(pieces: Piece[], spec: BoardSpec): Piece[] {
 }
 
 /** Problems that stop the army from starting a battle on `spec`. Empty = ready. */
-export function armyErrors(pieces: Piece[], spec: BoardSpec = BOARD_8): string[] {
+export function armyErrors(pieces: Piece[], spec: BoardSpec = BOARD_8, maxHeirs = MAX_HEIRS): string[] {
   const errors: string[] = [];
   const kings = pieces.filter((p) => p.type === 'K');
   if (kings.length !== 1) errors.push('Army must have exactly one king');
   else if (!kings[0].square) errors.push('Place your king on the board');
-  if (pieces.filter((p) => p.type === 'J').length > MAX_HEIRS) errors.push('An army can have only one Heir');
+  if (pieces.filter((p) => p.type === 'J').length > maxHeirs)
+    errors.push(maxHeirs === 1 ? 'An army can have only one Heir' : `An army can have at most ${maxHeirs} Heirs`);
 
   const cap = armyCap(spec);
   if (placedCount(pieces) > cap) errors.push(`Too many pieces on the board (at most ${cap})`);

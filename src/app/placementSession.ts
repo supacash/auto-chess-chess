@@ -22,6 +22,8 @@ export interface PlacementSession {
   opponent(): { name: string; pieces: Piece[] } | null;
   /** Why the army can't fight yet (empty = ready). */
   armyErrors(): string[];
+  /** How many Heirs the army may have (MAX_HEIRS unless a perk allows more). */
+  maxHeirs?(): number;
   setPieces(pieces: Piece[]): void;
   setShop(shop: Shop): void;
   rerollOffers(): ShopResult;

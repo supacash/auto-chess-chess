@@ -345,8 +345,8 @@ type MergePart = Pick<Piece, 'type' | 'affinity'>;
  * True when three Queens may merge into an Heir (a second king): fairy pieces on, and the army has
  * no Heir yet.
  */
-export function canMakeHeir(shop: Shop, fairy: boolean): boolean {
-  return fairy && shop.pieces.filter((p) => p.type === 'J').length < MAX_HEIRS;
+export function canMakeHeir(shop: Shop, fairy: boolean, maxHeirs = MAX_HEIRS): boolean {
+  return fairy && shop.pieces.filter((p) => p.type === 'J').length < maxHeirs;
 }
 
 /** What three pieces can merge into (empty if they can't). `heir`: three Queens may become an Heir (canMakeHeir). */
@@ -383,9 +383,9 @@ function sameKind(a: MergePart, b: MergePart): boolean {
  * The two pieces circled with `pieceId` when a three-piece merge starts: the same kind (same
  * affinity, or the same minor piece), benched ones first. Null if there aren't enough.
  */
-export function setMergePartners(shop: Shop, pieceId: string, fairy = false): Piece[] | null {
+export function setMergePartners(shop: Shop, pieceId: string, fairy = false, maxHeirs = MAX_HEIRS): Piece[] | null {
   const piece = shop.pieces.find((p) => p.id === pieceId);
-  if (!piece || !canSetMerge(piece, canMakeHeir(shop, fairy))) return null;
+  if (!piece || !canSetMerge(piece, canMakeHeir(shop, fairy, maxHeirs))) return null;
   const others = shop.pieces
     .filter((p) => p.id !== pieceId && sameKind(piece, p))
     .sort((x, y) => Number(x.square !== null) - Number(y.square !== null));
@@ -393,10 +393,16 @@ export function setMergePartners(shop: Shop, pieceId: string, fairy = false): Pi
 }
 
 /** Merges `pieceId` and its default partners (see setMergePartners) into `result`. */
-export function fuseDefaultSet(shop: Shop, pieceId: string, result: PieceType, fairy = false): ShopResult {
-  const partners = setMergePartners(shop, pieceId, fairy);
+export function fuseDefaultSet(
+  shop: Shop,
+  pieceId: string,
+  result: PieceType,
+  fairy = false,
+  maxHeirs = MAX_HEIRS,
+): ShopResult {
+  const partners = setMergePartners(shop, pieceId, fairy, maxHeirs);
   if (!partners) return { ok: false, error: `Merging needs ${SET_MERGE_SIZE} matching pieces` };
-  return fuseSet(shop, [pieceId, ...partners.map((p) => p.id)], result, fairy);
+  return fuseSet(shop, [pieceId, ...partners.map((p) => p.id)], result, fairy, maxHeirs);
 }
 
 /**
@@ -404,12 +410,12 @@ export function fuseDefaultSet(shop: Shop, pieceId: string, result: PieceType, f
  * picked piece on the board (or the first one, if all are benched). An Heir goes to the bench instead
  * (a queen's square may be on the front row, where a king can't stand).
  */
-export function fuseSet(shop: Shop, ids: string[], result: PieceType, fairy = false): ShopResult {
+export function fuseSet(shop: Shop, ids: string[], result: PieceType, fairy = false, maxHeirs = MAX_HEIRS): ShopResult {
   const chosen = ids.map((id) => shop.pieces.find((p) => p.id === id));
   if (new Set(ids).size !== SET_MERGE_SIZE || chosen.some((p) => !p))
     return { ok: false, error: `Pick ${SET_MERGE_SIZE} pieces to merge` };
   const pieces = chosen as Piece[];
-  if (!setMergeResults(pieces, canMakeHeir(shop, fairy)).includes(result))
+  if (!setMergeResults(pieces, canMakeHeir(shop, fairy, maxHeirs)).includes(result))
     return { ok: false, error: `Those pieces can't become a ${PIECE_NAME[result]}` };
   const pieceId = (pieces.find((p) => p.square) ?? pieces[0]).id;
   const used = new Set(ids.filter((id) => id !== pieceId));

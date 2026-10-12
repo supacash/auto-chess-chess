@@ -43,7 +43,7 @@ import {
   PIECES,
   type PieceType,
 } from '../rules/pieces';
-import { armyCap, BENCH_SIZE, benchCount } from '../rules/placement';
+import { armyCap, BENCH_SIZE, benchCount, MAX_HEIRS } from '../rules/placement';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { $, escapeHtml } from './dom';
@@ -126,7 +126,7 @@ export class PlacementScreen {
         if (fused.ok) this.onCollect?.('fused', [to]);
       } else if (btn.dataset.mergeSet) {
         const to = btn.dataset.mergeSet as PieceType;
-        const merged = fuseDefaultSet(shop, this.selected, to, this.session.run.settings.fairy);
+        const merged = fuseDefaultSet(shop, this.selected, to, this.session.run.settings.fairy, this.maxHeirs());
         this.applyShop(merged, to);
         if (merged.ok) this.onAchievements?.(mergeAchievements(to, merged.shop.pieces));
       } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
@@ -438,8 +438,9 @@ export class PlacementScreen {
     // Three of a kind merge in one tap (the set is all the same kind, so there's nothing to pick):
     // one button per result (three plain pawns can become a Knight or a Bishop).
     const { shop, settings } = this.session.run;
-    const partners = setMergePartners(shop, piece.id, settings.fairy);
-    const setResults = partners ? setMergeResults([piece, ...partners], canMakeHeir(shop, settings.fairy)) : [];
+    const heirs = this.maxHeirs();
+    const partners = setMergePartners(shop, piece.id, settings.fairy, heirs);
+    const setResults = partners ? setMergeResults([piece, ...partners], canMakeHeir(shop, settings.fairy, heirs)) : [];
     const pawnFusions = setResults
       .map(
         (to) =>
@@ -451,13 +452,18 @@ export class PlacementScreen {
       : `${PIECE_VALUE[piece.type]} pts. ${PIECES[piece.type].description}${
           isPawnLike(piece.type)
             ? ' Three of them merge into a Knight or Bishop.'
-            : piece.type === 'Q' && canMakeHeir(shop, settings.fairy)
+            : piece.type === 'Q' && canMakeHeir(shop, settings.fairy, heirs)
               ? ' Three Queens merge into an Heir: a second king, so one must be captured before the other can be mated.'
               : ''
         }`;
     actions.innerHTML =
       `<p class="piece-info"><strong>${pieceName(piece)}</strong> · ${info}</p>` +
       `${fusions}${pawnFusions}${upgrades}${sell}`;
+  }
+
+  /** How many Heirs the army may have (a prestige perk can allow more). */
+  private maxHeirs(): number {
+    return this.session.maxHeirs?.() ?? MAX_HEIRS;
   }
 
   /** Applies a shop action, or shows why it failed. */

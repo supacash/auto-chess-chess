@@ -72,6 +72,14 @@ describe('the Heir (three Queens → a second king)', () => {
     expect(canMakeHeir(one, true)).toBe(false);
     expect(fuseDefaultSet(one, one.pieces[2].id, 'J', true).ok).toBe(false);
   });
+
+  it('makes a second Heir when the army may have two (Dynasty)', () => {
+    const one = queens(1);
+    expect(canMakeHeir(one, true, 2)).toBe(true);
+    const result = fuseDefaultSet(one, one.pieces[2].id, 'J', true, 2);
+    expect(result.ok && result.shop.pieces.filter((p) => p.type === 'J')).toHaveLength(2);
+    if (result.ok) expect(canMakeHeir(result.shop, true, 2)).toBe(false);
+  });
 });
 
 describe('startingShop', () => {

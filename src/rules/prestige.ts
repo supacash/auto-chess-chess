@@ -1,4 +1,5 @@
 import { QUEEN_OFFER_ROUND, START_GOLD } from './economy';
+import { MAX_HEIRS } from './placement';
 import { type Rng, shuffle } from './rng';
 
 // Prestige: after winning a run (FINAL_ROUND), the player can start over at round 1 one prestige
@@ -9,7 +10,7 @@ import { type Rng, shuffle } from './rng';
 /** Extra AI points per round for each prestige level. */
 export const PRESTIGE_STEP = 0.25;
 
-export type PerkId = 'gold' | 'knight' | 'queenPawns' | 'freeReroll' | 'life' | 'income';
+export type PerkId = 'gold' | 'knight' | 'queenPawns' | 'freeReroll' | 'life' | 'income' | 'dynasty';
 
 export interface Perk {
   id: PerkId;
@@ -17,6 +18,8 @@ export interface Perk {
   description: string;
   /** Can be picked again at a later prestige (its effect adds up). */
   stackable: boolean;
+  /** Only offered in runs with fairy pieces (it does nothing without them). */
+  fairyOnly?: boolean;
 }
 
 export const PERKS: Perk[] = [
@@ -31,6 +34,13 @@ export const PERKS: Perk[] = [
   { id: 'freeReroll', name: 'Haggler', description: 'Your first reroll each round is free.', stackable: false },
   { id: 'life', name: 'Second wind', description: 'Start each run with an extra life.', stackable: false },
   { id: 'income', name: 'Tithe', description: 'Earn 1 more gold every round.', stackable: false },
+  {
+    id: 'dynasty',
+    name: 'Dynasty',
+    description: 'Your army may have two Heirs (three Queens merge into each).',
+    stackable: false,
+    fairyOnly: true,
+  },
 ];
 
 export function isPerkId(v: unknown): v is PerkId {
@@ -45,9 +55,12 @@ export function perkCount(perks: readonly PerkId[], id: PerkId): number {
   return perks.filter((p) => p === id).length;
 }
 
-/** Three perks to choose from at the next prestige: stackable ones, or ones the player doesn't have yet. */
-export function perkChoices(perks: readonly PerkId[], rng: Rng, count = 3): Perk[] {
-  const open = PERKS.filter((p) => p.stackable || !perks.includes(p.id));
+/**
+ * Three perks to choose from at the next prestige: stackable ones, or ones the player doesn't have
+ * yet (fairy-only perks only in fairy runs).
+ */
+export function perkChoices(perks: readonly PerkId[], rng: Rng, count = 3, fairy = true): Perk[] {
+  const open = PERKS.filter((p) => (p.stackable || !perks.includes(p.id)) && (fairy || !p.fairyOnly));
   return shuffle(open, rng).slice(0, count);
 }
 
@@ -68,4 +81,9 @@ export function queenOfferRound(perks: readonly PerkId[]): number {
 /** Extra gold every round. */
 export function extraIncome(perks: readonly PerkId[]): number {
   return perkCount(perks, 'income');
+}
+
+/** How many Heirs the army may have (Dynasty allows a second one). */
+export function maxHeirs(perks: readonly PerkId[]): number {
+  return MAX_HEIRS + perkCount(perks, 'dynasty');
 }

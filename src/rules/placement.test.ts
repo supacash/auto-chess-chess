@@ -90,6 +90,9 @@ describe('armyErrors', () => {
     expect(armyErrors([makePiece('K', sq(4, 0)), makePiece('J'), makePiece('J')])).toContain(
       'An army can have only one Heir',
     );
+    const two = [makePiece('K', sq(4, 0)), makePiece('J', sq(2, 0)), makePiece('J', sq(6, 0))];
+    expect(armyErrors(two, undefined, 2)).toEqual([]); // Dynasty
+    expect(armyErrors([...two, makePiece('J')], undefined, 2)).toContain('An army can have at most 2 Heirs');
     expect(armyErrors([makePiece('K', sq(4, 0)), makePiece('K', sq(2, 0))])).toContain(
       'Army must have exactly one king',
     );

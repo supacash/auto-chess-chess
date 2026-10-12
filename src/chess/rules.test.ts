@@ -202,6 +202,17 @@ describe('fairy pieces', () => {
     follow.undo();
     expect(follow.fen().split(' ')[0]).toContain('J');
     follow.delete();
+    // Two Heirs (Dynasty): three kings, none royal until one is left; each Heir is followed.
+    const three = new Game(BOARD_8, 'r6k/8/8/8/8/8/8/K2J3J b - - 0 1');
+    expect(three.variant).toBe('acc8k2');
+    expect(three.fen().split(' ')[0]).toBe('r6k/8/8/8/8/8/8/K2J3J');
+    expect(three.play('a8a1')).not.toBeNull(); // the King is taken: two Heirs left, neither in check
+    expect(three.isCheck()).toBe(false);
+    expect(three.play('d1d2')).not.toBeNull();
+    expect(three.fen().split(' ')[0]).toBe('7k/8/8/8/8/8/3J4/r6J');
+    three.undo();
+    expect(three.fen().split(' ')[0]).toBe('7k/8/8/8/8/8/8/r2J3J');
+    three.delete();
     // Both attacked at once isn't check (let alone mate): one of them has to be captured first.
     const both = new Game(BOARD_8, '7k/8/8/8/8/8/8/K2r3J w - - 0 1'); // the rook on d1 attacks both
     expect(both.isCheck()).toBe(false);

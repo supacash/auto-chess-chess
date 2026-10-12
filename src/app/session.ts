@@ -26,7 +26,7 @@ import {
 import type { BattleResult } from '../rules/battle';
 import { difficulty, type RunSettings } from '../rules/difficulty';
 import { REROLL_COST, rerollOffers, restock, rollOffers, type Shop, type ShopResult } from '../rules/economy';
-import { type PerkId, PRESTIGE_STEP, queenOfferRound } from '../rules/prestige';
+import { maxHeirs, type PerkId, PRESTIGE_STEP, queenOfferRound } from '../rules/prestige';
 import { gameMode } from '../rules/mode';
 import type { Piece } from '../rules/pieces';
 import type { ManualState } from '../game/manualBattle';
@@ -103,7 +103,11 @@ export class Session implements PlacementSession {
 
   /** Why the army can't fight yet (empty = ready). */
   armyErrors(): string[] {
-    return armyErrors(this.run.shop.pieces, this.board);
+    return armyErrors(this.run.shop.pieces, this.board, this.maxHeirs());
+  }
+
+  maxHeirs(): number {
+    return maxHeirs(this.run.perks);
   }
 
   /** `battleInProgress` marks a battle as started, so leaving mid-battle counts as a loss on the next load. */

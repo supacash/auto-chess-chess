@@ -45,9 +45,9 @@ export class Game {
   private readonly board: Board;
   /** The engine variant it's played under (the board's, or its two-kings form; see battleVariant). */
   readonly variant: string;
-  /** Where each side's Heir stands (ffish only knows it as a second king), and its earlier squares for undo. */
-  private heirs: Partial<Record<Color, string>> = {};
-  private heirHistory: Partial<Record<Color, string>>[] = [];
+  /** Where each side's Heirs stand (ffish only knows them as more kings), and their earlier squares for undo. */
+  private heirs: Record<Color, string[]> = { w: [], b: [] };
+  private heirHistory: Record<Color, string[]>[] = [];
 
   constructor(
     readonly spec: BoardSpec,
@@ -57,7 +57,7 @@ export class Game {
     const grid = parsePlacement(fen, spec.files);
     grid.forEach((row, i) => {
       row.forEach((cell, file) => {
-        if (cell?.type === 'J') this.heirs[cell.color] = squareName(file, spec.ranks - 1 - i);
+        if (cell?.type === 'J') this.heirs[cell.color].push(squareName(file, spec.ranks - 1 - i));
       });
     });
     this.board = new (rules().Board)(this.variant, engineFen(fen));
@@ -66,12 +66,13 @@ export class Game {
   /** The position, with each Heir written as 'J'. */
   fen(): string {
     const fen = this.board.fen();
-    if (!this.heirs.w && !this.heirs.b) return fen;
+    if (!this.heirs.w.length && !this.heirs.b.length) return fen;
     const grid = parsePlacement(fen, this.spec.files).reverse(); // [rank][file], rank 0 at the bottom
-    for (const [color, square] of Object.entries(this.heirs)) {
-      if (!square) continue;
-      const { file, rank } = parseSquare(square);
-      if (grid[rank]?.[file]) grid[rank][file] = { type: 'J', color: color as Color };
+    for (const color of ['w', 'b'] as const) {
+      for (const square of this.heirs[color]) {
+        const { file, rank } = parseSquare(square);
+        if (grid[rank]?.[file]) grid[rank][file] = { type: 'J', color };
+      }
     }
     return [placementField(grid), ...fen.split(' ').slice(1)].join(' ');
   }
@@ -93,10 +94,12 @@ export class Game {
     const move = parseUci(uci);
     const mover = this.turn();
     if (!move || !this.board.push(uci)) return null;
-    this.heirHistory.push({ ...this.heirs });
+    this.heirHistory.push(this.heirs);
     const other: Color = mover === 'w' ? 'b' : 'w';
-    if (this.heirs[other] === move.to) delete this.heirs[other]; // the Heir was captured
-    if (this.heirs[mover] === move.from) this.heirs[mover] = move.to;
+    this.heirs = {
+      [other]: this.heirs[other].filter((sq) => sq !== move.to), // a captured Heir is gone
+      [mover]: this.heirs[mover].map((sq) => (sq === move.from ? move.to : sq)),
+    } as Record<Color, string[]>;
     return move;
   }
 

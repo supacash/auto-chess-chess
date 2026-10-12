@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { QUEEN_OFFER_ROUND, START_GOLD } from './economy';
-import { extraIncome, PERKS, perkChoices, queenOfferRound, startGold } from './prestige';
+import { MAX_HEIRS } from './placement';
+import { extraIncome, maxHeirs, PERKS, perkChoices, queenOfferRound, startGold } from './prestige';
 import { seededRng } from './rng';
 import { applyResult, maxLives, newRun, START_LIVES } from './run';
 
@@ -31,6 +32,16 @@ describe('prestige perks', () => {
     expect(extraIncome(run.perks)).toBe(1);
     const after = applyResult(run, 'b');
     expect(after.shop.gold - run.shop.gold).toBe(5 + 1); // base income + Tithe
+  });
+
+  it('offers Dynasty (a second Heir) only in fairy runs', () => {
+    expect(maxHeirs([])).toBe(MAX_HEIRS);
+    expect(maxHeirs(['dynasty'])).toBe(MAX_HEIRS + 1);
+    for (let seed = 0; seed < 30; seed++) {
+      expect(perkChoices([], seededRng(seed), 3, false).map((p) => p.id)).not.toContain('dynasty');
+    }
+    const offered = Array.from({ length: 30 }, (_, seed) => perkChoices([], seededRng(seed)).map((p) => p.id)).flat();
+    expect(offered).toContain('dynasty');
   });
 
   it('starts a first run with no prestige and no perks', () => {

@@ -55,12 +55,17 @@ const battle = new BattleScreen(
 /** After a won run: pick a perk and start the next prestige level. */
 function openPrestige(): void {
   const owned = session.run.perks.map(perk);
-  prestigeDialog.open(session.run.prestige + 1, perkChoices(session.run.perks, rng), owned, (id) => {
-    session.startPrestige(id);
-    if (session.run.prestige >= PRESTIGIOUS_LEVEL) records.unlock(['prestigious']);
-    placement.resetForNewRun();
-    showPlacement();
-  });
+  prestigeDialog.open(
+    session.run.prestige + 1,
+    perkChoices(session.run.perks, rng, 3, session.run.settings.fairy),
+    owned,
+    (id) => {
+      session.startPrestige(id);
+      if (session.run.prestige >= PRESTIGIOUS_LEVEL) records.unlock(['prestigious']);
+      placement.resetForNewRun();
+      showPlacement();
+    },
+  );
 }
 placement.onGained = (type) => records.bought(type);
 placement.onAchievements = (ids) => records.unlock(ids);
