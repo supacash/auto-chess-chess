@@ -83,7 +83,7 @@ export const PIECES: Record<PieceType, PieceDef> = {
     betza: 'mRcpR',
     description: 'Moves like a rook; captures only by jumping over exactly one piece.',
   },
-  T: { name: 'Centaur', value: 5, group: 'fusion', betza: 'KN', description: 'King and knight moves combined.' },
+  T: { name: 'Centaur', value: 5, group: 'fusion', betza: 'KN', description: 'Man and knight moves combined.' },
   A: { name: 'Archbishop', value: 7, group: 'fusion', betza: 'BN', description: 'Bishop and knight moves combined.' },
   C: { name: 'Chancellor', value: 8, group: 'fusion', betza: 'RN', description: 'Rook and knight moves combined.' },
   Z: { name: 'Amazon', value: 12, group: 'fusion', betza: 'QN', description: 'Queen and knight moves combined.' },

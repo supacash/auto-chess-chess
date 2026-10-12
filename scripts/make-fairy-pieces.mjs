@@ -1,7 +1,8 @@
 // Generates the fairy piece icons in src/assets/pieces/ (w?.svg / b?.svg next to the Chessnut set).
 //
-// - Fusion pieces (Centaur, Archbishop, Chancellor, Amazon) are composed from two Chessnut pieces:
-//   the partner behind, the knight in front. That's a derivative of the Apache-2.0 Chessnut art.
+// - Knight compounds (Chancellor, Amazon, …) are composed from two pieces: the partner behind, the
+//   knight in front. The Centaur and Archbishop are the knight wearing the Man's crown or a mitre.
+//   Those are derivatives of the Apache-2.0 Chessnut art.
 // - The other fairy pieces are original shapes drawn here in Chessnut's style: white pieces are
 //   filled white with a black outline, black pieces solid black with light detail lines.
 //
@@ -96,8 +97,6 @@ function drawShape(shape, color) {
 // The knight compounds use two Chessnut pieces; the others put one of the shapes above in front.
 
 const FUSION = {
-  T: ['K', 'N'],
-  A: ['B', 'N'],
   C: ['R', 'N'],
   Z: ['Q', 'N'],
   D: ['R', 'F'], // Dragon King: rook + ferz
@@ -112,6 +111,34 @@ function inner(file) {
   return svg.slice(svg.indexOf('>') + 1, svg.lastIndexOf('</svg>'));
 }
 
+// ---- knights wearing their partner's headpiece ----
+// Centaur (man + knight): the knight wears the Man's crown. Archbishop (bishop + knight): a mitre.
+// Hats are drawn on a 0..300 box standing on (150, 220); on black pieces a light rim keeps them apart
+// from the black head.
+
+const HATS = {
+  T: { body: ['M20 210L0 0l90 95 60-145 60 145 90-95-20 210z'], detail: ['M32 210h236'] },
+  A: {
+    body: ['M150 -40c78 52 118 130 112 210l-6 50H44l-6-50c-6-80 34-158 112-210z'],
+    detail: ['M150 55v105M105 100h90', 'M46 180h208'],
+  },
+};
+const HAT_AT = { x: 425, y: 266, scale: 0.48, rot: -8 };
+
+function drawKnightWithHat(hat, color) {
+  const s = STYLE[color];
+  const { x, y, scale, rot } = HAT_AT;
+  const w = (30 / scale) * 0.88; // the knight's outline weight, after its own scaling
+  const path = (d, fill, stroke, width) =>
+    `<path fill="${fill}" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" d="${d}"/>`;
+  const body = hat.body.map((d) => path(d, s.fill, s.outline, w)).join('');
+  const rim = color === 'b' ? hat.body.map((d) => path(d, 'none', s.detail, w * 0.3)).join('') : '';
+  const detail = hat.detail.map((d) => path(d, 'none', s.detail, w * 0.55)).join('');
+  const knight = `<g transform="translate(60 92) scale(0.88)">${inner(`${color}N.svg`)}</g>`;
+  const top = `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${scale}) translate(-150 -220)">${body}${rim}${detail}</g>`;
+  return `${HEADER}${knight}${top}</svg>\n`;
+}
+
 function drawFusion([behind, inFront], color) {
   const back = `<g transform="translate(-30 -20) scale(0.82)">${inner(`${color}${behind}.svg`)}</g>`;
   const front = `<g transform="translate(170 150) scale(0.78)">${inner(`${color}${inFront}.svg`)}</g>`;
@@ -124,5 +151,8 @@ for (const color of ['w', 'b']) {
   for (const [type, parts] of Object.entries(FUSION)) {
     writeFileSync(join(dir, `${color}${type}.svg`), drawFusion(parts, color));
   }
+  for (const [type, hat] of Object.entries(HATS))
+    writeFileSync(join(dir, `${color}${type}.svg`), drawKnightWithHat(hat, color));
 }
-console.log('Wrote', 2 * (Object.keys(SHAPES).length + Object.keys(FUSION).length), 'fairy piece icons to', dir);
+const count = Object.keys(SHAPES).length + Object.keys(FUSION).length + Object.keys(HATS).length;
+console.log('Wrote', 2 * count, 'fairy piece icons to', dir);
