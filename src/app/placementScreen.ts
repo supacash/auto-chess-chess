@@ -116,6 +116,7 @@ export class PlacementScreen {
       if (!btn) return;
       const shop = this.session.run.shop;
       if (!this.selected) return;
+      const before = this.session.run.shop;
       if (btn.dataset.upgrade) {
         const to = btn.dataset.upgrade as PieceType;
         this.applyShop(upgradePiece(shop, this.selected, to), to);
@@ -130,6 +131,8 @@ export class PlacementScreen {
         this.applyShop(merged, to);
         if (merged.ok) this.onAchievements?.(mergeAchievements(to, merged.shop.pieces));
       } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
+      // The result of a merge, fusion or upgrade isn't left selected: the next tap would move it.
+      if (this.session.run.shop !== before) this.board.clearSelection();
     });
     // Tapping an opponent piece in the list explains what it does (the board reports taps via onFoeTap).
     $('#opponent').addEventListener('click', (e) => {
@@ -242,6 +245,10 @@ export class PlacementScreen {
 
   setMessage(text: string): void {
     this.message.textContent = text;
+    if (!text) return;
+    this.message.classList.remove('pop');
+    void this.message.offsetWidth; // restart the animation
+    this.message.classList.add('pop');
   }
 
   /** While a battle is starting, Fight is disabled and nothing stays selected. */

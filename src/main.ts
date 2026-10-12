@@ -70,9 +70,12 @@ function openPrestige(): void {
 placement.onGained = (type) => records.bought(type);
 placement.onAchievements = (ids) => records.unlock(ids);
 placement.onCollect = (kind, types) => records.collect(kind, types);
+/** Achievements unlocked during the battle being played, for its result card (null between battles). */
+let battleAwards: string[] | null = null;
 records.onUnlock = (id) => {
   const a = achievement(id);
   showToast(`🏆 Achievement unlocked: ${a.name}`, a.description);
+  battleAwards?.push(a.name);
 };
 const profile = new ProfileScreen(records, playerName, renamePlayer, () => showMenu());
 $('#menu-profile').addEventListener('click', () => {
@@ -336,6 +339,7 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
   placement.setBusy(true);
   try {
     const loaded = await ensureEngine();
+    battleAwards = [];
     const spec = session.board;
     const color = session.run.color;
     placement.hide();
@@ -353,6 +357,7 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
     records.unlock(runAchievements(outcome.won, outcome.record.l, settings));
     renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
+    battle.showAwards(battleAwards);
     const revive = $<HTMLButtonElement>('#revive');
     revive.hidden = !offerRevive;
     revive.disabled = false;
@@ -368,6 +373,7 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
     showPlacement();
     placement.setMessage(`Battle failed: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
+    battleAwards = null;
     busy = false;
     placement.setBusy(false);
     $<HTMLButtonElement>('#menu-button').disabled = false;

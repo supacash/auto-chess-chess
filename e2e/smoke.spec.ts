@@ -179,3 +179,22 @@ test('the profile shows records from play, by tab', async ({ page }) => {
   await page.locator('#profile-back').click();
   await expect(page.locator('#menu')).toBeVisible();
 });
+
+test('a refused placement flashes its square, and a merged piece is not left selected', async ({ page }) => {
+  await startRun(page);
+  const pawn = () =>
+    page
+      .locator('.bench .piece')
+      .filter({ has: page.getByAltText('Pawn', { exact: true }) })
+      .first();
+  // Pawns can't stand on the back row: the square flashes and the reason shows.
+  await pawn().click();
+  await page.locator('#board-root .square[data-file="1"][data-rank="0"]').click();
+  await expect(page.locator('#board-root .square.rejected')).toHaveCount(1);
+  await expect(page.locator('#message')).toContainText('back row');
+  await expect(page.locator('#board-root .square.rejected')).toHaveCount(0); // the flash fades
+  // Three plain pawns merge into a Knight, which isn't left selected.
+  await page.getByRole('button', { name: /Merge 3 .*Knight/ }).click();
+  await expect(page.locator('.bench .piece').filter({ has: page.getByAltText('Knight') })).toHaveCount(1);
+  await expect(page.locator('.piece.selected')).toHaveCount(0);
+});

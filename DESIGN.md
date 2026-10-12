@@ -114,7 +114,8 @@ In Growing mode the board opens up during the run:
 
 ## Placement rules
 - You own the bottom home rows; the AI owns the same number at the top (mirrored).
-- The king can't go on the front home row; pawns can't go on the back row.
+- The king can't go on the front home row; pawns can't go on the back row. A refused placement flashes its square red and the reason shows below the board.
+- A piece made by a merge, fusion or upgrade isn't left selected (the next tap would move it).
 - A pawn on your second rank may move two squares on its first move. No castling.
 - Promotion works as normal (the engine picks the piece) and lasts only for that battle.
 
@@ -150,7 +151,7 @@ In Growing mode the board opens up during the run:
 
 ## Achievements
 
-Easy, fun goals (src/game/achievements.ts), unlocked once and kept in the records (they sync with them, from the earliest unlock). A notice slides in at the top when one unlocks; the Profile's *Awards* tab lists them by group (unlocked first), with progress for the collections. "On the board" counts placed pieces of a family, fusions included: knights (N, Archbishop, Chancellor, Amazon, Centaur, Wildebeest), rooks (R, Chancellor, Dragon King), queens (Q, Amazon), bishops (B, Archbishop, Dragon Horse, Siege Cannon), camels (Camel, Wildebeest), men (Man, Centaur, Stackman), pawns (pawns of any kind, Berolina pawns).
+Easy, fun goals (src/game/achievements.ts), unlocked once and kept in the records (they sync with them, from the earliest unlock). A notice slides in at the top when one unlocks (several unlocked at once queue up, one after another), and the result card lists the ones the battle unlocked ("🏆 New: …"); the Profile's *Awards* tab lists them by group (unlocked first), with progress for the collections. "On the board" counts placed pieces of a family, fusions included: knights (N, Archbishop, Chancellor, Amazon, Centaur, Wildebeest), rooks (R, Chancellor, Dragon King), queens (Q, Amazon), bishops (B, Archbishop, Dragon Horse, Siege Cannon), camels (Camel, Wildebeest), men (Man, Centaur, Stackman), pawns (pawns of any kind, Berolina pawns).
 
 - **Armies and merges:** 15 of a family on the board (Call the Cavalry!, The Wall, Solomon, Silk Road, Oops all pawns, Sausage Party, Synod); It's not a boulder… (three rook-pawns into a Rook), I'm the Stackman, Finally a son (an Heir), The infamous second son (secret; needs the Dynasty prestige perk); Dragons now? (Dragon King and Dragon Horse in one army); Barnyard (Camel, Wildebeest and Centaur); Absolute Unit (120+ points on the board); All Hands on Deck (every home square filled: only the small boards' army cap allows it).
 - **Battles** (checked from the battle's moves, for the player's side): Holy Diver (a bishop-family piece takes in a corner from the opposite corner), David and Goliath (beat an army worth twice yours), Comeback Kid (win after being 10+ points behind), Pawn Storm (mate with a pawn), Long Live the King (win after losing the King), Royal Wedding (promote), Photo Finish (win on points by one).

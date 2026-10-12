@@ -36,6 +36,9 @@ export class PlacementBoard {
   /** The opponent's army (AI-local squares), shown read-only when revealed; null = hidden. */
   private enemy: Piece[] | null = null;
   private selected: string | null = null;
+  /** A square a move was refused on, flashed for a moment so the reason (onMessage) is noticed. */
+  private rejected: Square | null = null;
+  private rejectedTimer = 0;
   private reportedSelection: string | null = null;
   private press: Press | null = null;
   private spec: BoardSpec = BOARD_8;
@@ -109,6 +112,7 @@ export class PlacementBoard {
         if (rank < homeRows) cell.classList.add('home');
         else if (rank >= ranks - homeRows) cell.classList.add('enemy');
         if (legal.has(`${file},${rank}`)) cell.classList.add('legal');
+        if (this.rejected?.file === file && this.rejected.rank === rank) cell.classList.add('rejected');
         const piece = pieceAt(this.pieces, { file, rank });
         if (piece) cell.appendChild(this.pieceEl(piece));
         const foe = this.enemy?.find((p) => {
@@ -240,13 +244,25 @@ export class PlacementBoard {
     const sq = target.kind === 'square' ? target.sq : null;
     const next = movePiece(this.pieces, pieceId, sq, this.spec);
     if (!next) {
-      if (!quiet) this.opts.onMessage(this.moveError(pieceId, sq));
+      if (!quiet) {
+        this.opts.onMessage(this.moveError(pieceId, sq));
+        this.flashRejected(sq);
+      }
       return false;
     }
     this.pieces = next;
     this.opts.onMessage('');
     this.opts.onChange(next);
     return true;
+  }
+
+  private flashRejected(sq: Square | null): void {
+    clearTimeout(this.rejectedTimer);
+    this.rejected = sq;
+    this.rejectedTimer = window.setTimeout(() => {
+      this.rejected = null;
+      this.render();
+    }, 700);
   }
 
   private moveError(pieceId: string, sq: Square | null): string {

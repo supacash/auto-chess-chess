@@ -670,6 +670,7 @@ export class BattleScreen {
   /** Shows how the battle ended and what it did to the run. `spec` is the board it was played on. */
   showResult(result: BattleResult, outcome: BattleOutcome, spec: BoardSpec, lives: number, best: number): void {
     this.setCardExtras([]);
+    this.showAwards([]);
     const { winner, reason, material } = result;
     $('#replay').hidden = false;
     $('#prestige').hidden = true;
@@ -713,6 +714,13 @@ export class BattleScreen {
       $('#result-detail').textContent = `${summary} +${outcome.income} gold.${lifeNote}`;
       $('#next').textContent = 'Next round';
     }
+  }
+
+  /** Lists the achievements this battle unlocked on the result card (the notices are easy to miss). */
+  showAwards(names: string[]): void {
+    const el = $('#result-awards');
+    el.hidden = names.length === 0;
+    el.textContent = names.length ? `🏆 New: ${names.join(', ')}` : '';
   }
 
   private resetResign(): void {

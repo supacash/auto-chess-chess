@@ -158,6 +158,7 @@ export function renderLayout(root: HTMLElement): void {
     <div class="result" id="result" hidden>
       <h2 id="result-title"></h2>
       <p id="result-detail"></p>
+      <p class="result-awards" id="result-awards" hidden></p>
       <div class="run-summary" id="run-summary" hidden></div>
       <div class="actions result-actions">
         <button type="button" id="replay">Review</button>

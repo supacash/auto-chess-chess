@@ -193,6 +193,31 @@ h1 .logo {
 .piece.selected {
   background: rgb(95 179 107 / 0.45);
   border-radius: 6px;
+  outline: 2px solid rgb(95 179 107);
+  outline-offset: -2px;
+}
+
+/* A square a piece couldn't go to: a short red flash with the reason below the board. */
+.square.rejected {
+  box-shadow: inset 0 0 0 3px var(--danger);
+  animation: rejected 0.7s ease-out;
+}
+
+@keyframes rejected {
+  0%,
+  40% {
+    background-color: rgb(220 80 80 / 0.55);
+  }
+}
+
+#message.pop {
+  animation: message-pop 0.35s ease-out;
+}
+
+@keyframes message-pop {
+  from {
+    transform: scale(1.08);
+  }
 }
 
 /* Affinity pawns: a small badge of the piece three of them merge into. */
@@ -1623,6 +1648,12 @@ body.in-menu .credits {
 }
 
 /* The victory card's Prestige button, and the perk choices. */
+.result-awards {
+  margin: 6px 0 0;
+  color: var(--gold);
+  font-weight: 600;
+}
+
 .revive-button {
   width: 100%;
   margin-top: 8px;
@@ -2000,7 +2031,9 @@ button.tip-close {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .toast.show {
+  .toast.show,
+  .square.rejected,
+  #message.pop {
     animation: none;
   }
 }
