@@ -10,6 +10,7 @@ import {
   CROWD,
   FUSION_RESULTS,
   HOARD_GOLD,
+  runAchievements,
   matchAchievements,
   mergeAchievements,
   SHOP_FAIRY,
@@ -145,5 +146,24 @@ describe('achievements', () => {
       wall: 200,
       son: 300,
     });
+  });
+});
+
+describe('run achievements', () => {
+  const settings = {
+    mode: 'classic',
+    difficulty: 'hard',
+    reveal: false,
+    side: 'white',
+    fairy: false,
+    manual: false,
+  } as const;
+
+  it('Warlord: a won run on Hard without the board reveal, standard or fairy pieces, any board', () => {
+    expect(runAchievements(true, 3, settings)).toEqual(['warlord']);
+    expect(runAchievements(true, 0, { ...settings, fairy: true, mode: 'growing' })).toEqual(['undefeated', 'warlord']);
+    expect(runAchievements(true, 1, { ...settings, reveal: true })).toEqual([]);
+    expect(runAchievements(true, 1, { ...settings, difficulty: 'normal' })).toEqual([]);
+    expect(runAchievements(false, 0, settings)).toEqual([]);
   });
 });

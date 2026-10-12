@@ -2,6 +2,7 @@ import type { BoardSpec } from '../chess/boardSpec';
 import { type Color, material, parsePlacement, royalCaptured } from '../chess/fen';
 import { Game } from '../chess/rules';
 import type { BattleResult } from '../rules/battle';
+import type { RunSettings } from '../rules/difficulty';
 import { FUSIONS } from '../rules/economy';
 import { type Piece, PIECE_VALUE, type PieceType } from '../rules/pieces';
 import { armyCap } from '../rules/placement';
@@ -33,6 +34,7 @@ export type AchievementId =
   | 'photoFinish'
   // Runs
   | 'undefeated'
+  | 'warlord'
   | 'prestigious'
   | 'diy'
   | 'hoarder'
@@ -113,6 +115,11 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'photoFinish', name: 'Photo Finish', description: 'Win on points at the move limit by a single point.' },
   // Runs
   { id: 'undefeated', name: 'The Undefeated', description: 'Win a run without losing a battle.' },
+  {
+    id: 'warlord',
+    name: 'Warlord',
+    description: "Win a run on Hard without seeing where the opponent's pieces stand.",
+  },
   { id: 'prestigious', name: 'Prestigious', description: `Reach prestige ★${PRESTIGIOUS_LEVEL}.` },
   { id: 'diy', name: 'Do It Yourself', description: 'Win a battle you played yourself (Play it).' },
   { id: 'hoarder', name: 'Hoarder', description: `Have ${HOARD_GOLD} gold at once.` },
@@ -152,6 +159,7 @@ const GROUP_OF: Partial<Record<AchievementId, AchievementGroup>> = {
   royalWedding: 'battles',
   photoFinish: 'battles',
   undefeated: 'runs',
+  warlord: 'runs',
   prestigious: 'runs',
   diy: 'runs',
   hoarder: 'runs',
@@ -327,6 +335,15 @@ export function battleAchievements({ fen, moves, spec, side, result, worstDefici
     out.add('pawnStorm');
   }
   return [...out];
+}
+
+/** Achievements for a run that ended (`won`: got through the final round), any board or pieces. */
+export function runAchievements(won: boolean, losses: number, settings: RunSettings): AchievementId[] {
+  if (!won) return [];
+  const out: AchievementId[] = [];
+  if (losses === 0) out.push('undefeated');
+  if (settings.difficulty === 'hard' && !settings.reveal) out.push('warlord');
+  return out;
 }
 
 /** Achievements for a finished match: `place` (1 = won), battles lost, and the winner's health. */

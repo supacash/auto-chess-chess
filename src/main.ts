@@ -1,6 +1,6 @@
 import type { MatchSettings } from './multi/match';
 import './style.css';
-import { achievement, battleAchievements, PRESTIGIOUS_LEVEL } from './game/achievements';
+import { achievement, battleAchievements, PRESTIGIOUS_LEVEL, runAchievements } from './game/achievements';
 import { adsAvailable, showRewardedAd } from './app/ads';
 import { showToast } from './app/toast';
 import { battleVariant } from './chess/boardSpec';
@@ -345,7 +345,7 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
     const endRun = () => records.runEnd(settings, outcome.score, outcome.won, outcome.prestige);
     if (offerRevive) pendingRunEnd = endRun;
     else if (outcome.over) endRun();
-    if (outcome.won && outcome.record.l === 0) records.unlock(['undefeated']);
+    records.unlock(runAchievements(outcome.won, outcome.record.l, settings));
     renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
     const revive = $<HTMLButtonElement>('#revive');
