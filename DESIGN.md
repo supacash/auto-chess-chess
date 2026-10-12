@@ -132,7 +132,8 @@ In Growing mode the board opens up during the run:
 
 ## AI opponent
 - **Engine:** Fairy-Stockfish (WASM) plays both sides with identical settings: depth 8, MultiPV 3, picking randomly among moves within ~50 centipawns of the best for variety. Skill is in drafting and placement, not a better engine.
-- **Budget per round:** difficulty × round (rounded), ±1 random, −1 in round 1, and +1 every round in Growing mode (matching its extra starting gold so both modes have the same balance). −2% when the player is Black. Never more than a full board of queens around the king (15 queens, 135 points, on 8×8).
+- **Budget per round:** difficulty × round × the ramp (rounded), ±1 random, −1 in round 1, and +1 every round in Growing mode (matching its extra starting gold so both modes have the same balance). −2% when the player is Black. Never more than a full board of queens around the king (15 queens, 135 points, on 8×8).
+- **Ramp:** dips in rounds 2–4, peaks around round 7, back to 1 from round 10, and eases to 0.95 from round 16 to the end (a further step to 0.9 from round 21 made rounds 21–25 the easiest of the run; SIMULATION.md §18).
 - **Styles** (a new style and army each round, shown during placement):
 
   | Style | Draft | Layout |
