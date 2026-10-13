@@ -304,6 +304,43 @@ The stand-in builds worse than people (it rerolls rather than saving for interes
 
 Classic Hard is unchanged: its AI budget is already at the cap (a full board of queens) by then, so the ramp doesn't reach it; the late climb there is the player catching up. Growing Normal was cut short twice by an engine crash on 9×9 (a WASM thread's stack overflow right after `bestmove`): the simulator now restarts an engine that dies between games, as the browser does, and the third run finished (8 stalled searches restarted, 3 of 1000 battles left out as hung).
 
+### 19. Full sell refunds, 2-gold Wazir, unlimited Stackmen (RULES_VERSION 8; fairy pieces, shop player, 40 runs × 25 rounds per row)
+
+Same command as §18, after the economy change: selling refunds the full price (fusions no more than their parts, plain pawns nothing), the Wazir costs 2 gold but is still worth 1 point, a player's Stackmen have no fee or limit (AI armies still field at most one), and Ferz, Wazir, Man and Stackman offers are rarer.
+
+| Mode, difficulty | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | §18 All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|---|
+| Classic Easy | 48% | 46% | 62% | 73% | 77% | 61% | 56% | 5.8 | 8% |
+| Classic Normal | 47% | 55% | 57% | 64% | 79% | 60% | 46% | 5.7 | 15% |
+| Classic Hard | 20% | 14% | 26% | 34% | 58% | 30% | 26% | 1.0 | 0% |
+| Growing Easy | 66% | 60% | 71% | 81% | 85% | 72% | 62% | 10.9 | 28% |
+| Growing Normal | 56% | 58% | 71% | 77% | 80% | 68% | 50% | 8.9 | 20% |
+| Growing Hard | 46% | 35% | 41% | 50% | 60% | 46% | 28% | 4.3 | 5% |
+
+- **The player got stronger, mostly late.** Every suite wins more than in §18. The rise is largest from round 11 on, where the stand-in's board is full and it sells to make room: a full refund leaves it more gold per round. Normal now wins 64–80% in rounds 16–25 (§18: about 50%), so the late game is easy again, and Growing Hard nearly doubled (28% → 46%).
+- **Early rounds barely moved** (Classic Normal 47% in rounds 1–5), so the change is in the late economy, not the opening.
+- **Noise:** each round is ±15 points and each run score about ±2.5, so Classic Easy and Normal (61% and 60%) are within noise of each other; their early rounds came out unusually close.
+- **Engine:** 1–6 battles per suite hung even after a restart (left out, counted as draws), and 3–13 stalled searches restarted.
+- **Next:** the late-game AI budget needs raising again for this economy (the ramp's 0.95 from round 16, or the per-round rate), then rerun this table. The stand-in never sells to speculate on sets, so real players gain more from full refunds than this shows.
+
+### 20. Late-game ramp raised for full refunds (fairy pieces, shop player, 40 runs × 25 rounds per row)
+
+Same command as §19, with the ramp at 1.02–1.06 in rounds 11–15, 1.07 in rounds 16–20 and 1.1 from round 21 (was 1 and then 0.95):
+
+| Mode, difficulty | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | §19 All | §18 All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Classic Easy | 48% | 46% | 60% | 49% | 69% | 54% | 61% | 56% | 5.4 | 8% |
+| Classic Normal | 47% | 55% | 54% | 50% | 67% | 54% | 60% | 46% | 5.4 | 10% |
+| Classic Hard | 20% | 14% | 25% | 24% | 49% | 26% | 30% | 26% | 1.0 | 0% |
+| Growing Easy | 67% | 62% | 77% | 57% | 68% | 66% | 72% | 62% | 9.8 | 5% |
+| Growing Normal | 56% | 56% | 68% | 55% | 67% | 60% | 68% | 50% | 6.7 | 8% |
+| Growing Hard | 47% | 25% | 33% | 30% | 54% | 38% | 46% | 28% | 3.1 | 0% |
+
+- **Rounds 16–20 are back to about 50% on Normal** (§19: 64–77%), and Hard to 24–30%.
+- **Rounds 21–25 stay easy, and budget can't fix it.** The AI already fields 25–30 more points than the player there (Classic Normal round 25: 119 against 151) and still loses more often than in round 20. With boards full of queens and compounds, ~90% of late games end in mate, and the stand-in plays White, so moving first matters more than material (§13 measured first move at ~18 points of win rate). Random-side runs would show a flatter late game.
+- **Easy and Normal are within noise of each other on Classic** (54% each; their budgets differ by 3%), as in §19.
+- **Engine:** 2–9 battles per suite hung even after a restart (left out, counted as draws).
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.

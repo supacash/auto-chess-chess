@@ -163,11 +163,11 @@ export function aiBudget(
 export const RAMP = [
   // Rounds 1–10: dip early (few pieces, no merges yet), peak around round 7, back to 1.
   1, 0.93, 0.92, 0.94, 1, 1.06, 1.1, 1.08, 1.04, 1,
-  // Rounds 11–15.
-  1, 1, 1, 1, 1,
-  // Rounds 16+: the AI eases off, or it outgrows the player's income and good runs can't reach
-  // round 25 (on 9×9 the simulator's stand-in won only 25–35% there on Easy).
-  0.95,
+  // Rounds 11–15: climbs again. Once the player's board is full they sell to make room, and full
+  // sell refunds (RULES_VERSION 8) made the late game easy at a flat 1 (SIMULATION.md §19).
+  1.02, 1.03, 1.04, 1.05, 1.06,
+  // Rounds 16–20, then 21+ (the budget stops at a full board of queens anyway).
+  1.07, 1.07, 1.07, 1.07, 1.07, 1.1,
 ];
 
 export function rampFactor(round: number): number {
