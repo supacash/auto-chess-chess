@@ -8,8 +8,8 @@ import { armyPoints, type Piece, type PieceType } from '../rules/pieces';
 import { armyCap } from '../rules/placement';
 
 // Achievements: easy, fun goals that unlock once and stay unlocked (kept in the records, so they sync
-// with the rest). Piece "families" count fusions too: an Archbishop is a bishop for Synod, a
-// Centaur a knight for Call the Cavalry, and so on.
+// with the rest). Piece "families" count fusions too: an Archbishop is a bishop for Vatican, a
+// Centaur a knight for Bring in the Cavalry, and so on.
 
 export type AchievementId =
   | 'cavalry'
@@ -81,7 +81,7 @@ export const SPECTER_WATCHES = 5;
 export const ABSOLUTE_UNIT_POINTS = 120;
 
 export const ACHIEVEMENTS: Achievement[] = [
-  { id: 'cavalry', name: 'Call the Cavalry!', description: `Have ${CROWD} knights on the board.` },
+  { id: 'cavalry', name: 'Bring in the Cavalry!', description: `Have ${CROWD} knights on the board.` },
   { id: 'boulder', name: 'It’s not a boulder…', description: 'Merge three rook-pawns into a Rook.' },
   { id: 'wall', name: 'The Wall', description: `Have ${CROWD} rooks on the board.` },
   { id: 'solomon', name: 'Solomon', description: `Have ${CROWD} queens on the board.` },
@@ -91,11 +91,11 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'A bishop takes a piece in one corner, all the way from the opposite corner.',
   },
   { id: 'silkRoad', name: 'Silk Road', description: `Have ${CROWD} camels on the board.` },
-  { id: 'son', name: 'Finally a son', description: 'Create an Heir by merging three Queens.' },
+  { id: 'son', name: 'Finally, a son', description: 'Create an Heir by merging three Queens.' },
   { id: 'secondSon', name: 'The infamous second son', description: 'Create a second Heir.', secret: true },
   { id: 'pawns', name: 'Oops, all pawns', description: `Have ${CROWD} pawns on the board.` },
   { id: 'sausage', name: 'Sausage Party', description: `Have ${CROWD} men on the board.` },
-  { id: 'vatican', name: 'Synod', description: `Have ${CROWD} bishops on the board.` },
+  { id: 'vatican', name: 'Vatican', description: `Have ${CROWD} bishops on the board.` },
   { id: 'dragons', name: 'Dragons now?', description: 'Field a Dragon King and a Dragon Horse in the same army.' },
   { id: 'stackman', name: 'I’m the Stackman', description: 'Create a Stackman by merging three Men.' },
   // Battles
