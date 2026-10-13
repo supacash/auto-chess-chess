@@ -52,35 +52,40 @@ export function renderLayout(root: HTMLElement): void {
   </div>
 
   <section id="placement">
-    <div class="tip" id="tip" role="status" hidden>
-      <span class="tip-icon" aria-hidden="true">💡</span><span id="tip-text"></span>
-      <button type="button" id="tip-close" class="tip-close" aria-label="Dismiss tip">×</button>
+    <!-- The screen's two columns in landscape (style.css); in portrait the wrappers don't render. -->
+    <div class="screen-top">
+      <div class="tip" id="tip" role="status" hidden>
+        <span class="tip-icon" aria-hidden="true">💡</span><span id="tip-text"></span>
+        <button type="button" id="tip-close" class="tip-close" aria-label="Dismiss tip">×</button>
+      </div>
+      <p class="notice" id="notice" role="status" hidden></p>
+      <p class="opponent" id="opponent"></p>
+      <p class="opponent-info" id="opponent-info" role="status" hidden></p>
     </div>
-    <p class="notice" id="notice" role="status" hidden></p>
-    <p class="opponent" id="opponent"></p>
-    <p class="opponent-info" id="opponent-info" role="status" hidden></p>
     <div id="board-root"></div>
-    <div class="shop">
-      <div class="shop-row">
-        <span class="gold" id="gold" aria-label="Gold"></span>
-        <button id="lock" type="button" class="lock" aria-pressed="false" title="Lock the shop: keep these offers for next round">🔓</button>
-        <button id="reroll" type="button">Reroll · ${REROLL_COST}g</button>
+    <div class="screen-side">
+      <div class="shop">
+        <div class="shop-row">
+          <span class="gold" id="gold" aria-label="Gold"></span>
+          <button id="lock" type="button" class="lock" aria-pressed="false" title="Lock the shop: keep these offers for next round">🔓</button>
+          <button id="reroll" type="button">Reroll · ${REROLL_COST}g</button>
+        </div>
+        <div class="offers" id="offers"></div>
+        <div class="offer-detail" id="offer-detail" hidden></div>
+        <div class="piece-actions" id="piece-actions"></div>
       </div>
-      <div class="offers" id="offers"></div>
-      <div class="offer-detail" id="offer-detail" hidden></div>
-      <div class="piece-actions" id="piece-actions"></div>
-    </div>
-    <p id="message" role="status" aria-live="polite"></p>
-    <div class="fight-bar">
-      <div class="actions">
-        <button id="clear" type="button">Clear</button>
-        <button id="play" type="button" disabled>Play it</button>
-        <button id="fight" type="button" class="primary" disabled>Auto fight</button>
+      <p id="message" role="status" aria-live="polite"></p>
+      <div class="fight-bar">
+        <div class="actions">
+          <button id="clear" type="button">Clear</button>
+          <button id="play" type="button" disabled>Play it</button>
+          <button id="fight" type="button" class="primary" disabled>Auto fight</button>
+        </div>
+        <p class="fight-hint" id="fight-hint" hidden></p>
       </div>
-      <p class="fight-hint" id="fight-hint" hidden></p>
+      <p class="hint" id="points"></p>
+      <button type="button" id="last-replay" class="link-button" hidden>Review your last battle</button>
     </div>
-    <p class="hint" id="points"></p>
-    <button type="button" id="last-replay" class="link-button" hidden>Review your last battle</button>
   </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
@@ -122,51 +127,55 @@ export function renderLayout(root: HTMLElement): void {
   </section>
 
   <section id="battle" hidden>
-    <p class="battle-status" id="battle-status" aria-live="polite"></p>
-    <p class="battle-announce" id="battle-announce" role="status" hidden></p>
-    <div class="eval" id="eval">
-      <div class="eval-bar" id="eval-bar" role="meter" aria-label="Engine evaluation" aria-valuemin="0" aria-valuemax="100">
-        <div class="eval-fill" id="eval-fill"></div>
+    <div class="screen-top">
+      <p class="battle-status" id="battle-status" aria-live="polite"></p>
+      <p class="battle-announce" id="battle-announce" role="status" hidden></p>
+      <div class="eval" id="eval">
+        <div class="eval-bar" id="eval-bar" role="meter" aria-label="Engine evaluation" aria-valuemin="0" aria-valuemax="100">
+          <div class="eval-fill" id="eval-fill"></div>
+        </div>
+        <span class="eval-label" id="eval-label"></span>
       </div>
-      <span class="eval-label" id="eval-label"></span>
+      <div class="side-pieces" id="side-them" hidden></div>
     </div>
-    <div class="side-pieces" id="side-them" hidden></div>
     <div id="battle-root"></div>
-    <div class="side-pieces" id="side-you" hidden></div>
-    <div class="actions" id="playback">
-      ${SPEEDS.map((s) => `<button type="button" class="speed" data-speed="${s}">${s}×</button>`).join('')}
-      <button type="button" id="skip">Skip</button>
-    </div>
-    <div class="promo" id="promo" hidden></div>
-    <div class="actions" id="manual" hidden>
-      <button type="button" id="undo">Undo</button>
-      <button type="button" id="resign" class="sell">Resign</button>
-    </div>
-    <div class="review" id="review" hidden>
-      <input type="range" id="review-slider" min="0" max="0" value="0" aria-label="Move" />
-      <div class="actions review-buttons">
-        <button type="button" data-step="first" aria-label="First move">⏮</button>
-        <button type="button" data-step="prev" aria-label="Previous move">◀</button>
-        <button type="button" data-step="play" id="review-play" aria-label="Play">▶︎ Play</button>
-        <button type="button" data-step="next" aria-label="Next move">▶</button>
-        <button type="button" data-step="last" aria-label="Last move">⏭</button>
+    <div class="screen-side">
+      <div class="side-pieces" id="side-you" hidden></div>
+      <div class="actions" id="playback">
+        ${SPEEDS.map((s) => `<button type="button" class="speed" data-speed="${s}">${s}×</button>`).join('')}
+        <button type="button" id="skip">Skip</button>
       </div>
-    </div>
-    <div class="actions" id="replay-actions">
-      <button type="button" id="replay-done" class="primary" hidden>Done</button>
-    </div>
-    <div class="result" id="result" hidden>
-      <h2 id="result-title"></h2>
-      <p id="result-detail"></p>
-      <p class="result-awards" id="result-awards" hidden></p>
-      <div class="run-summary" id="run-summary" hidden></div>
-      <div class="actions result-actions">
-        <button type="button" id="replay">Review</button>
-        <button type="button" id="next" class="primary">Next round</button>
+      <div class="promo" id="promo" hidden></div>
+      <div class="actions" id="manual" hidden>
+        <button type="button" id="undo">Undo</button>
+        <button type="button" id="resign" class="sell">Resign</button>
       </div>
-      <button type="button" id="revive" class="revive-button" hidden>▶ Watch an ad for an extra life</button>
-      <div class="card-extras" id="card-extras" hidden></div>
-      <button type="button" id="prestige" class="prestige-button" hidden></button>
+      <div class="review" id="review" hidden>
+        <input type="range" id="review-slider" min="0" max="0" value="0" aria-label="Move" />
+        <div class="actions review-buttons">
+          <button type="button" data-step="first" aria-label="First move">⏮</button>
+          <button type="button" data-step="prev" aria-label="Previous move">◀</button>
+          <button type="button" data-step="play" id="review-play" aria-label="Play">▶︎ Play</button>
+          <button type="button" data-step="next" aria-label="Next move">▶</button>
+          <button type="button" data-step="last" aria-label="Last move">⏭</button>
+        </div>
+      </div>
+      <div class="actions" id="replay-actions">
+        <button type="button" id="replay-done" class="primary" hidden>Done</button>
+      </div>
+      <div class="result" id="result" hidden>
+        <h2 id="result-title"></h2>
+        <p id="result-detail"></p>
+        <p class="result-awards" id="result-awards" hidden></p>
+        <div class="run-summary" id="run-summary" hidden></div>
+        <div class="actions result-actions">
+          <button type="button" id="replay">Review</button>
+          <button type="button" id="next" class="primary">Next round</button>
+        </div>
+        <button type="button" id="revive" class="revive-button" hidden>▶ Watch an ad for an extra life</button>
+        <div class="card-extras" id="card-extras" hidden></div>
+        <button type="button" id="prestige" class="prestige-button" hidden></button>
+      </div>
     </div>
   </section>
 

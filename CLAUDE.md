@@ -8,7 +8,7 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - `npm run typecheck` — `tsc --noEmit` for the game, plus `-p scripts` for the simulator (TypeScript 7)
 - `npm run lint` — Biome lint + format check (CI runs it); `npm run format` fixes formatting and safe lint issues
 - `npm run build` — typecheck + production build
-- `npm run e2e` — Playwright browser smoke tests (whole runs in Chromium against the production build; CI runs them before deploying)
+- `npm run e2e` — Playwright browser tests (whole runs in Chromium against the production build, plus landscape and 360px layout checks in `e2e/landscape.spec.ts`; CI runs them before deploying)
 - `npm run test:rules` — Firestore security rules tests on the emulator (needs Java)
 - `npm run e2e:online` — two-browser online room tests against the Firebase emulators
 - `npm run android` — production build synced into the Capacitor Android project (`android/`); `npm run android:open` opens it in Android Studio. `node scripts/make-android-icons.mjs` regenerates its icons and splash from `public/icon.svg`

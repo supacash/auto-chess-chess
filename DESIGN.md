@@ -166,6 +166,7 @@ The Profile's Fun tab shows the most-bought piece (not counting pawns, Ferzes an
 - Chessnut SVG pieces (Apache 2.0). The board always shows the player at the bottom, and squares scale so every board size fills the same width.
 - Moves animate at ~0.4 s at 1×, with an eval bar from the player's side.
 - Results name the reason ("Victory on points", "Drawn by threefold repetition").
+- **Landscape:** the board never grows taller than fits on screen. On landscape phones (and touch tablets held sideways) the header, run bar and Menu button share one short row, and the shop and battle screens use two columns: the board and bench stay in view on the left while the shop, opponent and battle controls scroll on the right, with the fight bar pinned to the bottom. The installed web app no longer locks to portrait.
 
 ## Tech
 - Vite + TypeScript 7, no UI framework. Biome for formatting and linting.
