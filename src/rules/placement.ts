@@ -7,8 +7,6 @@ export const BACK_RANK = 0;
 export const BENCH_SIZE = 8;
 /** Heirs an army may have (three Queens merged into a second king, fairy mode). */
 export const MAX_HEIRS = 1;
-/** Stackmen an army may have: one, so the strong leaper stays a centrepiece rather than a stack of them. */
-export const MAX_STACKMEN = 1;
 
 /**
  * Most pieces on the board: a chess side's worth, two per file (16 on 8×8, 10 on 5×5), and never
@@ -126,7 +124,6 @@ export function armyErrors(pieces: Piece[], spec: BoardSpec = BOARD_8, maxHeirs 
   else if (!kings[0].square) errors.push('Place your king on the board');
   if (pieces.filter((p) => p.type === 'J').length > maxHeirs)
     errors.push(maxHeirs === 1 ? 'An army can have only one Heir' : `An army can have at most ${maxHeirs} Heirs`);
-  if (pieces.filter((p) => p.type === 'Y').length > MAX_STACKMEN) errors.push('An army can have only one Stackman');
 
   const cap = armyCap(spec);
   if (placedCount(pieces) > cap) errors.push(`Too many pieces on the board (at most ${cap})`);

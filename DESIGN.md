@@ -54,15 +54,15 @@ Draft and place a chess army, then watch an engine play the round for both sides
 | King | — | Free, always owned, can't be sold |
 
 - **Gold upgrades:** only a plain pawn (no affinity) → Knight/Bishop, for 3 gold. Rooks and Queens come only from merging or the shop; spare gold goes into rerolls.
-- **Affinity pawns:** pawns bought for a piece (knight-, bishop-, rook- or queen-pawn), shown with a small badge of that piece. They fight as ordinary pawns (and count toward the 8-pawn limit) until three with the same affinity are merged into the piece. Rook-pawns cost 2 gold (6 for a 5-point rook: rooks proved strong for their value); queen-pawns 3 gold and only from round 6. They sell for their price − 1. The piece panel and the offer show how many of the set you have ("you have 2/3").
+- **Affinity pawns:** pawns bought for a piece (knight-, bishop-, rook- or queen-pawn), shown with a small badge of that piece. They fight as ordinary pawns (and count toward the 8-pawn limit) until three with the same affinity are merged into the piece. Rook-pawns cost 2 gold (6 for a 5-point rook: rooks proved strong for their value); queen-pawns 3 gold and only from round 6. They sell for their price. The piece panel and the offer show how many of the set you have ("you have 2/3").
 - **Start:** King + 3 pawns, plus 4 gold (Growing) or 3 gold (Classic).
 - **Income:** 5 gold per round, +2 for a win, +1 for a draw, plus **interest**: +1 gold per 10 unspent (up to +3), counted on the gold saved before the battle. The shop shows the interest due ("23g +2 interest").
 - **Shop lock:** 🔒 next to Reroll keeps the current offers (whatever's left of them) into the next round; it unlocks after that round, or when you reroll.
-- **Selling** refunds value minus 1 (minimum 0).
+- **Selling** refunds what the piece is worth, as in other auto-battlers: its price (an affinity pawn's too), so collecting a set or changing plans costs nothing. Plain pawns are only ever the free starting pawns, so they sell for nothing. A fusion sells for no more than its parts (an Archbishop, worth 7, sells for 6), so fusing and selling never makes gold. The King and the Heir can't be sold. (Until RULES_VERSION 8 selling refunded value − 1, which made selling rare.)
 - **Army size:** only pieces on the board count: at most two per file, a chess side's worth (16 on 8×8; on the smaller boards that's every home square: 10 / 12 / 14), so it grows with the board in Growing mode. AI armies follow the same limit. No limit on the mix of pieces.
 - **Bench:** up to 8 pieces wait off the board, to mix and match. Bought pieces arrive there, so buying needs a free bench slot. A bench piece can go onto a full board by swapping with a placed one.
 - Pieces lost in battle come back for the next round.
-- **Shop offers:** 4 random offers each round, bought onto the bench: mostly affinity pawns, with finished pieces (priced at their value) rare. Offers cost at most 2 + 2×round (Rooks from round 2; Queens and queen-pawns from round 6). Plain pawns aren't offered. Reroll: 1 gold. Fusion pieces are never offered except the Stackman (rare, 9 gold, fairy only, from round 4; not if you have one), nor is the Grasshopper (players didn't find it worth buying; it stays in the rules for old saves and replays). With fairy pieces off, offers are standard pieces only.
+- **Shop offers:** 4 random offers each round, bought onto the bench: mostly affinity pawns, with finished pieces (priced at their value; the Wazir 2 gold) rare. Offers cost at most 2 + 2×round (Rooks from round 2; Queens and queen-pawns from round 6). Plain pawns aren't offered. Ferz, Wazir and Man are less common than the other fairy offers (they used to be in about three shops of four). Reroll: 1 gold. Fusion pieces are never offered except the Stackman (rare, 9 gold, fairy only, from round 4), nor is the Grasshopper (players didn't find it worth buying; it stays in the rules for old saves and replays). With fairy pieces off, offers are standard pieces only.
 - **Piece info:** tapping any piece (yours, a shop offer, or the opponent's in its list or on the revealed board) shows its value and how it moves.
 - **No single-pawn purchases:** pawns come from shop offers (Pawn and Berolina pawn are the most common offers).
 - **Merging** (free, every mode; one tap, but not automatic: completing a set doesn't merge it by itself):
@@ -70,10 +70,10 @@ Draft and place a chess army, then watch an engine play the round for both sides
   - Three plain pawns (the starting pawns, or three Berolina pawns) → Knight or Bishop.
   - Two Rooks → Queen.
   - Three Knights → Queen, or three Bishops → Queen (no mixing knights and bishops).
-  - Three Men + 3 gold → Stackman (fairy, one per army): three 3-point Men for a 9-point piece that frees two board squares. The fee and the limit are because Ferz + Wazir fusions made Men so cheap that it was easy to stack several (it scored 63% against a Queen at equal armies when it cost 8; `npm run sim:duel`).
+  - Three Men → Stackman (fairy): three 3-point Men for a 9-point piece that frees two board squares. No fee and no limit per army: a Man now costs 3 gold however it's made (the Wazir costs 2), and Ferz, Wazir, Man and Stackman offers are rarer instead. AI armies still field at most one (the drafter has no shop to make them rare). (Until RULES_VERSION 8 it cost 3 gold and was one per army, because 1-gold Ferz + Wazir fusions made Men too cheap.) It's strong for 9 points (`npm run sim:duel`, 40-point armies: 65% against a Queen, 35% against a 12-point Amazon).
   - Three Queens → **Heir** (fairy, one per army, or two with the Dynasty prestige perk; can't be sold): a second king with its own icon (the king without its cross, smaller), benched (a queen's square may be on the front row, and like the King it can't stand there). While a side has its King and its Heir neither is royal: either can be captured (both attacked at once isn't mate either), and the last one left is a real king that can be checkmated. The battle screen announces the capture ("Their King was captured! Their Heir takes the crown.") (Fairy-Stockfish's Spartan-chess rules, on each board's two-kings variant, used only when an Heir is on the board; every other battle is unchanged). The engine only pairs kings of one type, so it sees the Heir as a second king; our FENs write it 'J' and the game follows its square through the moves. 27 points for checkmate insurance and two free squares (army totals, like the placement screen's points, the end-of-run chart and Absolute Unit, count it as 27; in battle it counts 0, like the King, so hiding it can't win on points): a late-game luxury, never sold. AI armies (and multiplayer bots) rarely field one from round 20 in fairy runs (12% of armies, paid for with 27 points of their budget, as three Queens).
   - Three of a kind merge in one tap: the selected piece shows *Merge 3 → Rook* (three plain pawns show a button each for Knight and Bishop), using it and two more of the same kind, benched ones first. The result takes the square of the first of them on the board. Two-piece merges are buttons on the selected piece, which becomes the result where it stands.
-- **Fusion** (fairy pieces on): free, like merging. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Rook + Ferz → Dragon King, Bishop + Wazir → Dragon Horse, Knight + Camel → Wildebeest, Cannon + Bishop → Siege Cannon, Ferz + Wazir → Man (two 1-gold pieces make a 3-point piece: the reason to buy them over pawns, besides standing on the back row and not counting toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for value − 2 (the same as selling both parts).
+- **Fusion** (fairy pieces on): free, like merging. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Rook + Ferz → Dragon King, Bishop + Wazir → Dragon Horse, Knight + Camel → Wildebeest, Cannon + Bishop → Siege Cannon, Ferz + Wazir → Man (1 + 2 gold for a 3-point piece made of two 1-point ones; Ferzes and Wazirs stand on the back row and don't count toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for their value, but never more than their parts.
 
 ### Fairy pieces
 Values are tuned with the simulator (SIMULATION.md section 11): at equal points, AI armies with fairy pieces do as well as standard ones.
@@ -82,7 +82,7 @@ Values are tuned with the simulator (SIMULATION.md section 11): at equal points,
 |---|---|---|
 | Berolina pawn | 1 | Moves diagonally forward (two squares from rank 2), captures straight ahead; promotes like a pawn |
 | Ferz | 1 | One square diagonally |
-| Wazir | 1 | One square straight |
+| Wazir | 1 | One square straight. Costs 2 gold (the one piece priced above its value), so a Man costs 3 gold from its parts; at equal armies it scores 54% ±7 against a Ferz, 60% against a pawn, so it's worth about what a Ferz is |
 | Man | 3 | Like a king, but can be captured |
 | Camel | 2 | Jumps (3,1) |
 | Grasshopper | 1 | Along queen lines, hopping over a piece to land just beyond it |
@@ -95,7 +95,7 @@ Values are tuned with the simulator (SIMULATION.md section 11): at equal points,
 | Dragon Horse | 5 | Bishop + one straight step (fusion: Bishop + Wazir) |
 | Wildebeest | 5 | Knight and Camel jumps (fusion: Knight + Camel) |
 | Siege Cannon | 6 | Moves like a queen; captures by jumping exactly one piece (fusion: Cannon + Bishop) |
-| Stackman | 9 | Jumps to any square up to two away, over anything in between (merge: three Men + 3 gold, one per army; also sold, rarely, for 9 gold) |
+| Stackman | 9 | Jumps to any square up to two away, over anything in between (merge: three Men; also sold, rarely, for 9 gold) |
 
 ## Board sizes
 In Growing mode the board opens up during the run:

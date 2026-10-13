@@ -1,5 +1,5 @@
 import type { Winner } from './battle';
-import { BENCH_SIZE, benchCount, MAX_HEIRS, MAX_STACKMEN } from './placement';
+import { BENCH_SIZE, benchCount, MAX_HEIRS } from './placement';
 import {
   type Affinity,
   AFFINITIES,
@@ -53,14 +53,29 @@ export function upgradeCost(from: PieceType, to: PieceType): number {
 }
 
 /**
- * Value − 1 (an affinity pawn: its price − 1). Fused pieces lose 1 per part, so fusing then selling
- * pays the same as selling both parts.
+ * Gold above a piece's value that it costs in the shop. The Wazir fights like a 1-point piece but
+ * costs 2, so a Man costs 3 gold however it's made (a Ferz and a Wazir, or bought).
+ */
+const PRICE_PREMIUM: Partial<Record<PieceType, number>> = { W: 1 };
+
+/** What a piece costs in gold: its value, plus any PRICE_PREMIUM. */
+export function piecePrice(type: PieceType): number {
+  return PIECE_VALUE[type] + (PRICE_PREMIUM[type] ?? 0);
+}
+
+/**
+ * What a piece is worth, as in other auto-battlers: its price (an affinity pawn's too). A two-piece
+ * fusion sells for no more than its parts would, so fusing and selling never makes gold (an
+ * Archbishop is worth 7 but sells for a Knight and a Bishop, 6). Plain pawns are only ever the free
+ * starting pawns, so they sell for nothing.
  */
 export function sellValue(piece: PieceType | Pick<Piece, 'type' | 'affinity'>): number {
   const { type, affinity } = typeof piece === 'string' ? { type: piece, affinity: undefined } : piece;
-  if (type === 'K') return 0;
-  if (affinity) return AFFINITY_PRICE[affinity] - 1;
-  return Math.max(0, PIECE_VALUE[type] - (PIECES[type].group === 'fusion' ? 2 : 1));
+  if (affinity) return AFFINITY_PRICE[affinity];
+  if (type === 'K' || type === 'J' || type === 'P') return 0;
+  const recipe = FUSIONS.find((f) => f.result === type);
+  const parts = recipe ? piecePrice(recipe.parts[0]) + piecePrice(recipe.parts[1]) : Infinity;
+  return Math.min(piecePrice(type), parts);
 }
 
 /** Interest: +1 gold per INTEREST_STEP gold saved, up to MAX_INTEREST, paid with each round's income. */
@@ -130,9 +145,9 @@ export function isOffer(value: unknown): value is Offer {
   return typeof value === 'string' && (value in PIECES || isAffinityOffer(value as Offer));
 }
 
-/** What an offer costs: a piece's value, or an affinity pawn's price. */
+/** What an offer costs: a piece's price, or an affinity pawn's. */
 export function offerPrice(offer: Offer): number {
-  return isAffinityOffer(offer) ? AFFINITY_PRICE[offer[1] as Affinity] : PIECE_VALUE[offer];
+  return isAffinityOffer(offer) ? AFFINITY_PRICE[offer[1] as Affinity] : piecePrice(offer);
 }
 
 export function offerName(offer: Offer): string {
@@ -154,16 +169,16 @@ export const OFFER_WEIGHTS: Partial<Record<Offer, number>> = {
   PR: 2,
   PQ: 1.2,
   E: 2,
-  F: 2,
-  W: 2,
-  M: 1.2,
+  F: 1, // Ferz, Wazir and Man were in most shops; they're rarer so the other fairy pieces show up
+  W: 1,
+  M: 0.8,
   L: 1.2,
   X: 1.5,
   N: 0.5,
   B: 0.5,
   R: 0.3,
   Q: 0.15,
-  Y: 0.15, // the Stackman: the one fusion piece the shop sells (fairy, from round 4 at 9 gold)
+  Y: 0.1, // the Stackman: the one fusion piece the shop sells (fairy, from round 4, at its value)
 };
 
 /** Queens and queen-pawns are offered from this round on. */
@@ -203,7 +218,6 @@ export function buyOffer(shop: Shop, index: number): ShopResult {
   }
   const price = offerPrice(offer);
   if (shop.gold < price) return { ok: false, error: 'Not enough gold' };
-  if (offer === 'Y' && !canHaveStackman(shop)) return { ok: false, error: 'An army can have only one Stackman' };
   return {
     ok: true,
     shop: {
@@ -272,7 +286,7 @@ export const FUSIONS: FusionRecipe[] = [
   { parts: ['N', 'R'], result: 'C' }, // Chancellor
   { parts: ['N', 'Q'], result: 'Z' }, // Amazon
   { parts: ['N', 'M'], result: 'T' }, // Centaur (the Man stands in for the king)
-  { parts: ['F', 'W'], result: 'M' }, // Man: diagonal and straight steps together (worth 3 from 1 + 1)
+  { parts: ['F', 'W'], result: 'M' }, // Man: diagonal and straight steps together (worth 3 from 1 + 1; 3 gold)
   { parts: ['R', 'F'], result: 'D' }, // Dragon King
   { parts: ['B', 'W'], result: 'H' }, // Dragon Horse
   { parts: ['N', 'L'], result: 'U' }, // Wildebeest
@@ -350,19 +364,6 @@ export function canMakeHeir(shop: Shop, fairy: boolean, maxHeirs = MAX_HEIRS): b
   return fairy && shop.pieces.filter((p) => p.type === 'J').length < maxHeirs;
 }
 
-/** Gold a three-Men merge into a Stackman costs (the other merges are free): it was too cheap to stack. */
-export const STACKMAN_MERGE_COST = 3;
-
-/** True while the army has room for a Stackman (MAX_STACKMEN). */
-export function canHaveStackman(shop: Shop): boolean {
-  return shop.pieces.filter((p) => p.type === 'Y').length < MAX_STACKMEN;
-}
-
-/** What a three-piece merge into `result` costs in gold. */
-export function setMergeCost(result: PieceType): number {
-  return result === 'Y' ? STACKMAN_MERGE_COST : 0;
-}
-
 /** What three pieces can merge into (empty if they can't). `heir`: three Queens may become an Heir (canMakeHeir). */
 export function setMergeResults(parts: MergePart[], heir = false): PieceType[] {
   if (parts.length !== SET_MERGE_SIZE) return [];
@@ -431,16 +432,12 @@ export function fuseSet(shop: Shop, ids: string[], result: PieceType, fairy = fa
   const pieces = chosen as Piece[];
   if (!setMergeResults(pieces, canMakeHeir(shop, fairy, maxHeirs)).includes(result))
     return { ok: false, error: `Those pieces can't become a ${PIECE_NAME[result]}` };
-  if (result === 'Y' && !canHaveStackman(shop)) return { ok: false, error: 'An army can have only one Stackman' };
-  const cost = setMergeCost(result);
-  if (shop.gold < cost) return { ok: false, error: `Stacking three Men costs ${cost} gold` };
   const pieceId = (pieces.find((p) => p.square) ?? pieces[0]).id;
   const used = new Set(ids.filter((id) => id !== pieceId));
   return {
     ok: true,
     shop: {
       ...shop,
-      gold: shop.gold - cost,
       pieces: shop.pieces
         .filter((p) => !used.has(p.id))
         .map((p) => (p.id === pieceId ? { id: p.id, type: result, square: result === 'J' ? null : p.square } : p)),

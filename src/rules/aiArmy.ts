@@ -263,7 +263,8 @@ export function draftAiArmy(
     ? { ...style.weights, ...style.fairyWeights }
     : style.weights;
   const options = (Object.keys(weights) as PieceType[]).filter((t) => (weights[t] ?? 0) > 0 && !isPawnLike(t));
-  // One Stackman per army, as for the player (MAX_STACKMEN).
+  // One Stackman per army. The player has no limit, but Stackmen are rare in the shop; the drafter
+  // has no shop, and at 9 points a Stackman is stronger than a Queen (DESIGN.md).
   const allowed = (t: PieceType) => t !== 'Y' || !types.includes('Y');
   while (types.length < capacity) {
     const affordable = options.filter((t) => PIECE_VALUE[t] <= pieceBudget && allowed(t));

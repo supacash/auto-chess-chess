@@ -280,7 +280,7 @@ describe('placeForBattle', () => {
 });
 
 describe('the Stackman in AI armies', () => {
-  it('is drafted at most once per army', () => {
+  it('is drafted at most once per army (shop rarity limits the player instead)', () => {
     const rng = seededRng(5);
     const fortress = AI_STYLES.find((s) => s.id === 'fortress')!;
     for (let i = 0; i < 300; i++) {
