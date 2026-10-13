@@ -58,32 +58,35 @@ export function upgradeCost(from: PieceType, to: PieceType): number {
  */
 const PRICE_PREMIUM: Partial<Record<PieceType, number>> = { W: 1 };
 
-/** What a piece costs in gold: its value, plus any PRICE_PREMIUM. */
+/**
+ * What a piece costs in gold: its value, plus any PRICE_PREMIUM. A two-piece fusion costs no more
+ * than its parts, so buying one (the Bazaar perk) costs the same as fusing it, and fusing and selling
+ * never makes gold (an Archbishop is worth 7 but costs a Knight and a Bishop, 6).
+ */
 export function piecePrice(type: PieceType): number {
-  return PIECE_VALUE[type] + (PRICE_PREMIUM[type] ?? 0);
+  const own = PIECE_VALUE[type] + (PRICE_PREMIUM[type] ?? 0);
+  const recipe = FUSIONS.find((f) => f.result === type);
+  return recipe ? Math.min(own, piecePrice(recipe.parts[0]) + piecePrice(recipe.parts[1])) : own;
 }
 
 /**
- * What a piece is worth, as in other auto-battlers: its price (an affinity pawn's too). A two-piece
- * fusion sells for no more than its parts would, so fusing and selling never makes gold (an
- * Archbishop is worth 7 but sells for a Knight and a Bishop, 6). Plain pawns are only ever the free
- * starting pawns, so they sell for nothing.
+ * What a piece is worth, as in other auto-battlers: its price (an affinity pawn's too). Plain pawns
+ * are only ever the free starting pawns, so they sell for nothing.
  */
 export function sellValue(piece: PieceType | Pick<Piece, 'type' | 'affinity'>): number {
   const { type, affinity } = typeof piece === 'string' ? { type: piece, affinity: undefined } : piece;
   if (affinity) return AFFINITY_PRICE[affinity];
   if (type === 'K' || type === 'J' || type === 'P') return 0;
-  const recipe = FUSIONS.find((f) => f.result === type);
-  const parts = recipe ? piecePrice(recipe.parts[0]) + piecePrice(recipe.parts[1]) : Infinity;
-  return Math.min(piecePrice(type), parts);
+  return piecePrice(type);
 }
 
 /** Interest: +1 gold per INTEREST_STEP gold saved, up to MAX_INTEREST, paid with each round's income. */
 export const INTEREST_STEP = 10;
 export const MAX_INTEREST = 3;
 
-export function interest(gold: number): number {
-  return Math.min(MAX_INTEREST, Math.floor(Math.max(0, gold) / INTEREST_STEP));
+/** Interest on `gold`: +1 per `step` saved, up to `max` (the Banker perk changes both). */
+export function interest(gold: number, step = INTEREST_STEP, max = MAX_INTEREST): number {
+  return Math.min(max, Math.floor(Math.max(0, gold) / step));
 }
 
 export function roundIncome(winner: Winner): number {
@@ -189,24 +192,26 @@ export function maxOfferCost(round: number): number {
   return 2 + 2 * round;
 }
 
-/**
- * A fresh set of offers for `round`. Without `fairy`, standard pieces (and affinity pawns) only.
- * `queenRound` is when queens and queen-pawns start showing up (earlier with a prestige perk).
- * `scale` multiplies each offer's chance (multiplayer: by how much of it is left in the shared pool).
- */
-export function rollOffers(
-  round: number,
-  rng: Rng,
-  fairy = true,
-  queenRound = QUEEN_OFFER_ROUND,
-  scale: (offer: Offer) => number = () => 1,
-): Offer[] {
-  const pool = (Object.keys(OFFER_WEIGHTS) as Offer[]).filter((o) => {
+/** How offers are drawn when something changes the defaults: a prestige perk, or the multiplayer pool. */
+export interface OfferOdds {
+  /** Queens and queen-pawns show up from this round on (QUEEN_OFFER_ROUND by default). */
+  queenRound?: number;
+  /** Multiplies each offer's chance (multiplayer: how much of it is left in the shared pool). */
+  scale?: (offer: Offer) => number;
+  /** Offers the shop doesn't normally stock, with their weights (the Bazaar perk's fusion pieces). */
+  extra?: Partial<Record<Offer, number>>;
+}
+
+/** A fresh set of offers for `round`. Without `fairy`, standard pieces (and affinity pawns) only. */
+export function rollOffers(round: number, rng: Rng, fairy = true, odds: OfferOdds = {}): Offer[] {
+  const { queenRound = QUEEN_OFFER_ROUND, scale = () => 1, extra } = odds;
+  const weights = extra ? { ...OFFER_WEIGHTS, ...extra } : OFFER_WEIGHTS;
+  const pool = (Object.keys(weights) as Offer[]).filter((o) => {
     const queen = o === 'Q' || o === 'PQ';
     const standard = isAffinityOffer(o) || PIECES[o].group === 'standard';
     return offerPrice(o) <= maxOfferCost(round) && (!queen || round >= queenRound) && (fairy || standard);
   });
-  return Array.from({ length: OFFER_COUNT }, () => weightedPick(pool, (o) => (OFFER_WEIGHTS[o] ?? 0) * scale(o), rng));
+  return Array.from({ length: OFFER_COUNT }, () => weightedPick(pool, (o) => (weights[o] ?? 0) * scale(o), rng));
 }
 
 /** Buys offer number `index` onto the bench for its price in gold. */
@@ -236,15 +241,11 @@ export function rerollOffers(
   rng: Rng,
   fairy = true,
   cost = REROLL_COST,
-  queenRound = QUEEN_OFFER_ROUND,
-  scale?: (offer: Offer) => number,
+  odds: OfferOdds = {},
 ): ShopResult {
   if (shop.gold < cost) return { ok: false, error: 'Not enough gold' };
   const { locked: _, ...rest } = shop; // rerolling unlocks
-  return {
-    ok: true,
-    shop: { ...rest, gold: shop.gold - cost, offers: rollOffers(round, rng, fairy, queenRound, scale) },
-  };
+  return { ok: true, shop: { ...rest, gold: shop.gold - cost, offers: rollOffers(round, rng, fairy, odds) } };
 }
 
 /** Locks or unlocks the shop: a locked shop keeps its offers into the next round. */
@@ -256,17 +257,10 @@ export function toggleLock(shop: Shop): Shop {
  * The shop for a new round: fresh offers, unless it was locked, in which case it keeps the offers
  * (whatever's left of them) and unlocks.
  */
-export function restock(
-  shop: Shop,
-  round: number,
-  rng: Rng,
-  fairy = true,
-  queenRound = QUEEN_OFFER_ROUND,
-  scale?: (offer: Offer) => number,
-): Shop {
+export function restock(shop: Shop, round: number, rng: Rng, fairy = true, odds: OfferOdds = {}): Shop {
   const { locked, ...rest } = shop;
   if (locked && rest.offers) return rest;
-  return { ...rest, offers: rollOffers(round, rng, fairy, queenRound, scale) };
+  return { ...rest, offers: rollOffers(round, rng, fairy, odds) };
 }
 
 // ---- two-piece merges and fusion ----

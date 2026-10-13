@@ -24,7 +24,18 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **25 rounds.** Getting through round 25 with a life left wins the run: a victory card (record, and the end-of-run summary) and a "completed" count on the Profile. By then both armies are a full board of queens, so the run ends on a high instead of fading out. The header shows "Round 12/25". 
 - **End-of-run summary:** the victory and game-over cards chart your army's points against your opponents' for each round (losses marked), with the run's best win streak and biggest army.
 - **First-run tips:** one short tip at a time above the opponent line on the shop screen (how to play, a set ready to merge, affinity pawns, interest and the lock, the opponent list), each dismissed for good with ×. Kept per device.
-- **Prestige:** the victory card offers *Prestige ★N*: start over at round 1 with the starting army and lives, one prestige level higher. Opponents get 0.25 more points per round per level, and the player picks one of three perks to keep for good (stackable ones can come up again): War chest (+2 starting gold, stacks), Squire (start with a Knight, stacks), Royal favour (queens and queen-pawns from round 4), Haggler (first reroll each round free), Second wind (+1 life), Tithe (+1 gold every round), Dynasty (a second Heir: fairy runs only, so it isn't offered without fairy pieces; the first prestige of a fairy run always offers it). The header shows ★N; the Profile shows the highest prestige. Single player only.
+- **Prestige:** the victory card offers *Prestige ★N*: start over at round 1 with the starting army and lives, one prestige level higher. Opponents get 1 more point per round per level (it was 0.25, less than any perk was worth, so each level got easier; SIMULATION.md §21), and the player picks one of three perks to keep for good (stackable ones can come up again). Each perk is a play style, tuned with the simulator to roughly double a run's score on its own:
+  - **War chest:** +10 starting gold (stacks).
+  - **Squire:** start with a Knight and a Bishop (stacks).
+  - **Tithe:** +1 gold every round.
+  - **Banker:** interest is +1 per 5 gold saved, up to +5 a round (normally per 10, up to 3). A saving strategy the simulator's stand-in can't play, so it's tuned by hand.
+  - **Haggler:** the first 3 rerolls each round are free.
+  - **Royal favour:** start with two queen-pawns; queens and queen-pawns show up from round 4 and twice as often. (A whole Queen to start was far too strong.)
+  - **Second wind:** +2 lives.
+  - **Spyglass:** see where the opponent's pieces stand while placing (only offered with Reveal off; Warlord counts it as Reveal).
+  - **Dynasty** (fairy): a second Heir, and each Heir crowned pays 9 gold back. The first prestige of a fairy run always offers it.
+  - **Bazaar** (fairy): fusion pieces show up in the shop, priced at what their parts cost.
+  The header shows ★N; the Profile shows the highest prestige. Single player only.
 - **Main menu** (the landing screen, and *Menu* in the header): *Resume game* (shown while a run or a Play it game is in progress, with its round and lives), *New game*, *Multiplayer*, and *Review your last battle*. A battle interrupted by a reload is reported here.
 - **New run window** (opens from *New game*) sets the run's settings, which are fixed for the whole run:
   - **Board (game mode):** *Growing board* (default; 5×5 growing to 9×9, see Board sizes) or *Classic* (8×8 throughout).

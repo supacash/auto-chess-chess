@@ -6,6 +6,7 @@ import {
   BASE_INCOME,
   interest,
   type Offer,
+  type OfferOdds,
   QUEEN_OFFER_ROUND,
   REROLL_COST,
   rerollOffers,
@@ -197,6 +198,11 @@ export class MatchSession implements PlacementSession {
     return this.myPerkCount('favour') > 0 ? 1 : QUEEN_OFFER_ROUND;
   }
 
+  /** How this player's offers are drawn: Royal favour's queens, weighted by what's left in the pool. */
+  private offerOdds(): OfferOdds {
+    return { queenRound: this.queenRound(), scale: poolScale(this.poolLeft()) };
+  }
+
   rerollCost(): number {
     return this.myPerkCount('haggler') > 0 && this.freeRerollRound !== this.round ? 0 : REROLL_COST;
   }
@@ -215,7 +221,7 @@ export class MatchSession implements PlacementSession {
 
   /** Fresh offers for `round`, weighted by what's left in the pool. */
   private roll(round: number): Offer[] {
-    return rollOffers(round, this.rng, this.fairy, this.queenRound(), poolScale(this.poolLeft()));
+    return rollOffers(round, this.rng, this.fairy, this.offerOdds());
   }
 
   /** This round's board (the room's mode: Classic 8×8, or Growing). */
@@ -293,15 +299,7 @@ export class MatchSession implements PlacementSession {
 
   rerollOffers(): ShopResult {
     const cost = this.rerollCost();
-    const result = rerollOffers(
-      this.shop,
-      this.round,
-      this.rng,
-      this.fairy,
-      cost,
-      this.queenRound(),
-      poolScale(this.poolLeft()),
-    );
+    const result = rerollOffers(this.shop, this.round, this.rng, this.fairy, cost, this.offerOdds());
     if (result.ok && cost === 0) this.freeRerollRound = this.round;
     return result;
   }
@@ -423,7 +421,7 @@ export class MatchSession implements PlacementSession {
       interest(this.shop.gold) +
       this.myPerkCount('tithe');
     this.shop = {
-      ...restock(this.shop, this.round, this.rng, this.fairy, this.queenRound(), poolScale(this.poolLeft())),
+      ...restock(this.shop, this.round, this.rng, this.fairy, this.offerOdds()),
       gold: this.shop.gold + earned,
     };
     this.pairings = [];

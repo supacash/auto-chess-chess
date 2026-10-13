@@ -440,7 +440,11 @@ describe('three-piece merges', () => {
 
 describe('shop lock and interest', () => {
   it('pays 1 gold per 10 saved, up to 3', () => {
-    expect([0, 9, 10, 19, 20, 35, 99].map(interest)).toEqual([0, 0, 1, 1, 2, 3, 3]);
+    expect([0, 9, 10, 19, 20, 35, 99].map((g) => interest(g))).toEqual([0, 0, 1, 1, 2, 3, 3]);
+  });
+
+  it('pays on other terms when asked (the Banker perk: 1 per 5, up to 5)', () => {
+    expect([0, 4, 5, 14, 24, 25, 99].map((g) => interest(g, 5, 5))).toEqual([0, 0, 1, 2, 4, 5, 5]);
   });
 
   it('keeps a locked shop’s offers for the next round, then unlocks it', () => {

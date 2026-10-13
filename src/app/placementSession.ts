@@ -29,6 +29,12 @@ export interface PlacementSession {
   rerollOffers(): ShopResult;
   /** What the next reroll costs (REROLL_COST unless a perk makes it free). */
   rerollCost?(): number;
+  /** How interest is paid (INTEREST_STEP and MAX_INTEREST unless a perk changes them). */
+  interestTerms?(): { step: number; max: number };
+  /** True when placement shows the opponent's pieces (the Reveal setting unless a perk adds it). */
+  revealOpponent?(): boolean;
+  /** Gold paid for crowning an Heir (a perk), 0 by default. */
+  crownGold?(): number;
   /** How many of an offer are left in a shared pool (multiplayer), or null when it isn't pooled. */
   offerLeft?(offer: Offer): number | null;
   /** Repairs squares that don't fit the current board (older saves). */

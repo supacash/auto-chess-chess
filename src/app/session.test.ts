@@ -151,6 +151,33 @@ describe('Session', () => {
     expect(again.manual).toBeNull();
   });
 
+  it('gives Haggler free rerolls each round, then charges again', () => {
+    const s = ready();
+    s.startPrestige('freeReroll');
+    s.setShop({ ...s.run.shop, gold: 5 });
+    for (const cost of [0, 0, 0, 1]) {
+      expect(s.rerollCost()).toBe(cost);
+      const r = s.rerollOffers();
+      expect(r.ok).toBe(true);
+      if (r.ok) s.setShop(r.shop);
+    }
+    expect(s.run.shop.gold).toBe(4);
+    // A new round brings more.
+    s.run = { ...s.run, round: s.run.round + 1 };
+    expect(s.rerollCost()).toBe(0);
+  });
+
+  it('shows the opponent with Spyglass or the Reveal setting, and pays Banker interest', () => {
+    const s = ready();
+    expect(s.revealOpponent()).toBe(false);
+    s.startPrestige('reveal');
+    expect(s.revealOpponent()).toBe(true);
+    s.startNewRun({ ...s.run.settings, reveal: true });
+    expect(s.revealOpponent()).toBe(true);
+    s.startPrestige('interest');
+    expect(s.interestTerms()).toEqual({ step: 5, max: 5 });
+  });
+
   it('wins the run by getting through the final round with a life left', () => {
     const s = new Session(seededRng(3));
     s.startNewRun({ ...s.run.settings, mode: 'classic' });

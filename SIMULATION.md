@@ -341,6 +341,44 @@ Same command as §19, with the ramp at 1.02–1.06 in rounds 11–15, 1.07 in ro
 - **Easy and Normal are within noise of each other on Classic** (54% each; their budgets differ by 3%), as in §19.
 - **Engine:** 2–9 battles per suite hung even after a restart (left out, counted as draws).
 
+### 21. Prestige perks and the prestige step (Growing Normal, fairy pieces, shop player, 40 runs × 25 rounds per row)
+
+`npm run sim -- --player shop --rounds 25 --games 40 --fairy both --difficulty normal --board schedule --perks <ids> [--prestige N] [--per-round X] [--save N]`. The sim applies perks through the game's own rules (prestige.ts); "+life" re-scores the same battles with one more life.
+
+| Perk (alone, prestige 0) | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|
+| None | 55% | 51% | 63% | 51% | 63% | 56% | 6.8 | 10% |
+| War chest (+10 gold) | 91% | 83% | 81% | 66% | 68% | 78% | 15.8 | 28% |
+| Squire (Knight + Bishop) | 91% | 87% | 82% | 75% | 80% | 83% | 16.4 | 35% |
+| Tithe (+1 gold a round) | 81% | 85% | 94% | 85% | 91% | 87% | 17.9 | 63% |
+| Haggler, 2 free rerolls | 68% | 67% | 83% | 76% | 84% | 75% | 11.5 | 23% |
+| Haggler, 3 free rerolls | 69% | 65% | 83% | 78% | 83% | 75% | 12.2 | 30% |
+| Royal favour, early queens only | 56% | 50% | 65% | 56% | 68% | 59% | 6.1 | 5% |
+| Royal favour + a Queen | 97% | 92% | 93% | 84% | 90% | 91% | 20.7 | 70% |
+| Royal favour + two queen-pawns | 78% | 77% | 83% | 71% | 81% | 78% | 13.0 | 25% |
+| Second wind, +1 life | (same battles as None) | | | | | 56% | 8.6 | 18% |
+| Second wind, +2 lives | 56% | 58% | 70% | 54% | 68% | 61% | 11.2 | 28% |
+| Bazaar | 62% | 58% | 67% | 58% | 74% | 63% | 9.0 | 23% |
+| Banker, saving 25 from round 3 | 24% | 12% | 73% | 85% | 98% | 58% | 1.1 | 0% |
+| Banker, saving 10 from round 3 | 30% | 29% | 64% | 67% | 82% | 54% | 2.1 | 3% |
+
+- **Early points decide runs.** A few gold or a minor piece at the start roughly doubles the stand-in's run score, because it wins the early rounds where most runs are lost.
+- **Tuned:** Royal favour's early queens alone did nothing and a starting Queen was far too much, so it starts with two queen-pawns. One more life was worth much less than the gold perks; Second wind gives two. Haggler's third free reroll adds little (the stand-in runs out of gold to spend).
+- **Not measurable here:** the stand-in only loses by saving, so Banker's numbers show the strategy, not the perk (tuned by hand). Spyglass (the stand-in ignores the opponent's placement) and Dynasty (it never crowns Heirs) aren't simulated.
+
+The prestige step (0.25 AI points per round per level) was worth about 10 points of win rate, a third of one perk, so each level got easier. Tested at higher steps:
+
+| Prestige run | AI per round | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|---|
+| ★1, War chest, step 0.75 | 6.25 | 83% | 57% | 50% | 45% | 63% | 59% | 8.3 | 0% |
+| ★1, War chest, step 1 | 6.5 | 79% | 50% | 44% | 34% | 58% | 53% | 7.1 | 0% |
+| ★1, Tithe, step 1 | 6.5 | 47% | 41% | 42% | 44% | 74% | 49% | 4.0 | 3% |
+| ★2, War chest + Tithe, step 1 | 7.5 | 70% | 44% | 32% | 42% | 78% | 53% | 5.5 | 0% |
+| ★3, War chest + Tithe + Squire, step 1 | 8.5 | 75% | 26% | 25% | 42% | 82% | 50% | 4.7 | 0% |
+
+- **Chosen: 1 point per round per level.** ★1 with a perk plays about like a fresh Normal run (run score 4–7 against 6.8), and each level after is a little harder (★2 5.5, ★3 4.7): later perks add less than the step does. Perks make the early rounds easy; the AI's extra points make rounds 6–20 the fight. Rounds 21–25 stay easy because both armies hit the full-board cap.
+- The stand-in rarely reaches round 25 here, but a player who earned a prestige builds better than it does.
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.

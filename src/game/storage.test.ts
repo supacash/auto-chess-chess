@@ -79,6 +79,16 @@ describe('parseSave', () => {
     expect(parseSave(JSON.parse(JSON.stringify(game)))).toEqual(game);
   });
 
+  it("keeps Haggler's free rerolls, and reads saves from when it gave one", () => {
+    const g: any = JSON.parse(JSON.stringify(sample()));
+    g.run.perks = ['freeReroll', 'interest', 'nope'];
+    g.run.freeRerolls = { round: 1, used: 2 };
+    expect(parseSave(g)?.run).toMatchObject({ perks: ['freeReroll', 'interest'], freeRerolls: { round: 1, used: 2 } });
+    delete g.run.freeRerolls;
+    g.run.freeRerollRound = 1;
+    expect(parseSave(g)?.run.freeRerolls).toEqual({ round: 1, used: 1 });
+  });
+
   it('rejects other versions and junk', () => {
     expect(parseSave(null)).toBeNull();
     expect(parseSave('hello')).toBeNull();

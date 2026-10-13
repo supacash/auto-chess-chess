@@ -28,7 +28,7 @@ describe('shared pawn pool', () => {
     expect(offerLeft(left, 'W')).toBe(POOL_SIZE.W - 1);
     expect(offerLeft(left, 'M')).toBeNull();
     for (let seed = 0; seed < 50; seed++) {
-      expect(rollOffers(4, seededRng(seed), true, 6, poolScale({ ...left, F: 0 }))).not.toContain('F');
+      expect(rollOffers(4, seededRng(seed), true, { scale: poolScale({ ...left, F: 0 }) })).not.toContain('F');
     }
   });
 
@@ -42,7 +42,7 @@ describe('shared pawn pool', () => {
   it('never offers a sold-out pawn, and offers scarce ones less', () => {
     const left = { ...POOL_SIZE, R: 0 };
     for (let seed = 0; seed < 50; seed++) {
-      expect(rollOffers(4, seededRng(seed), false, 6, poolScale(left))).not.toContain('PR');
+      expect(rollOffers(4, seededRng(seed), false, { scale: poolScale(left) })).not.toContain('PR');
     }
     expect(poolScale({ ...POOL_SIZE, N: POOL_SIZE.N / 2 })('PN')).toBe(0.5);
     expect(poolScale(left)('N')).toBe(1);

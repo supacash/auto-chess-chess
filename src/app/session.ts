@@ -25,7 +25,16 @@ import {
 import type { BattleResult } from '../rules/battle';
 import { difficulty, type RunSettings } from '../rules/difficulty';
 import { REROLL_COST, rerollOffers, restock, rollOffers, type Shop, type ShopResult } from '../rules/economy';
-import { maxHeirs, type PerkId, PRESTIGE_STEP, queenOfferRound } from '../rules/prestige';
+import {
+  crownGold,
+  freeRerolls,
+  interestTerms,
+  maxHeirs,
+  offerOdds,
+  type PerkId,
+  prestigePerRound,
+  revealsOpponent,
+} from '../rules/prestige';
 import { gameMode } from '../rules/mode';
 import { armyPoints, type Piece } from '../rules/pieces';
 import type { ManualState } from '../game/manualBattle';
@@ -145,7 +154,7 @@ export class Session implements PlacementSession {
         ...this.run,
         shop: {
           ...this.run.shop,
-          offers: rollOffers(this.run.round, this.rng, this.run.settings.fairy, queenOfferRound(this.run.perks)),
+          offers: rollOffers(this.run.round, this.rng, this.run.settings.fairy, offerOdds(this.run.perks)),
         },
       };
     }
@@ -189,7 +198,7 @@ export class Session implements PlacementSession {
   draftOpponent(): void {
     this.run = {
       ...this.run,
-      shop: restock(this.run.shop, this.run.round, this.rng, this.run.settings.fairy, queenOfferRound(this.run.perks)),
+      shop: restock(this.run.shop, this.run.round, this.rng, this.run.settings.fairy, offerOdds(this.run.perks)),
     };
     const spec = this.board;
     const { settings } = this.run;
@@ -199,7 +208,7 @@ export class Session implements PlacementSession {
       aiBudget(
         this.run.round,
         this.rng,
-        difficulty(settings.difficulty).perRound + PRESTIGE_STEP * this.run.prestige,
+        prestigePerRound(difficulty(settings.difficulty).perRound, this.run.prestige),
         mode.roundOneDiscount,
         mode.aiBonus,
       ),
@@ -213,26 +222,47 @@ export class Session implements PlacementSession {
     );
   }
 
-  /** Pays for a fresh set of shop offers (doesn't apply it: see setShop). */
-  /** Pays for a fresh set of offers (doesn't apply it: see setShop). Haggler makes the first one each round free. */
+  /** Pays for a fresh set of offers (doesn't apply it: see setShop). Haggler makes the first ones each round free. */
   rerollOffers(): ShopResult {
-    const free = this.rerollCost() === 0;
+    const cost = this.rerollCost();
     const result = rerollOffers(
       this.run.shop,
       this.run.round,
       this.rng,
       this.run.settings.fairy,
-      this.rerollCost(),
-      queenOfferRound(this.run.perks),
+      cost,
+      offerOdds(this.run.perks),
     );
-    if (result.ok && free) this.run = { ...this.run, freeRerollRound: this.run.round };
+    if (result.ok && cost === 0) {
+      this.run = { ...this.run, freeRerolls: { round: this.run.round, used: this.freeRerollsUsed() + 1 } };
+    }
     return result;
+  }
+
+  /** Haggler's free rerolls used this round. */
+  private freeRerollsUsed(): number {
+    const { freeRerolls: used, round } = this.run;
+    return used?.round === round ? used.used : 0;
   }
 
   /** What the next reroll costs this round. */
   rerollCost(): number {
-    const { perks, freeRerollRound, round } = this.run;
-    return perks.includes('freeReroll') && freeRerollRound !== round ? 0 : REROLL_COST;
+    return this.freeRerollsUsed() < freeRerolls(this.run.perks) ? 0 : REROLL_COST;
+  }
+
+  /** How interest is paid this run (Banker changes it). */
+  interestTerms(): { step: number; max: number } {
+    return interestTerms(this.run.perks);
+  }
+
+  /** True when placement shows the opponent's pieces: the Reveal setting, or Spyglass. */
+  revealOpponent(): boolean {
+    return this.run.settings.reveal || revealsOpponent(this.run.perks);
+  }
+
+  /** Gold paid for crowning an Heir (Dynasty). */
+  crownGold(): number {
+    return crownGold(this.run.perks);
   }
 
   /** Starts the next prestige level after a won run, keeping the perks plus `picked`. */
