@@ -23,6 +23,7 @@ import {
   fuseSet,
   isAffinityOffer,
   type Offer,
+  type OfferOdds,
   offerPrice,
   REROLL_COST,
   rerollOffers,
@@ -84,9 +85,27 @@ function bestMerge(shop: Shop, full: boolean, fairy: boolean): Shop | null {
   return null;
 }
 
-export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec, fairy = false, round = 1): Shop {
+/** How a prestige run changes the stand-in's shopping: its perks' offer odds and free rerolls, and gold it saves. */
+export interface SpendOptions {
+  odds?: OfferOdds;
+  freeRerolls?: number;
+  /** Gold kept unspent (for interest). */
+  reserve?: number;
+}
+
+export function spendGold(
+  start: Shop,
+  style: AiStyle,
+  rng: Rng,
+  spec: BoardSpec,
+  fairy = false,
+  round = 1,
+  { odds = {}, freeRerolls = 0, reserve = 0 }: SpendOptions = {},
+): Shop {
   let shop = start;
   let rerolls = 0;
+  /** Gold it's willing to spend. */
+  const spendable = () => shop.gold - reserve;
   const like = (t: PieceType) => style.weights[t] ?? 0.1;
   for (;;) {
     const offers = shop.offers ?? [];
@@ -105,7 +124,7 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
     const sets = new Set(shop.pieces.flatMap((p) => (p.affinity ? [p.affinity] : [])));
     const candidates = offers
       .map((o, i) => ({ o, i, a: affinityOf(o) }))
-      .filter((c): c is { o: Offer; i: number; a: Affinity } => c.a !== null && offerPrice(c.o) <= shop.gold)
+      .filter((c): c is { o: Offer; i: number; a: Affinity } => c.a !== null && offerPrice(c.o) <= spendable())
       .filter((c) => sets.has(c.a) || sets.size < MAX_SETS);
     if (candidates.length > 0) {
       const best = candidates.reduce((x, y) =>
@@ -124,7 +143,7 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
       .map((o, i) => ({ o, i }))
       .filter(
         ({ o }) =>
-          !isAffinityOffer(o) && offerPrice(o) <= shop.gold && !full && (!isPawnLike(o as PieceType) || wantPawn),
+          !isAffinityOffer(o) && offerPrice(o) <= spendable() && !full && (!isPawnLike(o as PieceType) || wantPawn),
       );
     if (pieces.length > 0) {
       const score = (o: Offer) => (isPawnLike(o as PieceType) ? 1 : like(o as PieceType));
@@ -139,7 +158,7 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
     // Gold upgrades: a plain pawn into the minor piece the style likes.
     const plainPawn = shop.pieces.find((p) => p.type === 'P' && !p.affinity);
     if (plainPawn && rerolls >= MAX_REROLLS) {
-      const options = UPGRADES.P.filter((to) => upgradeCost('P', to) <= shop.gold);
+      const options = UPGRADES.P.filter((to) => upgradeCost('P', to) <= spendable());
       if (options.length > 0) {
         const to = weightedPick(options, like, rng);
         const r = upgradePiece(shop, plainPawn.id, to);
@@ -156,7 +175,7 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
         .filter((p) => p.type !== 'K' && !p.affinity)
         .reduce<Piece | null>((a, b) => (!a || PIECE_VALUE[b.type] < PIECE_VALUE[a.type] ? b : a), null);
       if (cheapest) {
-        const budget = shop.gold + sellValue(cheapest);
+        const budget = spendable() + sellValue(cheapest);
         const better = offers
           .map((o, i) => ({ o, i }))
           .filter(
@@ -178,9 +197,10 @@ export function spendGold(start: Shop, style: AiStyle, rng: Rng, spec: BoardSpec
       }
     }
 
-    // Spare gold: reroll for new offers.
-    if (rerolls < MAX_REROLLS && shop.gold >= REROLL_COST + REROLL_RESERVE) {
-      const r = rerollOffers(shop, round, rng, fairy);
+    // Spare gold: reroll for new offers (Haggler's first ones are free).
+    const cost = rerolls < freeRerolls ? 0 : REROLL_COST;
+    if (rerolls < MAX_REROLLS && spendable() >= cost + REROLL_RESERVE) {
+      const r = rerollOffers(shop, round, rng, fairy, cost, odds);
       if (r.ok) {
         rerolls++;
         shop = r.shop;

@@ -1,5 +1,5 @@
 import type { Winner } from './battle';
-import { BENCH_SIZE, benchCount, MAX_HEIRS, MAX_STACKMEN } from './placement';
+import { BENCH_SIZE, benchCount, MAX_HEIRS } from './placement';
 import {
   type Affinity,
   AFFINITIES,
@@ -53,22 +53,40 @@ export function upgradeCost(from: PieceType, to: PieceType): number {
 }
 
 /**
- * Value − 1 (an affinity pawn: its price − 1). Fused pieces lose 1 per part, so fusing then selling
- * pays the same as selling both parts.
+ * Gold above a piece's value that it costs in the shop. The Wazir fights like a 1-point piece but
+ * costs 2, so a Man costs 3 gold however it's made (a Ferz and a Wazir, or bought).
+ */
+const PRICE_PREMIUM: Partial<Record<PieceType, number>> = { W: 1 };
+
+/**
+ * What a piece costs in gold: its value, plus any PRICE_PREMIUM. A two-piece fusion costs no more
+ * than its parts, so buying one (the Bazaar perk) costs the same as fusing it, and fusing and selling
+ * never makes gold (an Archbishop is worth 7 but costs a Knight and a Bishop, 6).
+ */
+export function piecePrice(type: PieceType): number {
+  const own = PIECE_VALUE[type] + (PRICE_PREMIUM[type] ?? 0);
+  const recipe = FUSIONS.find((f) => f.result === type);
+  return recipe ? Math.min(own, piecePrice(recipe.parts[0]) + piecePrice(recipe.parts[1])) : own;
+}
+
+/**
+ * What a piece is worth, as in other auto-battlers: its price (an affinity pawn's too). Plain pawns
+ * are only ever the free starting pawns, so they sell for nothing.
  */
 export function sellValue(piece: PieceType | Pick<Piece, 'type' | 'affinity'>): number {
   const { type, affinity } = typeof piece === 'string' ? { type: piece, affinity: undefined } : piece;
-  if (type === 'K') return 0;
-  if (affinity) return AFFINITY_PRICE[affinity] - 1;
-  return Math.max(0, PIECE_VALUE[type] - (PIECES[type].group === 'fusion' ? 2 : 1));
+  if (affinity) return AFFINITY_PRICE[affinity];
+  if (type === 'K' || type === 'J' || type === 'P') return 0;
+  return piecePrice(type);
 }
 
 /** Interest: +1 gold per INTEREST_STEP gold saved, up to MAX_INTEREST, paid with each round's income. */
 export const INTEREST_STEP = 10;
 export const MAX_INTEREST = 3;
 
-export function interest(gold: number): number {
-  return Math.min(MAX_INTEREST, Math.floor(Math.max(0, gold) / INTEREST_STEP));
+/** Interest on `gold`: +1 per `step` saved, up to `max` (the Banker perk changes both). */
+export function interest(gold: number, step = INTEREST_STEP, max = MAX_INTEREST): number {
+  return Math.min(max, Math.floor(Math.max(0, gold) / step));
 }
 
 export function roundIncome(winner: Winner): number {
@@ -130,9 +148,9 @@ export function isOffer(value: unknown): value is Offer {
   return typeof value === 'string' && (value in PIECES || isAffinityOffer(value as Offer));
 }
 
-/** What an offer costs: a piece's value, or an affinity pawn's price. */
+/** What an offer costs: a piece's price, or an affinity pawn's. */
 export function offerPrice(offer: Offer): number {
-  return isAffinityOffer(offer) ? AFFINITY_PRICE[offer[1] as Affinity] : PIECE_VALUE[offer];
+  return isAffinityOffer(offer) ? AFFINITY_PRICE[offer[1] as Affinity] : piecePrice(offer);
 }
 
 export function offerName(offer: Offer): string {
@@ -154,16 +172,16 @@ export const OFFER_WEIGHTS: Partial<Record<Offer, number>> = {
   PR: 2,
   PQ: 1.2,
   E: 2,
-  F: 2,
-  W: 2,
-  M: 1.2,
+  F: 1, // Ferz, Wazir and Man were in most shops; they're rarer so the other fairy pieces show up
+  W: 1,
+  M: 0.8,
   L: 1.2,
   X: 1.5,
   N: 0.5,
   B: 0.5,
   R: 0.3,
   Q: 0.15,
-  Y: 0.15, // the Stackman: the one fusion piece the shop sells (fairy, from round 4 at 9 gold)
+  Y: 0.1, // the Stackman: the one fusion piece the shop sells (fairy, from round 4, at its value)
 };
 
 /** Queens and queen-pawns are offered from this round on. */
@@ -174,24 +192,26 @@ export function maxOfferCost(round: number): number {
   return 2 + 2 * round;
 }
 
-/**
- * A fresh set of offers for `round`. Without `fairy`, standard pieces (and affinity pawns) only.
- * `queenRound` is when queens and queen-pawns start showing up (earlier with a prestige perk).
- * `scale` multiplies each offer's chance (multiplayer: by how much of it is left in the shared pool).
- */
-export function rollOffers(
-  round: number,
-  rng: Rng,
-  fairy = true,
-  queenRound = QUEEN_OFFER_ROUND,
-  scale: (offer: Offer) => number = () => 1,
-): Offer[] {
-  const pool = (Object.keys(OFFER_WEIGHTS) as Offer[]).filter((o) => {
+/** How offers are drawn when something changes the defaults: a prestige perk, or the multiplayer pool. */
+export interface OfferOdds {
+  /** Queens and queen-pawns show up from this round on (QUEEN_OFFER_ROUND by default). */
+  queenRound?: number;
+  /** Multiplies each offer's chance (multiplayer: how much of it is left in the shared pool). */
+  scale?: (offer: Offer) => number;
+  /** Offers the shop doesn't normally stock, with their weights (the Bazaar perk's fusion pieces). */
+  extra?: Partial<Record<Offer, number>>;
+}
+
+/** A fresh set of offers for `round`. Without `fairy`, standard pieces (and affinity pawns) only. */
+export function rollOffers(round: number, rng: Rng, fairy = true, odds: OfferOdds = {}): Offer[] {
+  const { queenRound = QUEEN_OFFER_ROUND, scale = () => 1, extra } = odds;
+  const weights = extra ? { ...OFFER_WEIGHTS, ...extra } : OFFER_WEIGHTS;
+  const pool = (Object.keys(weights) as Offer[]).filter((o) => {
     const queen = o === 'Q' || o === 'PQ';
     const standard = isAffinityOffer(o) || PIECES[o].group === 'standard';
     return offerPrice(o) <= maxOfferCost(round) && (!queen || round >= queenRound) && (fairy || standard);
   });
-  return Array.from({ length: OFFER_COUNT }, () => weightedPick(pool, (o) => (OFFER_WEIGHTS[o] ?? 0) * scale(o), rng));
+  return Array.from({ length: OFFER_COUNT }, () => weightedPick(pool, (o) => (weights[o] ?? 0) * scale(o), rng));
 }
 
 /** Buys offer number `index` onto the bench for its price in gold. */
@@ -203,7 +223,6 @@ export function buyOffer(shop: Shop, index: number): ShopResult {
   }
   const price = offerPrice(offer);
   if (shop.gold < price) return { ok: false, error: 'Not enough gold' };
-  if (offer === 'Y' && !canHaveStackman(shop)) return { ok: false, error: 'An army can have only one Stackman' };
   return {
     ok: true,
     shop: {
@@ -222,15 +241,11 @@ export function rerollOffers(
   rng: Rng,
   fairy = true,
   cost = REROLL_COST,
-  queenRound = QUEEN_OFFER_ROUND,
-  scale?: (offer: Offer) => number,
+  odds: OfferOdds = {},
 ): ShopResult {
   if (shop.gold < cost) return { ok: false, error: 'Not enough gold' };
   const { locked: _, ...rest } = shop; // rerolling unlocks
-  return {
-    ok: true,
-    shop: { ...rest, gold: shop.gold - cost, offers: rollOffers(round, rng, fairy, queenRound, scale) },
-  };
+  return { ok: true, shop: { ...rest, gold: shop.gold - cost, offers: rollOffers(round, rng, fairy, odds) } };
 }
 
 /** Locks or unlocks the shop: a locked shop keeps its offers into the next round. */
@@ -242,17 +257,10 @@ export function toggleLock(shop: Shop): Shop {
  * The shop for a new round: fresh offers, unless it was locked, in which case it keeps the offers
  * (whatever's left of them) and unlocks.
  */
-export function restock(
-  shop: Shop,
-  round: number,
-  rng: Rng,
-  fairy = true,
-  queenRound = QUEEN_OFFER_ROUND,
-  scale?: (offer: Offer) => number,
-): Shop {
+export function restock(shop: Shop, round: number, rng: Rng, fairy = true, odds: OfferOdds = {}): Shop {
   const { locked, ...rest } = shop;
   if (locked && rest.offers) return rest;
-  return { ...rest, offers: rollOffers(round, rng, fairy, queenRound, scale) };
+  return { ...rest, offers: rollOffers(round, rng, fairy, odds) };
 }
 
 // ---- two-piece merges and fusion ----
@@ -272,7 +280,7 @@ export const FUSIONS: FusionRecipe[] = [
   { parts: ['N', 'R'], result: 'C' }, // Chancellor
   { parts: ['N', 'Q'], result: 'Z' }, // Amazon
   { parts: ['N', 'M'], result: 'T' }, // Centaur (the Man stands in for the king)
-  { parts: ['F', 'W'], result: 'M' }, // Man: diagonal and straight steps together (worth 3 from 1 + 1)
+  { parts: ['F', 'W'], result: 'M' }, // Man: diagonal and straight steps together (worth 3 from 1 + 1; 3 gold)
   { parts: ['R', 'F'], result: 'D' }, // Dragon King
   { parts: ['B', 'W'], result: 'H' }, // Dragon Horse
   { parts: ['N', 'L'], result: 'U' }, // Wildebeest
@@ -350,19 +358,6 @@ export function canMakeHeir(shop: Shop, fairy: boolean, maxHeirs = MAX_HEIRS): b
   return fairy && shop.pieces.filter((p) => p.type === 'J').length < maxHeirs;
 }
 
-/** Gold a three-Men merge into a Stackman costs (the other merges are free): it was too cheap to stack. */
-export const STACKMAN_MERGE_COST = 3;
-
-/** True while the army has room for a Stackman (MAX_STACKMEN). */
-export function canHaveStackman(shop: Shop): boolean {
-  return shop.pieces.filter((p) => p.type === 'Y').length < MAX_STACKMEN;
-}
-
-/** What a three-piece merge into `result` costs in gold. */
-export function setMergeCost(result: PieceType): number {
-  return result === 'Y' ? STACKMAN_MERGE_COST : 0;
-}
-
 /** What three pieces can merge into (empty if they can't). `heir`: three Queens may become an Heir (canMakeHeir). */
 export function setMergeResults(parts: MergePart[], heir = false): PieceType[] {
   if (parts.length !== SET_MERGE_SIZE) return [];
@@ -431,16 +426,12 @@ export function fuseSet(shop: Shop, ids: string[], result: PieceType, fairy = fa
   const pieces = chosen as Piece[];
   if (!setMergeResults(pieces, canMakeHeir(shop, fairy, maxHeirs)).includes(result))
     return { ok: false, error: `Those pieces can't become a ${PIECE_NAME[result]}` };
-  if (result === 'Y' && !canHaveStackman(shop)) return { ok: false, error: 'An army can have only one Stackman' };
-  const cost = setMergeCost(result);
-  if (shop.gold < cost) return { ok: false, error: `Stacking three Men costs ${cost} gold` };
   const pieceId = (pieces.find((p) => p.square) ?? pieces[0]).id;
   const used = new Set(ids.filter((id) => id !== pieceId));
   return {
     ok: true,
     shop: {
       ...shop,
-      gold: shop.gold - cost,
       pieces: shop.pieces
         .filter((p) => !used.has(p.id))
         .map((p) => (p.id === pieceId ? { id: p.id, type: result, square: result === 'J' ? null : p.square } : p)),

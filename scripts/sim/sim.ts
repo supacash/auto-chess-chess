@@ -26,15 +26,24 @@ import { type BoardSpec, plyLimit } from '../../src/chess/boardSpec';
 import { gameMode } from '../../src/rules/mode';
 import { difficulty, isDifficultyId } from '../../src/rules/difficulty';
 import { type BattleLimits, type BattleResult, material } from '../../src/rules/battle';
-import { interest, rollOffers, roundIncome, START_GOLD, startingShop } from '../../src/rules/economy';
+import { offerPiece, rollOffers, roundIncome, startingShop } from '../../src/rules/economy';
 import { type Piece, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
+import {
+  extraIncome,
+  freeRerolls,
+  isPerkId,
+  offerOdds,
+  perkInterest,
+  prestigePerRound,
+  startGold,
+  startPieces,
+} from '../../src/rules/prestige';
+import { maxLives } from '../../src/rules/run';
 import { randomInt, seededRng } from '../../src/rules/rng';
 import { formatMargin, meanMargin } from './stats';
 import { loadRulesForNode } from '../../src/chess/testRules';
 import { EngineFailure, NodeEngine } from './nodeEngine';
 import { armyValue, spendGold } from './shopPlayer';
-
-const LIVES = 3;
 
 const { values: opts } = parseArgs({
   options: {
@@ -57,6 +66,9 @@ const { values: opts } = parseArgs({
     side: { type: 'string', default: 'white' },
     'per-round': { type: 'string' },
     'black-discount': { type: 'string' },
+    perks: { type: 'string', default: '' },
+    prestige: { type: 'string', default: '0' },
+    save: { type: 'string', default: '0' },
     json: { type: 'boolean', default: false },
   },
 });
@@ -100,8 +112,23 @@ const PLAYER_FAIRY = FAIRY === 'both';
 /** `--difficulty easy|normal|hard`: the AI's points per round, as in the New run window. */
 const DIFFICULTY = opts.difficulty!;
 if (!isDifficultyId(DIFFICULTY)) throw new Error('--difficulty must be easy, normal or hard');
-/** `--per-round N` overrides the difficulty's AI points per round (for tuning). */
-const PER_ROUND = opts['per-round'] ? Number(opts['per-round']) : difficulty(DIFFICULTY).perRound;
+/** `--prestige N`: the AI's points per round at prestige level N (prestige.ts). */
+const PRESTIGE = Number(opts.prestige);
+if (!(PRESTIGE >= 0)) throw new Error('--prestige must be a level (0 or more)');
+/** `--per-round N` overrides the difficulty's AI points per round (for tuning); prestige adds to it. */
+const PER_ROUND = prestigePerRound(
+  opts['per-round'] ? Number(opts['per-round']) : difficulty(DIFFICULTY).perRound,
+  PRESTIGE,
+);
+/** `--perks gold,income,...`: the shop player's prestige perks (prestige.ts), applied as in the game. */
+const perkArgs = opts.perks ? opts.perks.split(',') : [];
+const badPerk = perkArgs.find((p) => !isPerkId(p));
+if (badPerk) throw new Error(`--perks: unknown perk ${badPerk}`);
+const PERKS = perkArgs.filter(isPerkId);
+if (PERKS.length && PLAYER !== 'shop') throw new Error('--perks needs --player shop');
+/** `--save N`: the shop player keeps N gold unspent from round 3 on (an interest strategy, e.g. with Banker). */
+const SAVE = Number(opts.save);
+const LIVES = maxLives(PERKS);
 /** `--black-discount F` overrides how much smaller the AI is when the player is Black (0 = none). */
 const BLACK = opts['black-discount'] ? Number(opts['black-discount']) : BLACK_DISCOUNT;
 /** `--side white|black|random`: who moves first (the player as White moves first, the game's default). */
@@ -156,9 +183,16 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
   const records: GameRecord[] = [];
   const rejected: RejectedRecord[] = [];
   const runStyle = PLAYER_STYLE === 'random' ? pickStyle(rng) : AI_STYLES.find((s) => s.id === PLAYER_STYLE)!;
-  let playerPoints = MODE.startArmy.reduce((s, t) => s + PIECE_VALUE[t], 0) + START_GOLD + MODE.extraGold;
+  const gifts = startPieces(PERKS).map(offerPiece);
+  let playerPoints =
+    [...MODE.startArmy, ...gifts.map((p) => p.type)].reduce((s, t) => s + PIECE_VALUE[t], 0) +
+    startGold(PERKS) +
+    MODE.extraGold;
   let shop = startingShop(MODE.startArmy);
-  shop = { ...shop, gold: shop.gold + MODE.extraGold };
+  shop = { gold: startGold(PERKS) + MODE.extraGold, pieces: [...shop.pieces, ...gifts] };
+  /** Income after a battle, as in the game (run.battleIncome): round income, Tithe, interest. */
+  const income = (winner: BattleResult['winner'], gold: number) =>
+    roundIncome(winner) + extraIncome(PERKS) + perkInterest(gold, PERKS);
 
   for (let round = 1; round <= ROUNDS; round++) {
     const spec = boardFor(round);
@@ -171,12 +205,13 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     let playerTypes: PieceType[];
     if (PLAYER === 'shop') {
       shop = spendGold(
-        { ...shop, offers: rollOffers(round, rng, PLAYER_FAIRY) },
+        { ...shop, offers: rollOffers(round, rng, PLAYER_FAIRY, offerOdds(PERKS)) },
         runStyle,
         rng,
         spec,
         PLAYER_FAIRY,
         round,
+        { odds: offerOdds(PERKS), freeRerolls: freeRerolls(PERKS), reserve: round >= 3 ? SAVE : 0 },
       );
       playerPoints = armyValue(shop);
       playerTypes = shop.pieces.map((p) => p.type);
@@ -226,7 +261,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       const side = e.kind === 'hung' ? null : /WHITE/.test(e.detail) ? 'player' : 'AI';
       rejected.push({ kind: e.kind, round, plies, fen: e.fen, side });
       playerPoints += roundIncome('draw');
-      shop = { ...shop, gold: shop.gold + roundIncome('draw') + interest(shop.gold) };
+      shop = { ...shop, gold: shop.gold + income('draw', shop.gold) };
       onGame();
       continue;
     }
@@ -243,8 +278,8 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       peakLeader,
     });
     playerPoints += roundIncome(result.winner);
-    // As in the game: income plus interest on the gold saved (see economy.interest).
-    shop = { ...shop, gold: shop.gold + roundIncome(result.winner) + interest(shop.gold) };
+    // As in the game: income plus interest on the gold saved (see run.battleIncome).
+    shop = { ...shop, gold: shop.gold + income(result.winner, shop.gold) };
   }
   return { games: records, rejected };
 }
@@ -359,23 +394,29 @@ function report(records: RunRecord[]): string {
     reasons.set(g.result.reason, (reasons.get(g.result.reason) ?? 0) + 1);
   }
 
-  // Run score as the game would count it: rounds won before the LIVES-th loss.
-  const scores = runs.map((rs) => {
-    let lives = LIVES;
-    let score = 0;
-    for (const g of rs) {
-      if (g.result.winner === 'w') score++;
-      else if (g.result.winner === 'b' && --lives === 0) break;
-    }
-    return { score, survived: lives > 0 };
-  });
+  // Run score as the game would count it: rounds won before the last life is lost.
+  const runScores = (startLives: number) =>
+    runs.map((rs) => {
+      let lives = startLives;
+      let score = 0;
+      for (const g of rs) {
+        if (g.result.winner === 'w') score++;
+        else if (g.result.winner === 'b' && --lives === 0) break;
+      }
+      return { score, survived: lives > 0 };
+    });
+  const scores = runScores(LIVES);
   const avgScore = scores.reduce((s, x) => s + x.score, 0) / scores.length;
   const scoreMargin = meanMargin(scores.map((x) => x.score));
+  // The same battles with one more life (what Second wind would add).
+  const moreLife = runScores(LIVES + 1);
+  const avgMoreLife = moreLife.reduce((s, x) => s + x.score, 0) / moreLife.length;
 
   const out = [
     `Auto Chess² sim — ${RUNS} runs × ${ROUNDS} rounds, seed ${SEED}, depth ${DEPTH ?? SEARCH_DEPTH}, ` +
       `mode ${MODE.name}, ply limit ${PLY_OVERRIDE ?? '10 × size + 10'}${DECISIVE ? `, decisive lead ${DECISIVE[0]} for ${DECISIVE[1]} plies` : ''}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
-      `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round ±1` : `6×round${MODE.aiBonus ? ` + ${MODE.aiBonus}` : ''} ±1 (round 1: −${MODE.roundOneDiscount})`}`,
+      `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round ±1` : `${PER_ROUND}×round × ramp${MODE.aiBonus ? ` + ${MODE.aiBonus}` : ''} ±1 (round 1: −${MODE.roundOneDiscount})`}` +
+      `${PRESTIGE ? `, prestige ${PRESTIGE}` : ''}${PERKS.length ? `, perks ${PERKS.join(',')}` : ''}${SAVE ? `, saves ${SAVE} gold from round 3` : ''}`,
     'W/D/L are from the player\'s side. "lead≥N" = games where a side was ever ≥N points of material ahead;',
     '"no mate"/"no win" = share of those where that side failed to checkmate / failed to win at all.',
     '"±win" = 95% margin of error on the win rate, in points. Treat gaps smaller than the margins as noise.',
@@ -388,7 +429,9 @@ function report(records: RunRecord[]): string {
     table('Total', [['all', total]]),
     `\nEnd reasons: ${[...reasons.entries()].map(([r, n]) => `${r} ${pct(n, games.length)}`).join(', ')}`,
     `Run score (wins before ${LIVES} losses): avg ${avgScore.toFixed(2)} ±${scoreMargin.toFixed(2)}, ` +
-      `${pct(scores.filter((s) => s.survived).length, scores.length)} of runs still alive after round ${ROUNDS}`,
+      `${pct(scores.filter((s) => s.survived).length, scores.length)} of runs still alive after round ${ROUNDS}` +
+      `\nWith one more life: avg ${avgMoreLife.toFixed(2)}, ` +
+      `${pct(moreLife.filter((s) => s.survived).length, moreLife.length)} alive after round ${ROUNDS}`,
   ];
   const all = games.length + rejected.length;
   const refused = rejected.filter((r) => r.kind === 'rejected');

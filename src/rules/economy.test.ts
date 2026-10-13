@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  canHaveStackman,
   canMakeHeir,
-  STACKMAN_MERGE_COST,
   AFFINITY_PRICE,
   buyOffer,
   fuseDefaultSet,
@@ -13,6 +11,7 @@ import {
   toggleLock,
   isAffinityOffer,
   offerPrice,
+  piecePrice,
   fusionOptions,
   fusionResults,
   QUEEN_OFFER_ROUND,
@@ -132,11 +131,36 @@ describe('upgradePiece', () => {
 });
 
 describe('sellPiece', () => {
-  it('refunds value minus 1 and removes the piece', () => {
+  it('refunds what the piece is worth and removes it', () => {
     const rook = makePiece('R', { file: 0, rank: 0 });
     const shop = ok(sellPiece({ gold: 0, pieces: [rook] }, rook.id));
-    expect(shop).toEqual({ gold: 4, pieces: [] });
+    expect(shop).toEqual({ gold: 5, pieces: [] });
+    expect(sellValue('E')).toBe(1);
+    expect(sellValue('Y')).toBe(9);
+  });
+
+  it('sells plain pawns (the free starting pawns) for nothing', () => {
     expect(sellValue('P')).toBe(0);
+  });
+
+  it('prices the Wazir at 2 gold although it is worth 1 point, and refunds the 2', () => {
+    expect(PIECES.W.value).toBe(1);
+    expect(piecePrice('W')).toBe(2);
+    expect(offerPrice('W')).toBe(2);
+    expect(sellValue('W')).toBe(2);
+    expect(piecePrice('F') + piecePrice('W')).toBe(piecePrice('M')); // a Man costs 3 either way
+  });
+
+  it('never sells a fusion for more than its parts', () => {
+    expect(sellValue('A')).toBe(6); // worth 7, made from a Knight and a Bishop
+    expect(sellValue('D')).toBe(6); // worth 7, a Rook and a Ferz
+    expect(sellValue('T')).toBe(5); // worth 5, less than a Knight and a Man
+    expect(sellValue('M')).toBe(3); // a Ferz (1 gold) and a Wazir (2)
+    expect(sellValue('H')).toBe(5); // a Bishop and a Wazir
+  });
+
+  it('never sells the Heir', () => {
+    expect(sellValue('J')).toBe(0);
   });
 
   it('never sells the king', () => {
@@ -185,20 +209,16 @@ describe('shop offers', () => {
     expect(seen(8, false)).toBe(false);
   });
 
-  it('stacks three Men into one Stackman for 3 gold, and only one per army', () => {
-    const men = (gold: number, extra: PieceType[] = []): Shop => ({
-      gold,
+  it('stacks three Men into a Stackman for free, as many as the army likes', () => {
+    const men = (extra: PieceType[] = []): Shop => ({
+      gold: 0,
       pieces: [...(['K', 'M', 'M', 'M', ...extra] as PieceType[]).map((t) => makePiece(t))],
     });
-    const shop = men(5);
-    const result = fuseDefaultSet(shop, shop.pieces[1].id, 'Y', true);
-    expect(result.ok && result.shop.gold).toBe(5 - STACKMAN_MERGE_COST);
-    expect(result.ok && result.shop.pieces.filter((p) => p.type === 'Y')).toHaveLength(1);
-    expect(fuseDefaultSet(men(2), men(2).pieces[1].id, 'Y', true).ok).toBe(false); // can't pay
-    const has = men(9, ['Y']);
-    expect(canHaveStackman(has)).toBe(false);
-    expect(fuseDefaultSet(has, has.pieces[1].id, 'Y', true).ok).toBe(false);
-    expect(buyOffer({ ...has, offers: ['Y'] }, 0)).toMatchObject({ ok: false });
+    const has = men(['Y']);
+    const result = fuseDefaultSet(has, has.pieces[1].id, 'Y', true);
+    expect(result.ok && result.shop.gold).toBe(0);
+    expect(result.ok && result.shop.pieces.filter((p) => p.type === 'Y')).toHaveLength(2);
+    expect(buyOffer({ ...has, gold: 9, offers: ['Y'] }, 0).ok).toBe(true);
   });
 
   it('rolls OFFER_COUNT affordable-tier pieces, never kings or fusion pieces (but the Stackman)', () => {
@@ -252,14 +272,14 @@ describe('shop offers', () => {
     expect(offers.filter((o) => o === 'R' || o === 'Q').length / offers.length).toBeLessThan(0.1);
   });
 
-  it('sells affinity pawns at their price: rook-pawns 2 gold, queen-pawns 3', () => {
+  it('buys and sells affinity pawns at their price: rook-pawns 2 gold, queen-pawns 3', () => {
     expect(AFFINITY_PRICE).toEqual({ N: 1, B: 1, R: 2, Q: 3 });
     const shop: Shop = { gold: 5, pieces: [makePiece('K')], offers: ['PR', 'PQ'] };
     const next = ok(buyOffer(shop, 0));
     expect(next.gold).toBe(3);
     expect(next.pieces.at(-1)).toMatchObject({ type: 'P', affinity: 'R', square: null });
-    expect(sellValue(next.pieces.at(-1)!)).toBe(1);
-    expect(sellValue(makePiece('P', null, 'Q'))).toBe(2);
+    expect(sellValue(next.pieces.at(-1)!)).toBe(2);
+    expect(sellValue(makePiece('P', null, 'Q'))).toBe(3);
   });
 
   it('holds back rooks until round 2 and queens until round 6', () => {
@@ -420,7 +440,11 @@ describe('three-piece merges', () => {
 
 describe('shop lock and interest', () => {
   it('pays 1 gold per 10 saved, up to 3', () => {
-    expect([0, 9, 10, 19, 20, 35, 99].map(interest)).toEqual([0, 0, 1, 1, 2, 3, 3]);
+    expect([0, 9, 10, 19, 20, 35, 99].map((g) => interest(g))).toEqual([0, 0, 1, 1, 2, 3, 3]);
+  });
+
+  it('pays on other terms when asked (the Banker perk: 1 per 5, up to 5)', () => {
+    expect([0, 4, 5, 14, 24, 25, 99].map((g) => interest(g, 5, 5))).toEqual([0, 0, 1, 2, 4, 5, 5]);
   });
 
   it('keeps a locked shop’s offers for the next round, then unlocks it', () => {

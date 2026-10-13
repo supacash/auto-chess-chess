@@ -57,7 +57,7 @@ function openPrestige(): void {
   const owned = session.run.perks.map(perk);
   prestigeDialog.open(
     session.run.prestige + 1,
-    perkChoices(session.run.perks, rng, 3, session.run.settings.fairy),
+    perkChoices(session.run.perks, rng, 3, session.run.settings.fairy, session.run.settings.reveal),
     owned,
     (id) => {
       session.startPrestige(id);
@@ -347,6 +347,8 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
     $<HTMLButtonElement>('#menu-button').disabled = !session.manual;
     const result = await play(loaded);
     const settings = session.run.settings;
+    // Spyglass shows the opponent's placement like the Reveal setting (Warlord needs neither).
+    const revealed = session.revealOpponent();
     const outcome = session.finishBattle(result);
     // A run lost on lives can be revived once with a rewarded ad (Android app): it's only recorded
     // as ended once the player moves on without reviving.
@@ -354,7 +356,7 @@ async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promis
     const endRun = () => records.runEnd(settings, outcome.score, outcome.won, outcome.prestige);
     if (offerRevive) pendingRunEnd = endRun;
     else if (outcome.over) endRun();
-    records.unlock(runAchievements(outcome.won, outcome.record.l, settings));
+    records.unlock(runAchievements(outcome.won, outcome.record.l, { ...settings, reveal: revealed }));
     renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
     battle.showAwards(battleAwards);

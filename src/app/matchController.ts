@@ -895,7 +895,7 @@ export class MatchController {
         const classes = ['player', p.id === m.myId ? 'me' : '', p.place !== null && p.place > 1 ? 'out' : '']
           .filter(Boolean)
           .join(' ');
-        const badge = p.place !== null ? `<span class="place">${ordinal(p.place)}</span>` : '';
+        const badge = p.place !== null ? `<span class="place">${escapeHtml(ordinal(p.place))}</span>` : '';
         const hit = lost && m.phase === 'shop' ? `<span class="hit">−${lost}</span>` : '';
         const isReady =
           this.online && !p.bot && m.phase === 'shop' && ready[p.id] === m.round ? ' <small>✓ ready</small>' : '';

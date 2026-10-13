@@ -10,7 +10,6 @@ import { dismissTip, seenTips } from '../game/storage';
 import { nextTip, TIPS, type TipId } from '../game/tips';
 import {
   buyOffer,
-  canHaveStackman,
   canMakeHeir,
   fusePieces,
   INTEREST_STEP,
@@ -26,7 +25,6 @@ import {
   pieceName,
   REROLL_COST,
   SET_MERGE_SIZE,
-  setMergeCost,
   setMergePartners,
   setMergeResults,
   type ShopResult,
@@ -130,9 +128,14 @@ export class PlacementScreen {
         if (fused.ok) this.onCollect?.('fused', [to]);
       } else if (btn.dataset.mergeSet) {
         const to = btn.dataset.mergeSet as PieceType;
-        const merged = fuseDefaultSet(shop, this.selected, to, this.session.run.settings.fairy, this.maxHeirs());
+        const bonus = to === 'J' ? (this.session.crownGold?.() ?? 0) : 0;
+        const merged = crownBonus(
+          fuseDefaultSet(shop, this.selected, to, this.session.run.settings.fairy, this.maxHeirs()),
+          bonus,
+        );
         this.applyShop(merged, to);
         if (merged.ok) this.onAchievements?.(mergeAchievements(to, merged.shop.pieces));
+        if (merged.ok && bonus > 0) this.setMessage(`Dynasty: +${bonus} gold for the crowning.`);
       } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
       // The result of a merge, fusion or upgrade isn't left selected: the next tap would move it.
       if (this.session.run.shop !== before) this.board.clearSelection();
@@ -217,7 +220,8 @@ export class PlacementScreen {
     this.board.setSpec(spec);
     this.board.setPieces(this.session.run.shop.pieces);
     const opponent = this.session.opponent();
-    this.board.setEnemy(this.session.run.settings.reveal && opponent ? opponent.pieces : null);
+    const reveal = this.session.revealOpponent?.() ?? this.session.run.settings.reveal;
+    this.board.setEnemy(reveal && opponent ? opponent.pieces : null);
     this.renderOpponent();
     this.mode.header();
     this.piecesChanged(this.session.run.shop.pieces);
@@ -407,11 +411,12 @@ export class PlacementScreen {
     this.renderOffers();
     this.renderTip();
     const { gold, pieces, locked } = this.session.run.shop;
-    const owed = interest(gold);
+    const { step, max } = this.session.interestTerms?.() ?? { step: INTEREST_STEP, max: MAX_INTEREST };
+    const owed = interest(gold, step, max);
     $('#gold').innerHTML =
       `${gold}g` +
       (owed > 0
-        ? ` <small class="interest" title="Interest: +1 gold per ${INTEREST_STEP} saved (up to ${MAX_INTEREST}), paid after the battle">+${owed} interest</small>`
+        ? ` <small class="interest" title="Interest: +1 gold per ${step} saved (up to ${max}), paid after the battle">+${owed} interest</small>`
         : '');
     const lock = $<HTMLButtonElement>('#lock');
     lock.textContent = locked ? '🔒' : '🔓';
@@ -450,13 +455,11 @@ export class PlacementScreen {
     const { shop, settings } = this.session.run;
     const heirs = this.maxHeirs();
     const partners = setMergePartners(shop, piece.id, settings.fairy, heirs);
-    const setResults = (
-      partners ? setMergeResults([piece, ...partners], canMakeHeir(shop, settings.fairy, heirs)) : []
-    ).filter((to) => to !== 'Y' || canHaveStackman(shop));
+    const setResults = partners ? setMergeResults([piece, ...partners], canMakeHeir(shop, settings.fairy, heirs)) : [];
     const pawnFusions = setResults
       .map(
         (to) =>
-          `<button type="button" class="fuse" data-merge-set="${to}" title="Uses up ${SET_MERGE_SIZE} ${pieceName(piece).toLowerCase()}s">Merge ${SET_MERGE_SIZE} → ${inlinePiece(to)} ${to === 'J' ? 'Heir (a second king)' : PIECE_NAME[to]}${setMergeCost(to) ? ` · ${setMergeCost(to)}g` : ''}</button>`,
+          `<button type="button" class="fuse" data-merge-set="${to}" title="Uses up ${SET_MERGE_SIZE} ${pieceName(piece).toLowerCase()}s">Merge ${SET_MERGE_SIZE} → ${inlinePiece(to)} ${to === 'J' ? 'Heir (a second king)' : PIECE_NAME[to]}</button>`,
       )
       .join('');
     const info = piece.affinity
@@ -490,6 +493,11 @@ export class PlacementScreen {
     this.board.setPieces(result.shop.pieces);
     this.piecesChanged(result.shop.pieces);
   }
+}
+
+/** A merge that crowned an Heir, with the gold a perk pays for it (Dynasty). */
+function crownBonus(result: ShopResult, gold: number): ShopResult {
+  return result.ok && gold > 0 ? { ok: true, shop: { ...result.shop, gold: result.shop.gold + gold } } : result;
 }
 
 /** An offer's picture: the piece, or a pawn with its affinity badge. */

@@ -40,7 +40,7 @@ describe('aiBudget', () => {
     const mid = (round: number) => aiBudget(round, () => 0.5); // randomInt(…, 3) = 1: no jitter
     expect(mid(3)).toBe(Math.round(18 * 0.92));
     expect(mid(10)).toBe(60);
-    expect(rampFactor(18)).toBe(0.95);
+    expect(rampFactor(18)).toBe(1.07);
     expect(mid(25)).toBe(Math.round(150 * RAMP.at(-1)!));
     expect(rampFactor(3)).toBeLessThan(1);
     expect(rampFactor(8)).toBeGreaterThan(1);
@@ -280,7 +280,7 @@ describe('placeForBattle', () => {
 });
 
 describe('the Stackman in AI armies', () => {
-  it('is drafted at most once per army', () => {
+  it('is drafted at most once per army (shop rarity limits the player instead)', () => {
     const rng = seededRng(5);
     const fortress = AI_STYLES.find((s) => s.id === 'fortress')!;
     for (let i = 0; i < 300; i++) {

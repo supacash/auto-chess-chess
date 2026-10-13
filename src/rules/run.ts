@@ -1,10 +1,9 @@
 import type { Color } from '../chess/fen';
 import type { Winner } from './battle';
 import { DEFAULT_SETTINGS, type RunSettings, type SideId } from './difficulty';
-import { interest, roundIncome, type Shop, startingShop } from './economy';
+import { offerPiece, roundIncome, type Shop, startingShop } from './economy';
 import { gameMode } from './mode';
-import { makePiece } from './pieces';
-import { extraIncome, extraLives, type PerkId, perkCount, startGold } from './prestige';
+import { extraIncome, extraLives, type PerkId, perkInterest, startGold, startPieces } from './prestige';
 import type { Rng } from './rng';
 
 export const START_LIVES = 3;
@@ -29,8 +28,8 @@ export interface Run {
   prestige: number;
   /** Perks kept from earlier prestiges, one per level. */
   perks: PerkId[];
-  /** The round the Haggler perk's free reroll was last used in. */
-  freeRerollRound?: number;
+  /** Haggler's free rerolls used so far, and in which round. */
+  freeRerolls?: { round: number; used: number };
   /** One entry per battle fought, for the end-of-run summary. */
   history?: RoundLog[];
   /** True once the run has been revived (an extra life for a rewarded ad); it can't be again. */
@@ -76,12 +75,12 @@ export function newRun(
 ): Run {
   const mode = gameMode(settings.mode);
   const shop = startingShop(mode.startArmy);
-  const knights = Array.from({ length: perkCount(carry.perks, 'knight') }, () => makePiece('N'));
+  const gifts = startPieces(carry.perks).map(offerPiece);
   return {
     round: 1,
     lives: maxLives(carry.perks),
     record: { w: 0, l: 0, d: 0 },
-    shop: { ...shop, gold: startGold(carry.perks) + mode.extraGold, pieces: [...shop.pieces, ...knights] },
+    shop: { ...shop, gold: startGold(carry.perks) + mode.extraGold, pieces: [...shop.pieces, ...gifts] },
     settings,
     color: rollColor(settings.side, rng),
     prestige: carry.prestige,
@@ -118,9 +117,9 @@ export function applyResult(run: Run, winner: Winner): Run {
   };
 }
 
-/** Gold a battle pays: round income, Tithe, and interest on the gold saved before it. */
+/** Gold a battle pays: round income, Tithe, and interest on the gold saved before it (Banker's terms). */
 export function battleIncome(run: Run, winner: Winner): number {
-  return roundIncome(winner) + extraIncome(run.perks) + interest(run.shop.gold);
+  return roundIncome(winner) + extraIncome(run.perks) + perkInterest(run.shop.gold, run.perks);
 }
 
 /** Moves on to the next round, picking the player's colour for it. */

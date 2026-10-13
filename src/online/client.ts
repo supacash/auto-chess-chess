@@ -19,7 +19,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { type MatchSettings, matchBoard } from '../multi/match';
+import { type MatchPlayer, type MatchSettings, MATCH_SIZE, matchBoard } from '../multi/match';
 import { isMatchPerkId, type MatchPerkId, type PerkPicks } from '../multi/perks';
 import { type Holdings, isPoolKind } from '../multi/pool';
 import { isModeId } from '../rules/mode';
@@ -345,6 +345,7 @@ function fromStored(data: Record<string, unknown>): Room {
     createdAt: millis(data.createdAt),
     waitingSince: millis(data.waitingSince),
     phaseStartedAt: millis(data.phaseStartedAt),
+    players: parsePlayers(data.players),
     ready: (data.ready as Record<string, number>) ?? {},
     done: (data.done as Record<string, number>) ?? {},
     preview: parsePreviews(data.preview),
@@ -352,6 +353,26 @@ function fromStored(data: Record<string, unknown>): Room {
     perks: parsePerks(data.perks),
     held: parseHeld(data.held),
   };
+}
+
+/** The match's players, kept only if well-formed (a place is null or a whole number from 1 to MATCH_SIZE). */
+function parsePlayers(data: unknown): MatchPlayer[] {
+  const out: MatchPlayer[] = [];
+  if (!Array.isArray(data)) return out;
+  for (const p of data) {
+    if (typeof p !== 'object' || p === null) continue;
+    const { id, name, bot, hp, place, lastOpponent } = p as Record<string, unknown>;
+    if (typeof id !== 'string' || typeof name !== 'string' || typeof bot !== 'boolean') continue;
+    if (!Number.isInteger(hp) || (place !== null && !isPlace(place))) continue;
+    const player: MatchPlayer = { id, name, bot, hp: hp as number, place: place as number | null };
+    if (typeof lastOpponent === 'string' || lastOpponent === null) player.lastOpponent = lastOpponent;
+    out.push(player);
+  }
+  return out;
+}
+
+function isPlace(n: unknown): boolean {
+  return Number.isInteger(n) && (n as number) >= 1 && (n as number) <= MATCH_SIZE;
 }
 
 /** People's perk picks (round → perk), kept only if well-formed. */

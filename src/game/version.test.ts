@@ -13,6 +13,7 @@ const FINGERPRINTS: Record<number, string> = {
   5: '69f2ac38', // the Heir (two kings), and the engine rules (variants.ini) in the fingerprint
   6: '88c4e465', // two kings: both attacked at once isn't mate (one must be captured first)
   7: '87a056c6', // the Stackman is worth 9 (was 8)
+  8: '87a056c6', // same pieces as 7; armies may hold several Stackmen and the shop changed (kept apart from 7 online)
 };
 
 describe('rules version', () => {

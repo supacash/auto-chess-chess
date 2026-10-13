@@ -304,6 +304,81 @@ The stand-in builds worse than people (it rerolls rather than saving for interes
 
 Classic Hard is unchanged: its AI budget is already at the cap (a full board of queens) by then, so the ramp doesn't reach it; the late climb there is the player catching up. Growing Normal was cut short twice by an engine crash on 9×9 (a WASM thread's stack overflow right after `bestmove`): the simulator now restarts an engine that dies between games, as the browser does, and the third run finished (8 stalled searches restarted, 3 of 1000 battles left out as hung).
 
+### 19. Full sell refunds, 2-gold Wazir, unlimited Stackmen (RULES_VERSION 8; fairy pieces, shop player, 40 runs × 25 rounds per row)
+
+Same command as §18, after the economy change: selling refunds the full price (fusions no more than their parts, plain pawns nothing), the Wazir costs 2 gold but is still worth 1 point, a player's Stackmen have no fee or limit (AI armies still field at most one), and Ferz, Wazir, Man and Stackman offers are rarer.
+
+| Mode, difficulty | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | §18 All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|---|
+| Classic Easy | 48% | 46% | 62% | 73% | 77% | 61% | 56% | 5.8 | 8% |
+| Classic Normal | 47% | 55% | 57% | 64% | 79% | 60% | 46% | 5.7 | 15% |
+| Classic Hard | 20% | 14% | 26% | 34% | 58% | 30% | 26% | 1.0 | 0% |
+| Growing Easy | 66% | 60% | 71% | 81% | 85% | 72% | 62% | 10.9 | 28% |
+| Growing Normal | 56% | 58% | 71% | 77% | 80% | 68% | 50% | 8.9 | 20% |
+| Growing Hard | 46% | 35% | 41% | 50% | 60% | 46% | 28% | 4.3 | 5% |
+
+- **The player got stronger, mostly late.** Every suite wins more than in §18. The rise is largest from round 11 on, where the stand-in's board is full and it sells to make room: a full refund leaves it more gold per round. Normal now wins 64–80% in rounds 16–25 (§18: about 50%), so the late game is easy again, and Growing Hard nearly doubled (28% → 46%).
+- **Early rounds barely moved** (Classic Normal 47% in rounds 1–5), so the change is in the late economy, not the opening.
+- **Noise:** each round is ±15 points and each run score about ±2.5, so Classic Easy and Normal (61% and 60%) are within noise of each other; their early rounds came out unusually close.
+- **Engine:** 1–6 battles per suite hung even after a restart (left out, counted as draws), and 3–13 stalled searches restarted.
+- **Next:** the late-game AI budget needs raising again for this economy (the ramp's 0.95 from round 16, or the per-round rate), then rerun this table. The stand-in never sells to speculate on sets, so real players gain more from full refunds than this shows.
+
+### 20. Late-game ramp raised for full refunds (fairy pieces, shop player, 40 runs × 25 rounds per row)
+
+Same command as §19, with the ramp at 1.02–1.06 in rounds 11–15, 1.07 in rounds 16–20 and 1.1 from round 21 (was 1 and then 0.95):
+
+| Mode, difficulty | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | §19 All | §18 All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Classic Easy | 48% | 46% | 60% | 49% | 69% | 54% | 61% | 56% | 5.4 | 8% |
+| Classic Normal | 47% | 55% | 54% | 50% | 67% | 54% | 60% | 46% | 5.4 | 10% |
+| Classic Hard | 20% | 14% | 25% | 24% | 49% | 26% | 30% | 26% | 1.0 | 0% |
+| Growing Easy | 67% | 62% | 77% | 57% | 68% | 66% | 72% | 62% | 9.8 | 5% |
+| Growing Normal | 56% | 56% | 68% | 55% | 67% | 60% | 68% | 50% | 6.7 | 8% |
+| Growing Hard | 47% | 25% | 33% | 30% | 54% | 38% | 46% | 28% | 3.1 | 0% |
+
+- **Rounds 16–20 are back to about 50% on Normal** (§19: 64–77%), and Hard to 24–30%.
+- **Rounds 21–25 stay easy, and budget can't fix it.** The AI already fields 25–30 more points than the player there (Classic Normal round 25: 119 against 151) and still loses more often than in round 20. With boards full of queens and compounds, ~90% of late games end in mate, and the stand-in plays White, so moving first matters more than material (§13 measured first move at ~18 points of win rate). Random-side runs would show a flatter late game.
+- **Easy and Normal are within noise of each other on Classic** (54% each; their budgets differ by 3%), as in §19.
+- **Engine:** 2–9 battles per suite hung even after a restart (left out, counted as draws).
+
+### 21. Prestige perks and the prestige step (Growing Normal, fairy pieces, shop player, 40 runs × 25 rounds per row)
+
+`npm run sim -- --player shop --rounds 25 --games 40 --fairy both --difficulty normal --board schedule --perks <ids> [--prestige N] [--per-round X] [--save N]`. The sim applies perks through the game's own rules (prestige.ts); "+life" re-scores the same battles with one more life.
+
+| Perk (alone, prestige 0) | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|
+| None | 55% | 51% | 63% | 51% | 63% | 56% | 6.8 | 10% |
+| War chest (+10 gold) | 91% | 83% | 81% | 66% | 68% | 78% | 15.8 | 28% |
+| Squire (Knight + Bishop) | 91% | 87% | 82% | 75% | 80% | 83% | 16.4 | 35% |
+| Tithe (+1 gold a round) | 81% | 85% | 94% | 85% | 91% | 87% | 17.9 | 63% |
+| Haggler, 2 free rerolls | 68% | 67% | 83% | 76% | 84% | 75% | 11.5 | 23% |
+| Haggler, 3 free rerolls | 69% | 65% | 83% | 78% | 83% | 75% | 12.2 | 30% |
+| Royal favour, early queens only | 56% | 50% | 65% | 56% | 68% | 59% | 6.1 | 5% |
+| Royal favour + a Queen | 97% | 92% | 93% | 84% | 90% | 91% | 20.7 | 70% |
+| Royal favour + two queen-pawns | 78% | 77% | 83% | 71% | 81% | 78% | 13.0 | 25% |
+| Second wind, +1 life | (same battles as None) | | | | | 56% | 8.6 | 18% |
+| Second wind, +2 lives | 56% | 58% | 70% | 54% | 68% | 61% | 11.2 | 28% |
+| Bazaar | 62% | 58% | 67% | 58% | 74% | 63% | 9.0 | 23% |
+| Banker, saving 25 from round 3 | 24% | 12% | 73% | 85% | 98% | 58% | 1.1 | 0% |
+| Banker, saving 10 from round 3 | 30% | 29% | 64% | 67% | 82% | 54% | 2.1 | 3% |
+
+- **Early points decide runs.** A few gold or a minor piece at the start roughly doubles the stand-in's run score, because it wins the early rounds where most runs are lost.
+- **Tuned:** Royal favour's early queens alone did nothing and a starting Queen was far too much, so it starts with two queen-pawns. One more life was worth much less than the gold perks; Second wind gives two. Haggler's third free reroll adds little (the stand-in runs out of gold to spend).
+- **Not measurable here:** the stand-in only loses by saving, so Banker's numbers show the strategy, not the perk (tuned by hand). Spyglass (the stand-in ignores the opponent's placement) and Dynasty (it never crowns Heirs) aren't simulated.
+
+The prestige step (0.25 AI points per round per level) was worth about 10 points of win rate, a third of one perk, so each level got easier. Tested at higher steps:
+
+| Prestige run | AI per round | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|---|
+| ★1, War chest, step 0.75 | 6.25 | 83% | 57% | 50% | 45% | 63% | 59% | 8.3 | 0% |
+| ★1, War chest, step 1 | 6.5 | 79% | 50% | 44% | 34% | 58% | 53% | 7.1 | 0% |
+| ★1, Tithe, step 1 | 6.5 | 47% | 41% | 42% | 44% | 74% | 49% | 4.0 | 3% |
+| ★2, War chest + Tithe, step 1 | 7.5 | 70% | 44% | 32% | 42% | 78% | 53% | 5.5 | 0% |
+| ★3, War chest + Tithe + Squire, step 1 | 8.5 | 75% | 26% | 25% | 42% | 82% | 50% | 4.7 | 0% |
+
+- **Chosen: 1 point per round per level.** ★1 with a perk plays about like a fresh Normal run (run score 4–7 against 6.8), and each level after is a little harder (★2 5.5, ★3 4.7): later perks add less than the step does. Perks make the early rounds easy; the AI's extra points make rounds 6–20 the fight. Rounds 21–25 stay easy because both armies hit the full-board cap.
+- The stand-in rarely reaches round 25 here, but a player who earned a prestige builds better than it does.
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.

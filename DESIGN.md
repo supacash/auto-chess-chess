@@ -24,7 +24,18 @@ Draft and place a chess army, then watch an engine play the round for both sides
 - **25 rounds.** Getting through round 25 with a life left wins the run: a victory card (record, and the end-of-run summary) and a "completed" count on the Profile. By then both armies are a full board of queens, so the run ends on a high instead of fading out. The header shows "Round 12/25". 
 - **End-of-run summary:** the victory and game-over cards chart your army's points against your opponents' for each round (losses marked), with the run's best win streak and biggest army.
 - **First-run tips:** one short tip at a time above the opponent line on the shop screen (how to play, a set ready to merge, affinity pawns, interest and the lock, the opponent list), each dismissed for good with ×. Kept per device.
-- **Prestige:** the victory card offers *Prestige ★N*: start over at round 1 with the starting army and lives, one prestige level higher. Opponents get 0.25 more points per round per level, and the player picks one of three perks to keep for good (stackable ones can come up again): War chest (+2 starting gold, stacks), Squire (start with a Knight, stacks), Royal favour (queens and queen-pawns from round 4), Haggler (first reroll each round free), Second wind (+1 life), Tithe (+1 gold every round), Dynasty (a second Heir: fairy runs only, so it isn't offered without fairy pieces; the first prestige of a fairy run always offers it). The header shows ★N; the Profile shows the highest prestige. Single player only.
+- **Prestige:** the victory card offers *Prestige ★N*: start over at round 1 with the starting army and lives, one prestige level higher. Opponents get 1 more point per round per level (it was 0.25, less than any perk was worth, so each level got easier; SIMULATION.md §21), and the player picks one of three perks to keep for good (stackable ones can come up again). Each perk is a play style, tuned with the simulator to roughly double a run's score on its own:
+  - **War chest:** +10 starting gold (stacks).
+  - **Squire:** start with a Knight and a Bishop (stacks).
+  - **Tithe:** +1 gold every round.
+  - **Banker:** interest is +1 per 5 gold saved, up to +5 a round (normally per 10, up to 3). A saving strategy the simulator's stand-in can't play, so it's tuned by hand.
+  - **Haggler:** the first 3 rerolls each round are free.
+  - **Royal favour:** start with two queen-pawns; queens and queen-pawns show up from round 4 and twice as often. (A whole Queen to start was far too strong.)
+  - **Second wind:** +2 lives.
+  - **Spyglass:** see where the opponent's pieces stand while placing (only offered with Reveal off; Warlord counts it as Reveal).
+  - **Dynasty** (fairy): a second Heir, and each Heir crowned pays 9 gold back. The first prestige of a fairy run always offers it.
+  - **Bazaar** (fairy): fusion pieces show up in the shop, priced at what their parts cost.
+  The header shows ★N; the Profile shows the highest prestige. Single player only.
 - **Main menu** (the landing screen, and *Menu* in the header): *Resume game* (shown while a run or a Play it game is in progress, with its round and lives), *New game*, *Multiplayer*, and *Review your last battle*. A battle interrupted by a reload is reported here.
 - **New run window** (opens from *New game*) sets the run's settings, which are fixed for the whole run:
   - **Board (game mode):** *Growing board* (default; 5×5 growing to 9×9, see Board sizes) or *Classic* (8×8 throughout).
@@ -54,15 +65,15 @@ Draft and place a chess army, then watch an engine play the round for both sides
 | King | — | Free, always owned, can't be sold |
 
 - **Gold upgrades:** only a plain pawn (no affinity) → Knight/Bishop, for 3 gold. Rooks and Queens come only from merging or the shop; spare gold goes into rerolls.
-- **Affinity pawns:** pawns bought for a piece (knight-, bishop-, rook- or queen-pawn), shown with a small badge of that piece. They fight as ordinary pawns (and count toward the 8-pawn limit) until three with the same affinity are merged into the piece. Rook-pawns cost 2 gold (6 for a 5-point rook: rooks proved strong for their value); queen-pawns 3 gold and only from round 6. They sell for their price − 1. The piece panel and the offer show how many of the set you have ("you have 2/3").
+- **Affinity pawns:** pawns bought for a piece (knight-, bishop-, rook- or queen-pawn), shown with a small badge of that piece. They fight as ordinary pawns (and count toward the 8-pawn limit) until three with the same affinity are merged into the piece. Rook-pawns cost 2 gold (6 for a 5-point rook: rooks proved strong for their value); queen-pawns 3 gold and only from round 6. They sell for their price. The piece panel and the offer show how many of the set you have ("you have 2/3").
 - **Start:** King + 3 pawns, plus 4 gold (Growing) or 3 gold (Classic).
 - **Income:** 5 gold per round, +2 for a win, +1 for a draw, plus **interest**: +1 gold per 10 unspent (up to +3), counted on the gold saved before the battle. The shop shows the interest due ("23g +2 interest").
 - **Shop lock:** 🔒 next to Reroll keeps the current offers (whatever's left of them) into the next round; it unlocks after that round, or when you reroll.
-- **Selling** refunds value minus 1 (minimum 0).
+- **Selling** refunds what the piece is worth, as in other auto-battlers: its price (an affinity pawn's too), so collecting a set or changing plans costs nothing. Plain pawns are only ever the free starting pawns, so they sell for nothing. A fusion sells for no more than its parts (an Archbishop, worth 7, sells for 6), so fusing and selling never makes gold. The King and the Heir can't be sold. (Until RULES_VERSION 8 selling refunded value − 1, which made selling rare.)
 - **Army size:** only pieces on the board count: at most two per file, a chess side's worth (16 on 8×8; on the smaller boards that's every home square: 10 / 12 / 14), so it grows with the board in Growing mode. AI armies follow the same limit. No limit on the mix of pieces.
 - **Bench:** up to 8 pieces wait off the board, to mix and match. Bought pieces arrive there, so buying needs a free bench slot. A bench piece can go onto a full board by swapping with a placed one.
 - Pieces lost in battle come back for the next round.
-- **Shop offers:** 4 random offers each round, bought onto the bench: mostly affinity pawns, with finished pieces (priced at their value) rare. Offers cost at most 2 + 2×round (Rooks from round 2; Queens and queen-pawns from round 6). Plain pawns aren't offered. Reroll: 1 gold. Fusion pieces are never offered except the Stackman (rare, 9 gold, fairy only, from round 4; not if you have one), nor is the Grasshopper (players didn't find it worth buying; it stays in the rules for old saves and replays). With fairy pieces off, offers are standard pieces only.
+- **Shop offers:** 4 random offers each round, bought onto the bench: mostly affinity pawns, with finished pieces (priced at their value; the Wazir 2 gold) rare. Offers cost at most 2 + 2×round (Rooks from round 2; Queens and queen-pawns from round 6). Plain pawns aren't offered. Ferz, Wazir and Man are less common than the other fairy offers (they used to be in about three shops of four). Reroll: 1 gold. Fusion pieces are never offered except the Stackman (rare, 9 gold, fairy only, from round 4), nor is the Grasshopper (players didn't find it worth buying; it stays in the rules for old saves and replays). With fairy pieces off, offers are standard pieces only.
 - **Piece info:** tapping any piece (yours, a shop offer, or the opponent's in its list or on the revealed board) shows its value and how it moves.
 - **No single-pawn purchases:** pawns come from shop offers (Pawn and Berolina pawn are the most common offers).
 - **Merging** (free, every mode; one tap, but not automatic: completing a set doesn't merge it by itself):
@@ -70,10 +81,10 @@ Draft and place a chess army, then watch an engine play the round for both sides
   - Three plain pawns (the starting pawns, or three Berolina pawns) → Knight or Bishop.
   - Two Rooks → Queen.
   - Three Knights → Queen, or three Bishops → Queen (no mixing knights and bishops).
-  - Three Men + 3 gold → Stackman (fairy, one per army): three 3-point Men for a 9-point piece that frees two board squares. The fee and the limit are because Ferz + Wazir fusions made Men so cheap that it was easy to stack several (it scored 63% against a Queen at equal armies when it cost 8; `npm run sim:duel`).
+  - Three Men → Stackman (fairy): three 3-point Men for a 9-point piece that frees two board squares. No fee and no limit per army: a Man now costs 3 gold however it's made (the Wazir costs 2), and Ferz, Wazir, Man and Stackman offers are rarer instead. AI armies still field at most one (the drafter has no shop to make them rare). (Until RULES_VERSION 8 it cost 3 gold and was one per army, because 1-gold Ferz + Wazir fusions made Men too cheap.) It's strong for 9 points (`npm run sim:duel`, 40-point armies: 65% against a Queen, 35% against a 12-point Amazon).
   - Three Queens → **Heir** (fairy, one per army, or two with the Dynasty prestige perk; can't be sold): a second king with its own icon (the king without its cross, smaller), benched (a queen's square may be on the front row, and like the King it can't stand there). While a side has its King and its Heir neither is royal: either can be captured (both attacked at once isn't mate either), and the last one left is a real king that can be checkmated. The battle screen announces the capture ("Their King was captured! Their Heir takes the crown.") (Fairy-Stockfish's Spartan-chess rules, on each board's two-kings variant, used only when an Heir is on the board; every other battle is unchanged). The engine only pairs kings of one type, so it sees the Heir as a second king; our FENs write it 'J' and the game follows its square through the moves. 27 points for checkmate insurance and two free squares (army totals, like the placement screen's points, the end-of-run chart and Absolute Unit, count it as 27; in battle it counts 0, like the King, so hiding it can't win on points): a late-game luxury, never sold. AI armies (and multiplayer bots) rarely field one from round 20 in fairy runs (12% of armies, paid for with 27 points of their budget, as three Queens).
   - Three of a kind merge in one tap: the selected piece shows *Merge 3 → Rook* (three plain pawns show a button each for Knight and Bishop), using it and two more of the same kind, benched ones first. The result takes the square of the first of them on the board. Two-piece merges are buttons on the selected piece, which becomes the result where it stands.
-- **Fusion** (fairy pieces on): free, like merging. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Rook + Ferz → Dragon King, Bishop + Wazir → Dragon Horse, Knight + Camel → Wildebeest, Cannon + Bishop → Siege Cannon, Ferz + Wazir → Man (two 1-gold pieces make a 3-point piece: the reason to buy them over pawns, besides standing on the back row and not counting toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for value − 2 (the same as selling both parts).
+- **Fusion** (fairy pieces on): free, like merging. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Rook + Ferz → Dragon King, Bishop + Wazir → Dragon Horse, Knight + Camel → Wildebeest, Cannon + Bishop → Siege Cannon, Ferz + Wazir → Man (1 + 2 gold for a 3-point piece made of two 1-point ones; Ferzes and Wazirs stand on the back row and don't count toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for their value, but never more than their parts.
 
 ### Fairy pieces
 Values are tuned with the simulator (SIMULATION.md section 11): at equal points, AI armies with fairy pieces do as well as standard ones.
@@ -82,7 +93,7 @@ Values are tuned with the simulator (SIMULATION.md section 11): at equal points,
 |---|---|---|
 | Berolina pawn | 1 | Moves diagonally forward (two squares from rank 2), captures straight ahead; promotes like a pawn |
 | Ferz | 1 | One square diagonally |
-| Wazir | 1 | One square straight |
+| Wazir | 1 | One square straight. Costs 2 gold (the one piece priced above its value), so a Man costs 3 gold from its parts; at equal armies it scores 54% ±7 against a Ferz, 60% against a pawn, so it's worth about what a Ferz is |
 | Man | 3 | Like a king, but can be captured |
 | Camel | 2 | Jumps (3,1) |
 | Grasshopper | 1 | Along queen lines, hopping over a piece to land just beyond it |
@@ -95,7 +106,7 @@ Values are tuned with the simulator (SIMULATION.md section 11): at equal points,
 | Dragon Horse | 5 | Bishop + one straight step (fusion: Bishop + Wazir) |
 | Wildebeest | 5 | Knight and Camel jumps (fusion: Knight + Camel) |
 | Siege Cannon | 6 | Moves like a queen; captures by jumping exactly one piece (fusion: Cannon + Bishop) |
-| Stackman | 9 | Jumps to any square up to two away, over anything in between (merge: three Men + 3 gold, one per army; also sold, rarely, for 9 gold) |
+| Stackman | 9 | Jumps to any square up to two away, over anything in between (merge: three Men; also sold, rarely, for 9 gold) |
 
 ## Board sizes
 In Growing mode the board opens up during the run:
@@ -133,7 +144,7 @@ In Growing mode the board opens up during the run:
 ## AI opponent
 - **Engine:** Fairy-Stockfish (WASM) plays both sides with identical settings: depth 8, MultiPV 3, picking randomly among moves within ~50 centipawns of the best for variety. Skill is in drafting and placement, not a better engine.
 - **Budget per round:** difficulty × round × the ramp (rounded), ±1 random, −1 in round 1, and +1 every round in Growing mode (matching its extra starting gold so both modes have the same balance). −2% when the player is Black. Never more than a full board of queens around the king (15 queens, 135 points, on 8×8).
-- **Ramp:** dips in rounds 2–4, peaks around round 7, back to 1 from round 10, and eases to 0.95 from round 16 to the end (a further step to 0.9 from round 21 made rounds 21–25 the easiest of the run; SIMULATION.md §18).
+- **Ramp:** dips in rounds 2–4, peaks around round 7, back to 1 in round 10, then climbs again: 1.02 to 1.06 in rounds 11–15, 1.07 in rounds 16–20 and 1.1 from round 21. Until full sell refunds it eased to 0.95 from round 16 (SIMULATION.md §18); with them the late game was easy at that level (§19).
 - **Styles** (a new style and army each round, shown during placement):
 
   | Style | Draft | Layout |
@@ -154,7 +165,7 @@ In Growing mode the board opens up during the run:
 
 Easy, fun goals (src/game/achievements.ts), unlocked once and kept in the records (they sync with them, from the earliest unlock). A notice slides in at the top when one unlocks (several unlocked at once queue up, one after another), and the result card lists the ones the battle unlocked ("🏆 New: …"); the Profile's *Awards* tab lists them by group (unlocked first), with progress for the collections. "On the board" counts placed pieces of a family, fusions included: knights (N, Archbishop, Chancellor, Amazon, Centaur, Wildebeest), rooks (R, Chancellor, Dragon King), queens (Q, Amazon), bishops (B, Archbishop, Dragon Horse, Siege Cannon), camels (Camel, Wildebeest), men (Man, Centaur, Stackman), pawns (pawns of any kind, Berolina pawns).
 
-- **Armies and merges:** 15 of a family on the board (Call the Cavalry!, The Wall, Solomon, Silk Road, Oops all pawns, Sausage Party, Synod); It's not a boulder… (three rook-pawns into a Rook), I'm the Stackman, Finally a son (an Heir), The infamous second son (secret; needs the Dynasty prestige perk); Dragons now? (Dragon King and Dragon Horse in one army); Barnyard (Camel, Wildebeest and Centaur); Absolute Unit (120+ points on the board); All Hands on Deck (every home square filled: only the small boards' army cap allows it).
+- **Armies and merges:** 15 of a family on the board (Bring in the Cavalry!, The Wall, Solomon, Silk Road, Oops all pawns, Sausage Party, Vatican); It's not a boulder… (three rook-pawns into a Rook), I'm the Stackman, Finally, a son (an Heir), The infamous second son (secret; needs the Dynasty prestige perk); Dragons now? (Dragon King and Dragon Horse in one army); Barnyard (Camel, Wildebeest and Centaur); Absolute Unit (120+ points on the board); All Hands on Deck (every home square filled: only the small boards' army cap allows it).
 - **Battles** (checked from the battle's moves, for the player's side): Holy Diver (a bishop-family piece takes in a corner from the opposite corner), David and Goliath (beat an army worth twice yours), Comeback Kid (win after being 10+ points behind), Pawn Storm (mate with a pawn), Long Live the King (win after losing the King), Royal Wedding (promote), Photo Finish (win on points by one).
 - **Runs:** The Undefeated (win a run without losing a battle), Warlord (win a run on Hard with the board reveal off; any board, standard or fairy pieces), Prestigious (prestige ★3), Do It Yourself (win a Play it battle), Hoarder (50 gold), Shopaholic (10 rerolls in a round).
 - **Multiplayer:** Last One Standing (win a match), Untouchable (win without losing a battle), Pool Shark (buy the last one in the pool), Kingmaker (finish 2nd with the winner on 1 HP), Specter (watch 5 battles after being knocked out).
@@ -166,6 +177,7 @@ The Profile's Fun tab shows the most-bought piece (not counting pawns, Ferzes an
 - Chessnut SVG pieces (Apache 2.0). The board always shows the player at the bottom, and squares scale so every board size fills the same width.
 - Moves animate at ~0.4 s at 1×, with an eval bar from the player's side.
 - Results name the reason ("Victory on points", "Drawn by threefold repetition").
+- **Landscape:** the board never grows taller than fits on screen. On landscape phones (and touch tablets held sideways) the header, run bar and Menu button share one short row, and the shop and battle screens use two columns: the board and bench stay in view on the left while the shop, opponent and battle controls scroll on the right, with the fight bar pinned to the bottom. The installed web app no longer locks to portrait.
 
 ## Tech
 - Vite + TypeScript 7, no UI framework. Biome for formatting and linting.

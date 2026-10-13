@@ -299,13 +299,22 @@ export function parseSave(raw: unknown): SavedGame | null {
       color: run.color === 'b' ? 'b' : 'w',
       prestige: isCount(run.prestige, 0) ? run.prestige : 0,
       perks: Array.isArray(run.perks) ? run.perks.filter(isPerkId) : [],
-      ...(isCount(run.freeRerollRound, 1) ? { freeRerollRound: run.freeRerollRound } : {}),
+      ...parseFreeRerolls(run),
       ...parseHistory(run.history),
     },
     ai: { styleId: ai.styleId, pieces: aiPieces },
     ...(data.battleInProgress === true ? { battleInProgress: true } : {}),
     ...parseManual(data.manual),
   };
+}
+
+/** Haggler's free rerolls used this round. Saves from before Haggler gave two kept only the round of the one. */
+function parseFreeRerolls(run: Record<string, unknown>): { freeRerolls?: { round: number; used: number } } {
+  const f = run.freeRerolls;
+  if (isObject(f) && isCount(f.round, 1) && isCount(f.used, 0))
+    return { freeRerolls: { round: f.round, used: f.used } };
+  if (isCount(run.freeRerollRound, 1)) return { freeRerolls: { round: run.freeRerollRound, used: 1 } };
+  return {};
 }
 
 /** The run's battle log (for the summary); malformed entries are dropped, at most 60 kept. */
