@@ -1,0 +1,25 @@
+<!doctype html>
+<!-- Dev-only engine benchmark (npm run dev, then /bench.html). Times the bench corpus
+     (src/engine/benchCorpus.ts) so phone numbers compare with scripts/check/baseline.ts. Not in the build. -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Engine bench</title>
+    <style>
+      body { margin: 0; padding: 16px; background: #1d1f24; color: #e8e8e8; font: 14px/1.4 system-ui, sans-serif; }
+      table { border-collapse: collapse; margin: 12px 0; }
+      th, td { padding: 4px 10px; text-align: right; border-bottom: 1px solid #3a3d44; }
+      button { font: inherit; padding: 8px 16px; }
+      pre { white-space: pre-wrap; word-break: break-all; font-size: 11px; background: #111; padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>Engine bench</h1>
+    <p id="info"></p>
+    <button id="run" type="button">Run</button>
+    <p id="status"></p>
+    <div id="out"></div>
+    <script type="module" src="/src/bench.ts"></script>
+  </body>
+</html>

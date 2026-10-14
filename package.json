@@ -6,15 +6,19 @@
   "type": "module",
   "scripts": {
     "copy-engine": "node scripts/copy-engine.mjs",
-    "predev": "npm run copy-engine",
+    "build-engine": "node scripts/build-engine.mjs",
+    "predev": "npm run copy-engine && npm run build-engine",
     "dev": "vite",
-    "prebuild": "npm run copy-engine",
+    "prebuild": "npm run copy-engine && npm run build-engine",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "android": "npm run build && cap sync android",
     "android:open": "cap open android",
+    "pretypecheck": "npm run build-engine",
     "typecheck": "tsc --noEmit && tsc --noEmit -p scripts",
+    "pretest": "npm run build-engine",
     "test": "vitest run",
+    "engine:check": "cd engine && cargo fmt --check && cargo clippy --all-targets --locked -- -D warnings && cargo test --locked",
     "sim": "tsx scripts/sim/sim.ts",
     "sim:duel": "tsx scripts/sim/duel.ts",
     "lint": "biome check .",
@@ -23,7 +27,8 @@
     "e2e": "playwright test",
     "test:rules": "firebase emulators:exec --only firestore --project auto-chess-chess \"vitest run --config vitest.rules.config.ts\"",
     "e2e:online": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.online.config.ts\"",
-    "e2e:fullmatch": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.fullmatch.config.ts\""
+    "e2e:fullmatch": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.fullmatch.config.ts\"",
+    "check:baseline": "tsx scripts/check/baseline.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

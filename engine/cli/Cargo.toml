@@ -1,0 +1,14 @@
+[package]
+name = "acc-cli"
+description = "Native engine binary: perft, self-play and tuning (much faster than WASM)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "acc"
+path = "src/main.rs"
+
+[dependencies]
+acc-core = { path = "../core" }

@@ -1,0 +1,3266 @@
+{
+  "engine": "fairy-stockfish",
+  "depth": 8,
+  "seed": 1,
+  "speed": [
+    {
+      "board": "5×5",
+      "positions": 20,
+      "failed": 0,
+      "p50": 25,
+      "p95": 60,
+      "max": 67
+    },
+    {
+      "board": "6×6",
+      "positions": 20,
+      "failed": 0,
+      "p50": 62,
+      "p95": 104,
+      "max": 118
+    },
+    {
+      "board": "7×7",
+      "positions": 20,
+      "failed": 0,
+      "p50": 59,
+      "p95": 185,
+      "max": 201
+    },
+    {
+      "board": "8×8",
+      "positions": 20,
+      "failed": 0,
+      "p50": 145,
+      "p95": 334,
+      "max": 622
+    },
+    {
+      "board": "9×9",
+      "positions": 20,
+      "failed": 0,
+      "p50": 489,
+      "p95": 2603,
+      "max": 2680
+    }
+  ],
+  "white": {
+    "score": 0.4666666666666667,
+    "margin": 0.04951383012067813,
+    "games": 390
+  },
+  "first": {
+    "score": 0.5743589743589743,
+    "margin": 0.049072390431777954,
+    "games": 390
+  },
+  "reasons": {
+    "insufficient": 12,
+    "checkmate": 186,
+    "move-limit": 186,
+    "failed": 10,
+    "repetition": 6
+  },
+  "games": [
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "insufficient",
+      "plies": 43
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 15
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 70
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 70
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 65
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 65
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 39
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 14
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 90
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 100
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 68
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 83
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 63
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 11
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 44
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "failed",
+      "reason": "failed",
+      "plies": 0
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "failed",
+      "reason": "failed",
+      "plies": 0
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 59
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "repetition",
+      "plies": 22
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 28
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 70
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 61
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 49
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 42
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 49
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 41
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 33
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 42
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 76
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 50
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 21
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 60
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 49
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 70
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 64
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 72
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 75
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 90
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 94
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 21
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 50
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "failed",
+      "reason": "failed",
+      "plies": 0
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "failed",
+      "reason": "failed",
+      "plies": 0
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "repetition",
+      "plies": 46
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 60
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 65
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 70
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 71
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 27
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 30
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 59
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 64
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 9
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "repetition",
+      "plies": 92
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 42
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 60
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 46
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 57
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 61
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 59
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 90
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 98
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "failed",
+      "reason": "failed",
+      "plies": 0
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 85
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "repetition",
+      "plies": 74
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "failed",
+      "reason": "failed",
+      "plies": 0
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 21
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 53
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "insufficient",
+      "plies": 28
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 31
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 46
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 53
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 82
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 73
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 84
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 49
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 52
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "failed",
+      "reason": "failed",
+      "plies": 0
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 57
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 78
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "insufficient",
+      "plies": 7
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "insufficient",
+      "plies": 42
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 52
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 71
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 100
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 82
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 39
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 64
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 65
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "failed",
+      "reason": "failed",
+      "plies": 0
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 43
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 50
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "insufficient",
+      "plies": 15
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 40
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 62
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 89
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 99
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 99
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 39
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 27
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 13
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 55
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "failed",
+      "reason": "failed",
+      "plies": 0
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 39
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 14
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "insufficient",
+      "plies": 52
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 60
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 70
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 53
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 70
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 74
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 21
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 67
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 65
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 52
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 79
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 55
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 83
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 51
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 42
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "insufficient",
+      "plies": 17
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 60
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 66
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 70
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 3
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 77
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 80
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 90
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 45
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 59
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 70
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 87
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 39
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 25
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 7
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "insufficient",
+      "plies": 31
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 37
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 34
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 68
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 34
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 48
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 41
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 71
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 39
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 34
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 73
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "repetition",
+      "plies": 30
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 60
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 61
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 75
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 99
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 98
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 44
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 20
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 86
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 81
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 71
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 41
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 21
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 54
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 32
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 3
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 36
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 61
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 53
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 74
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 15
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 95
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 50
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 86
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 77
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 69
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 3
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 41
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 73
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "insufficient",
+      "plies": 46
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 26
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 31
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 77
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 51
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 63
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 75
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 48
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 77
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "draw",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 81
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 46
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 39
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 48
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 53
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "failed",
+      "reason": "failed",
+      "plies": 0
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 65
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "insufficient",
+      "plies": 12
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 38
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "insufficient",
+      "plies": 60
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 70
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 78
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 31
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 87
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 88
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 1
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 50
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 83
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 71
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 76
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 54
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 21
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 50
+    },
+    {
+      "round": 1,
+      "board": "5×5",
+      "firstMover": "b",
+      "winner": "draw",
+      "reason": "repetition",
+      "plies": 52
+    },
+    {
+      "round": 2,
+      "board": "5×5",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 60
+    },
+    {
+      "round": 3,
+      "board": "6×6",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "insufficient",
+      "plies": 67
+    },
+    {
+      "round": 4,
+      "board": "6×6",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 48
+    },
+    {
+      "round": 5,
+      "board": "7×7",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 6,
+      "board": "7×7",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 80
+    },
+    {
+      "round": 7,
+      "board": "8×8",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 8,
+      "board": "8×8",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 90
+    },
+    {
+      "round": 9,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 10,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 11,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 12,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 13,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 14,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 15,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 8
+    },
+    {
+      "round": 16,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 17,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "w",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 18,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 62
+    },
+    {
+      "round": 19,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 20,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "w",
+      "reason": "checkmate",
+      "plies": 35
+    },
+    {
+      "round": 21,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 22,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "move-limit",
+      "plies": 100
+    },
+    {
+      "round": 23,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 17
+    },
+    {
+      "round": 24,
+      "board": "9×9",
+      "firstMover": "w",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 40
+    },
+    {
+      "round": 25,
+      "board": "9×9",
+      "firstMover": "b",
+      "winner": "b",
+      "reason": "checkmate",
+      "plies": 63
+    }
+  ]
+}

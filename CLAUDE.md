@@ -13,11 +13,14 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - `npm run e2e:online` — two-browser online room tests against the Firebase emulators
 - `npm run android` — production build synced into the Capacitor Android project (`android/`); `npm run android:open` opens it in Android Studio. `node scripts/make-android-icons.mjs` regenerates its icons and splash from `public/icon.svg`
 - `npm run check:determinism` — plays battles twice with the same seed and checks the moves match
+- `npm run engine:check` — `cargo fmt --check`, clippy and tests for the Rust engine in `engine/` (CI runs it)
+- `npm run check:baseline` — Fairy-Stockfish speed per move on the bench corpus, and colour/first-mover fairness on mirrored armies; `/bench.html` on the dev server times the same corpus in a browser or on a phone
 
 ## Layout
 - `src/rules/` — pure game logic, no DOM. Every rule gets a unit test next to it (`*.test.ts`).
 - `src/chess/` — board specs (`boardSpec.ts`, also generates the Fairy-Stockfish `variants.ini`), size-agnostic FEN helpers (`fen.ts`), and the rules `Game` wrapper around ffish (`rules.ts`). ffish loads async: `loadRules.ts` in the browser, `testRules.ts` in tests/the simulator.
-- `src/engine/` — Fairy-Stockfish UCI wrapper (`stockfish.ts`) and move picking/UCI parsing (`pick.ts`, pure + tested).
+- `src/engine/` — Fairy-Stockfish UCI wrapper (`stockfish.ts`) and move picking/UCI parsing (`pick.ts`, pure + tested). `benchCorpus.ts` is the fixed position set engines are timed on; `wasm/` holds the generated bindings of our own engine (gitignored), loaded in Node by `wasmNode.ts`.
+- `engine/` — the game's own engine in Rust, replacing Fairy-Stockfish and ffish ([docs/ENGINE-PLAN.md](docs/ENGINE-PLAN.md)): `core` (rules, search, eval; pure, deterministic, integer-only), `wasm` (single-threaded bindings) and `cli` (native `acc` binary for perft, self-play and tuning). Toolchain pinned in `engine/rust-toolchain.toml`.
 - `src/game/` — orchestration that combines rules and engine (`runBattle.ts`, `manualBattle.ts`, tested with a fake engine), plus the shareable formats: `version.ts` (RULES_VERSION and its fingerprint test), `snapshot.ts` (ArmySnapshot) and `record.ts` (BattleRecord for replays).
 - `src/app/` — the app around the rules: `session.ts` (the run, opponent, best score, saving and run flow; no DOM, unit tested), the screens (`placementScreen.ts`, `battleScreen.ts`, `newRunDialog.ts`, `header.ts`) and the page shell (`layout.ts`).
 - `src/multi/` — multiplayer match logic (pairings, health, streaks, bots) and `MatchSession`; pure and tested.
@@ -25,7 +28,7 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - `src/ui/` — reusable board widgets (Pointer Events, touch-first): the placement board, the battle view, and shared piece/square helpers in `boardDom.ts`.
 - `src/main.ts` — wires the session to the screens and runs the fight sequence (placement → battle → result).
 - `android/` — the Capacitor Android app. `MainActivity.java` adds the COOP/COEP headers the engine needs; `src/app/ads.ts` shows rewarded ads there (AdMob, test IDs until release).
-- `scripts/copy-engine.mjs` copies Fairy-Stockfish, ffish and coi-serviceworker into `public/` (gitignored). It runs automatically before `dev` and `build`.
+- `scripts/copy-engine.mjs` copies Fairy-Stockfish, ffish and coi-serviceworker into `public/` (gitignored). It runs automatically before `dev` and `build`. `scripts/build-engine.mjs` builds `engine/` to WASM and runs `wasm-bindgen` (its CLI must match the crate, 0.2.129) into `src/engine/wasm/`, before `dev`, `build`, `test` and `typecheck`.
 
 ## Conventions
 - Formatting is Biome's (2 spaces, single quotes, 120 columns, LF line endings via `.gitattributes`). Run `npm run format` before committing. ESLint/typescript-eslint can't run on TypeScript 7 (no JS API), which is why the project uses Biome.
