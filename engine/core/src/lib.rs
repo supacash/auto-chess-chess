@@ -4,8 +4,10 @@
 //! native CLI and the WASM build play identical battles from the same position and seed.
 
 pub mod betza;
+pub mod eval;
 pub mod pieces;
 pub mod position;
+pub mod search;
 pub mod tables;
 
 /// Bumped whenever anything that decides a move changes. Folded into the game's RULES_VERSION

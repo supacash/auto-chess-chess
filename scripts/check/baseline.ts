@@ -4,6 +4,7 @@
  * to match the speed and the fairness.
  *
  *   npm run check:baseline -- --games 400 --json docs/baseline/fairy-desktop.json
+ *   npm run check:baseline -- --engine acc     (our engine: WASM for speed, the native build for fairness)
  *
  * Speed: one engine, no other load, timing a search of every position in the bench corpus
  * (src/engine/benchCorpus.ts; bench.html times the same corpus in a browser or on a phone).
@@ -14,6 +15,7 @@ import { availableParallelism } from 'node:os';
 import { parseArgs } from 'node:util';
 import { BOARDS, battleVariant, boardForRound, plyLimit } from '../../src/chess/boardSpec';
 import { loadRulesForNode } from '../../src/chess/testRules';
+import { ACC_LIMITS, AccEngine } from '../../src/engine/accEngine';
 import { benchBattle, benchCorpus, percentile } from '../../src/engine/benchCorpus';
 import { runBattle, SEARCH_DEPTH } from '../../src/game/runBattle';
 import type { BattleResult } from '../../src/rules/battle';
@@ -28,11 +30,17 @@ const { values: opts } = parseArgs({
     workers: { type: 'string' },
     json: { type: 'string' },
     'skip-speed': { type: 'boolean', default: false },
+    /** 'fairy' (Fairy-Stockfish) or 'acc' (our engine at ACC_LIMITS). */
+    engine: { type: 'string', default: 'fairy' },
   },
 });
 const GAMES = Number(opts.games);
 const SEED = Number(opts.seed);
 const WORKERS = Math.min(GAMES, opts.workers ? Number(opts.workers) : Math.max(1, availableParallelism() - 2));
+const ACC = opts.engine === 'acc';
+const LABEL = ACC
+  ? `our engine (WASM), depth ${ACC_LIMITS.depth}, ${ACC_LIMITS.nodes} nodes`
+  : `Fairy-Stockfish, depth ${SEARCH_DEPTH}`;
 
 interface SpeedRow {
   board: string;
@@ -44,7 +52,7 @@ interface SpeedRow {
 }
 
 async function speed(): Promise<SpeedRow[]> {
-  const engine = await NodeEngine.create();
+  const engine = ACC ? new AccEngine() : await NodeEngine.create();
   const corpus = benchCorpus(SEED, Number(opts['per-board']));
   const times = new Map<string, number[]>();
   const failed = new Map<string, number>();
@@ -84,7 +92,9 @@ interface GameRow {
 }
 
 async function fairness(): Promise<GameRow[]> {
-  const engines = await Promise.all(Array.from({ length: WORKERS }, () => NodeEngine.create()));
+  const engines = await Promise.all(
+    Array.from({ length: WORKERS }, () => (ACC ? NodeEngine.createAcc(ACC_LIMITS) : NodeEngine.create())),
+  );
   const rows: GameRow[] = [];
   let next = 0;
   let done = 0;
@@ -135,7 +145,7 @@ async function main(): Promise<void> {
   const games = await fairness();
 
   if (speedRows.length) {
-    console.log(`\nFairy-Stockfish, depth ${SEARCH_DEPTH}, one engine, ms per search:`);
+    console.log(`\n${LABEL}, one engine, ms per search:`);
     console.table(speedRows);
   }
   const white = score(games, () => 'w');
@@ -157,7 +167,7 @@ async function main(): Promise<void> {
   if (opts.json) {
     writeFileSync(
       opts.json,
-      `${JSON.stringify({ engine: 'fairy-stockfish', depth: SEARCH_DEPTH, seed: SEED, speed: speedRows, white, first, reasons, games }, null, 2)}\n`,
+      `${JSON.stringify({ engine: ACC ? { acc: ACC_LIMITS } : 'fairy-stockfish', depth: SEARCH_DEPTH, seed: SEED, speed: speedRows, white, first, reasons, games }, null, 2)}\n`,
     );
   }
 }

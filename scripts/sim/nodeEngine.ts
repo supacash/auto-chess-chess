@@ -10,6 +10,18 @@ import type { MoveSource } from '../../src/game/runBattle';
 
 /** Runs Fairy-Stockfish WASM as a UCI process (same engine as the browser). */
 const ENGINE_PATH = fileURLToPath(new URL('./fairyProcess.cjs', import.meta.url));
+/** The game's own engine, natively (engine/cli: `cargo build --release -p acc-cli`), speaking the same UCI. */
+const ACC_PATH = fileURLToPath(
+  new URL(`../../engine/target/release/acc${process.platform === 'win32' ? '.exe' : ''}`, import.meta.url),
+);
+
+/** Our engine's search limits: plies and a node budget (0 = none). */
+export interface AccLimits {
+  depth: number;
+  nodes: number;
+  /** Another build of the engine to run (to test a change against the previous version). */
+  path?: string;
+}
 /** The game's variants, written once to a temp file that every engine process loads. */
 const VARIANTS_PATH = join(mkdtempSync(join(tmpdir(), 'acc-sim-')), 'variants.ini');
 writeFileSync(VARIANTS_PATH, variantsIni());
@@ -53,10 +65,21 @@ export class NodeEngine implements MoveSource {
   /** How many times a stalled search restarted the engine. */
   restarts = 0;
 
-  private constructor(private readonly depthOverride?: number) {}
+  private constructor(
+    private readonly depthOverride?: number,
+    /** Set to run the game's own engine instead of Fairy-Stockfish, with these limits. */
+    private readonly acc?: AccLimits,
+  ) {}
 
   static async create(depthOverride?: number): Promise<NodeEngine> {
     const engine = new NodeEngine(depthOverride);
+    await engine.start();
+    return engine;
+  }
+
+  /** The game's own engine (native build), searching to `limits` whatever depth the game asks for. */
+  static async createAcc(limits: AccLimits): Promise<NodeEngine> {
+    const engine = new NodeEngine(undefined, limits);
     await engine.start();
     return engine;
   }
@@ -109,7 +132,9 @@ export class NodeEngine implements MoveSource {
   }
 
   private async start(): Promise<void> {
-    const proc = spawn(process.execPath, [ENGINE_PATH, VARIANTS_PATH], { stdio: 'pipe' });
+    const proc = this.acc
+      ? spawn(this.acc.path ?? ACC_PATH, ['uci'], { stdio: 'pipe' })
+      : spawn(process.execPath, [ENGINE_PATH, VARIANTS_PATH], { stdio: 'pipe' });
     this.proc = proc;
     this.exited = null;
     createInterface({ input: proc.stdout }).on('line', (raw) => {
@@ -144,7 +169,9 @@ export class NodeEngine implements MoveSource {
     this.listeners.add(onLine);
     const done = this.waitFor((l) => l.startsWith('bestmove') || UNSUPPORTED.test(l), `search of ${fen}`);
     this.send(positionCommand(fen, history));
-    this.send(`go depth ${this.depthOverride ?? depth}`);
+    this.send(
+      this.acc ? `go depth ${this.acc.depth} nodes ${this.acc.nodes}` : `go depth ${this.depthOverride ?? depth}`,
+    );
     let reply: string;
     try {
       reply = await done;

@@ -219,3 +219,60 @@ Your two constraints:
 - The grasshopper lands just past the first piece in line. The cannon captures the first piece beyond its screen.
 
 **Also added:** the WASM `Board` (ffish's method names) and a test that the engine's Betza strings match `src/rules/pieces.ts`.
+
+## Phase 3 progress (2026-10-14)
+
+**Search** (`engine/core/src/search.rs`):
+- Iterative deepening with aspiration windows, PVS and a transposition table (2^18 entries, cleared each battle).
+- Quiescence search with delta pruning.
+- Pruning and reductions: null move, reverse futility, futility, late-move pruning and reductions, check extensions.
+- Move ordering: MVV-LVA, killers and history.
+- MultiPV by excluding moves already chosen at the root.
+- Limits are depth plus a node cap, never time.
+- Scores are converted to pick.ts's mate encoding (`game_score`).
+
+**Evaluation** (`eval.rs`), still a placeholder until Phase 4:
+- Material from the game's point values, plus centralisation and pawn advancement.
+- All of it lives in piece-square tables, so `Position` keeps it summed as moves are made and unmade (`put`/`take`).
+- Piece counts are also kept up to date, which makes insufficient-material and null-move checks cheap.
+
+**Tools:**
+- `acc uci`: the UCI subset the scripts use.
+- `NodeEngine.createAcc`.
+- `npm run sim:arena`: against Fairy-Stockfish, or against another build with `--opponent`.
+
+**Speed:** perft 3.7 → 7.0M positions/s. From the 8×8 start after 1.e4 e5, depth 8 with 3 lines went from 506k nodes in 1.04 s to 112k nodes in 0.19 s.
+
+**Strength:** depth 8 with a 300k-node cap, from game-drafted battles over rounds 1–25.
+
+| Version | vs Fairy-Stockfish depth 8 | Notes |
+|---|---|---|
+| First search | 27.4% ±6.2 (Elo −169), 200 games | |
+| + aspiration, pruning, buffers | **41.0% ±5.6 (Elo −64)**, 300 games | Elo +111 over the first search head to head (65.5%, 300 games) |
+
+**By board, latest:**
+- 5×5 57%, 6×6 41%, 7×7 45%, 8×8 56%, 9×9 36%.
+- 9×9 is most of the games and the weakest board.
+- Fairy-Stockfish failed (rejected or hung) in 7 of the 9×9 games. Our engine played all of them.
+
+**Still to do in Phase 3:**
+- WASM `Searcher` bindings, and a browser and WASM speed check on the bench corpus.
+- More speed. Average time per move under 14-way load is 453 ms for ours against 295 ms for Fairy-Stockfish.
+
+The evaluation (Phase 4) is the main remaining strength lever.
+
+**Correction to Phase 0:** the baseline's fairness numbers stand, but the individual games aren't reproducible. Under 14-way load Fairy-Stockfish sometimes passes its 10 s timeout and is restarted mid-battle, which changes the later moves. Replayed one at a time, the old (ffish) and new rules give identical battles (supacash/auto-chess-chess#4).
+
+**WASM speed** (desktop, one engine, ms per search on the same bench corpus):
+
+| Board | Ours (WASM, depth 8 / 300k nodes) p50 / p95 | Fairy-Stockfish depth 8 p50 / p95 |
+|---|---|---|
+| 5×5 | 13 / 65 | 24 / 63 |
+| 6×6 | 78 / 289 | 68 / 166 |
+| 7×7 | 139 / 353 | 69 / 133 |
+| 8×8 | 274 / 398 | 124 / 300 |
+| 9×9 | 552 / 668 | 634 / 2792 (one position refused) |
+
+- The node cap bounds our worst case. On 9×9 our p95 is a quarter of Fairy-Stockfish's.
+- On 6×6–8×8 we're slower: the speed gate (p95 at or below Fairy-Stockfish's on every board) isn't met yet.
+- **The corpus has changed since Phase 0:** its random plies now use our rules' move order. Both engines above were timed on the current corpus.

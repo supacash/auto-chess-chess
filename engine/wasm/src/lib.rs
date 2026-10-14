@@ -102,3 +102,61 @@ impl Board {
     /// Same as free(), under ffish's name.
     pub fn delete(self) {}
 }
+
+/// The engine's search, with its transposition table kept between moves of a battle.
+#[wasm_bindgen]
+pub struct Searcher {
+    inner: acc_core::search::Searcher,
+}
+
+impl Default for Searcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[wasm_bindgen]
+impl Searcher {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Searcher {
+        Searcher { inner: acc_core::search::Searcher::default() }
+    }
+
+    /// Forgets everything learned (at the start of each battle, so battles replay exactly).
+    #[wasm_bindgen(js_name = newGame)]
+    pub fn new_game(&mut self) {
+        self.inner.new_game();
+    }
+
+    /// Searches the position reached from `fen` by `moves` (UCI, space-separated) and returns up to
+    /// `multipv` lines as "move score move score …", best first. Scores are for the side to move, in
+    /// centipawns, with mates encoded as src/engine/pick.ts reads them.
+    pub fn candidates(
+        &mut self,
+        variant: &str,
+        fen: &str,
+        moves: &str,
+        depth: u32,
+        nodes: f64,
+        multipv: u32,
+    ) -> Result<String, JsError> {
+        let mut board = Board::new(variant, fen)?;
+        for m in moves.split_whitespace() {
+            if !board.push(m) {
+                return Err(JsError::new(&format!("illegal move {m} in {fen}")));
+            }
+        }
+        let limits = acc_core::search::Limits { depth, nodes: nodes as u64 };
+        let lines = self.inner.search(&mut board.pos, limits, multipv as usize);
+        Ok(lines
+            .iter()
+            .map(|l| format!("{} {}", board.pos.move_name(l.mv), acc_core::search::game_score(l.score)))
+            .collect::<Vec<_>>()
+            .join(" "))
+    }
+
+    /// Nodes searched by the last call.
+    pub fn nodes(&self) -> f64 {
+        self.inner.nodes() as f64
+    }
+}

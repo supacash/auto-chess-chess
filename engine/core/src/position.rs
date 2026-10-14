@@ -7,7 +7,7 @@
 //! is royal.
 
 use crate::betza::Kind;
-use crate::pieces::{self, BISHOP, KNIGHT, PAWN, PIECES, PROMOTIONS, PieceType};
+use crate::pieces::{self, BISHOP, KNIGHT, PAWN, PIECE_COUNT, PIECES, PROMOTIONS, PieceType};
 use crate::tables::{MAX_SQUARES, NO_SQUARE, OPPOSITE, Square, Tables, tables};
 
 pub type Color = u8;
@@ -68,7 +68,19 @@ pub struct Position {
     two_kings: bool,
     hash: u64,
     history: Vec<Undo>,
+    /// Each side's king squares (King and Heirs: up to three with the Dynasty perk), kept up to date
+    /// by make/unmake so check tests don't scan the board.
+    kings: [[Square; MAX_KINGS]; 2],
+    king_count: [u8; 2],
+    /// Piece-square values (material included) per cell and square: eval::psq_table.
+    psq: &'static [i32],
+    /// Each side's sum of piece-square values, kept up to date by make/unmake.
+    score: [i32; 2],
+    /// How many pieces of each type each side has.
+    counts: [[u8; PIECE_COUNT]; 2],
 }
+
+const MAX_KINGS: usize = 4;
 
 // ---- Zobrist keys (fixed, so hashes are the same in every build) ----
 
@@ -140,8 +152,30 @@ impl Position {
         let ep_field = parts.next().unwrap_or("-");
         let halfmove = parts.next().unwrap_or("0").parse().map_err(|_| FenError::Counter)?;
         let fullmove = parts.next().unwrap_or("1").parse().map_err(|_| FenError::Counter)?;
-        let mut pos =
-            Position { t, board, side, ep: None, halfmove, fullmove, two_kings, hash: 0, history: Vec::new() };
+        let mut pos = Position {
+            t,
+            board: [EMPTY; MAX_SQUARES],
+            side,
+            ep: None,
+            halfmove,
+            fullmove,
+            two_kings,
+            hash: 0,
+            history: Vec::new(),
+            kings: [[NO_SQUARE; MAX_KINGS]; 2],
+            king_count: [0; 2],
+            psq: crate::eval::psq_table(size),
+            score: [0; 2],
+            counts: [[0; PIECE_COUNT]; 2],
+        };
+        for (sq, &c) in board.iter().enumerate().take(t.squares) {
+            if c != EMPTY {
+                if PIECES[cell_type(c) as usize].king && pos.king_count[cell_color(c) as usize] as usize == MAX_KINGS {
+                    return Err(FenError::Placement("too many kings".into()));
+                }
+                pos.put(sq as Square, c);
+            }
+        }
         if ep_field != "-" {
             let first = pos.parse_square(&ep_field[..2]).ok_or(FenError::EnPassant)?;
             // Two squares after a Berolina pawn's double step: the empty one is the square passed.
@@ -312,25 +346,90 @@ impl Position {
         false
     }
 
-    fn kings(&self, color: Color) -> ([Square; 2], usize) {
-        let mut out = [NO_SQUARE; 2];
-        let mut n = 0;
-        for sq in 0..self.t.squares {
-            let c = self.board[sq];
-            if c != EMPTY && cell_color(c) == color && PIECES[cell_type(c) as usize].king {
-                if n < 2 {
-                    out[n] = sq as Square;
-                }
-                n += 1;
-            }
+    /// Places a piece on an empty square, keeping the hash, scores, counts and kings up to date.
+    fn put(&mut self, sq: Square, c: Cell) {
+        self.board[sq as usize] = c;
+        self.hash ^= piece_key(c, sq);
+        let color = cell_color(c);
+        let ty = cell_type(c);
+        self.score[color as usize] += self.psq[(c as usize - 1) * MAX_SQUARES + sq as usize];
+        self.counts[color as usize][ty as usize] += 1;
+        if PIECES[ty as usize].king {
+            self.add_king(color, sq);
         }
-        (out, n)
+    }
+
+    /// Removes the piece on `sq` (the reverse of put) and returns it.
+    fn take(&mut self, sq: Square) -> Cell {
+        let c = self.board[sq as usize];
+        self.board[sq as usize] = EMPTY;
+        self.hash ^= piece_key(c, sq);
+        let color = cell_color(c);
+        let ty = cell_type(c);
+        self.score[color as usize] -= self.psq[(c as usize - 1) * MAX_SQUARES + sq as usize];
+        self.counts[color as usize][ty as usize] -= 1;
+        if PIECES[ty as usize].king {
+            self.remove_king(color, sq);
+        }
+        c
+    }
+
+    /// `color`'s summed piece-square values (material included).
+    pub fn psq_score(&self, color: Color) -> i32 {
+        self.score[color as usize]
+    }
+
+    /// How many pieces of type `ty` `color` has.
+    pub fn count(&self, color: Color, ty: PieceType) -> u8 {
+        self.counts[color as usize][ty as usize]
+    }
+
+    fn add_king(&mut self, color: Color, sq: Square) {
+        let c = color as usize;
+        self.kings[c][self.king_count[c] as usize] = sq;
+        self.king_count[c] += 1;
+    }
+
+    fn remove_king(&mut self, color: Color, sq: Square) {
+        let c = color as usize;
+        let n = self.king_count[c] as usize;
+        let i = self.kings[c][..n].iter().position(|&k| k == sq).expect("a king on its square");
+        self.kings[c][i] = self.kings[c][n - 1];
+        self.kings[c][n - 1] = NO_SQUARE;
+        self.king_count[c] -= 1;
     }
 
     /// The square of `color`'s royal king: its only king (with two kings, neither is royal).
     fn royal(&self, color: Color) -> Option<Square> {
-        let (k, n) = self.kings(color);
-        if n == 1 || (!self.two_kings && n >= 1) { Some(k[0]) } else { None }
+        let n = self.king_count[color as usize];
+        if n == 1 || (!self.two_kings && n >= 1) { Some(self.kings[color as usize][0]) } else { None }
+    }
+
+    /// Whether `color`'s royal king (if it has one) is attacked: after `color` moved, the move was illegal.
+    pub fn royal_attacked(&self, color: Color) -> bool {
+        self.royal(color).is_some_and(|k| self.attacked(k, opponent(color)))
+    }
+
+    /// The type of the piece `m` captures, if any (en passant included).
+    pub fn captured_type(&self, m: Move) -> Option<PieceType> {
+        let target = self.board[m.to as usize];
+        if target != EMPTY {
+            return Some(cell_type(target));
+        }
+        let moved = self.board[m.from as usize];
+        let ep = self.ep?;
+        (cell_type(moved) == PAWN && ep.square == m.to && self.t.file(m.from) != self.t.file(m.to))
+            .then(|| cell_type(self.board[ep.victim as usize]))
+    }
+
+    /// Whether `color` has a piece other than kings and pawn-like pieces (null-move pruning is unsafe
+    /// without one: zugzwang).
+    pub fn has_pieces(&self, color: Color) -> bool {
+        PIECES.iter().zip(&self.counts[color as usize]).any(|(d, &n)| n > 0 && !d.king && !d.pawn)
+    }
+
+    pub fn two_kings(&self) -> bool {
+        self.two_kings
     }
 
     /// Whether the side to move's royal king is attacked.
@@ -474,7 +573,7 @@ impl Position {
     fn is_legal_after(&mut self, m: Move) -> bool {
         let us = self.side;
         self.make(m);
-        let ok = self.royal(us).is_none_or(|k| !self.attacked(k, self.side));
+        let ok = !self.royal_attacked(us);
         self.unmake();
         ok
     }
@@ -512,14 +611,10 @@ impl Position {
             self.hash ^= ep_key(ep.square);
         }
         if captured != EMPTY {
-            self.board[captured_at as usize] = EMPTY;
-            self.hash ^= piece_key(captured, captured_at);
+            self.take(captured_at);
         }
-        self.board[m.from as usize] = EMPTY;
-        self.hash ^= piece_key(moved, m.from);
-        let placed = if m.promo != NO_PROMOTION { cell(m.promo, us) } else { moved };
-        self.board[m.to as usize] = placed;
-        self.hash ^= piece_key(placed, m.to);
+        self.take(m.from);
+        self.put(m.to, if m.promo != NO_PROMOTION { cell(m.promo, us) } else { moved });
 
         // A pawn's move, a capture or a promotion resets the 50-move count (a Berolina pawn's other
         // moves don't, as in Fairy-Stockfish).
@@ -562,17 +657,49 @@ impl Position {
     pub fn unmake(&mut self) {
         let u = self.history.pop().expect("a move to take back");
         self.side = opponent(self.side);
+        if u.mv.from == NO_SQUARE {
+            // A null move.
+            self.ep = u.ep;
+            self.halfmove = u.halfmove;
+            self.hash = u.hash;
+            return;
+        }
         if self.side == BLACK {
             self.fullmove -= 1;
         }
-        self.board[u.mv.to as usize] = EMPTY;
-        self.board[u.mv.from as usize] = u.moved;
+        self.take(u.mv.to);
+        self.put(u.mv.from, u.moved);
         if u.captured != EMPTY {
-            self.board[u.captured_at as usize] = u.captured;
+            self.put(u.captured_at, u.captured);
         }
         self.ep = u.ep;
         self.halfmove = u.halfmove;
         self.hash = u.hash;
+    }
+
+    /// Passes the move (for null-move pruning in search). Undo with unmake().
+    pub fn make_null(&mut self) {
+        let none = Move { from: NO_SQUARE, to: NO_SQUARE, promo: NO_PROMOTION };
+        self.history.push(Undo {
+            mv: none,
+            moved: EMPTY,
+            captured: EMPTY,
+            captured_at: NO_SQUARE,
+            ep: self.ep,
+            halfmove: self.halfmove,
+            hash: self.hash,
+        });
+        if let Some(ep) = self.ep.take() {
+            self.hash ^= ep_key(ep.square);
+        }
+        self.halfmove += 1;
+        self.side = opponent(self.side);
+        self.hash ^= SIDE_KEY;
+    }
+
+    /// The hash of the position `plies_ago` plies back (1 = before the last move).
+    pub fn earlier_hash(&self, plies_ago: usize) -> u64 {
+        self.history[self.history.len() - plies_ago].hash
     }
 
     /// Plies played since this position was set up.
@@ -603,6 +730,16 @@ impl Position {
     /// Neither side can mate. Never in the two-kings rules, as in Fairy-Stockfish.
     pub fn insufficient_material(&self) -> bool {
         if self.two_kings {
+            return false;
+        }
+        // Anything but kings, knights and bishops can mate (cheap test first: this runs in search).
+        let only_minors = PIECES.iter().enumerate().all(|(ty, d)| {
+            d.king
+                || ty as PieceType == KNIGHT
+                || ty as PieceType == BISHOP
+                || self.counts[0][ty] + self.counts[1][ty] == 0
+        });
+        if !only_minors {
             return false;
         }
         let mut knights = 0;

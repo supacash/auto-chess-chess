@@ -15,6 +15,7 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - `npm run check:determinism` — plays battles twice with the same seed and checks the moves match
 - `npm run engine:check` — `cargo fmt --check`, clippy and tests for the Rust engine in `engine/` (CI runs it)
 - `npm run check:perft` — rules parity: random games in our engine (WASM) and ffish side by side, comparing legal moves, FEN, check and draws at every position (`--positions 10000` is the Phase 1 gate). `cd engine && cargo run --release -p acc-cli -- perft acc8 5 "<fen>"` counts a perft natively
+- `npm run sim:arena` — our engine (native `acc`, `cargo build --release -p acc-cli` first) against Fairy-Stockfish at depth 8, or against another `acc` build with `--opponent <path>`; each battle start is played twice with sides swapped. Reports score, Elo and time per move by board
 - `npm run check:baseline` — Fairy-Stockfish speed per move on the bench corpus, and colour/first-mover fairness on mirrored armies; `/bench.html` on the dev server times the same corpus in a browser or on a phone
 
 ## Layout
