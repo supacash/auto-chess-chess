@@ -1,5 +1,5 @@
-// Generates the app icon (public/icon.svg): the crowned Centaur (the Chessnut white knight, Apache 2.0,
-// see src/assets/pieces/README.md, with a crown) on the game's dark background with a green ring.
+// Generates the app icon (public/icon.svg) and logo (public/logo.svg): the crowned Centaur (the Chessnut white knight, Apache 2.0,
+// see src/assets/pieces/README.md, with a crown) on a coral tile over a teal one, on the game's violet.
 // The PNG sizes (public/icon-*.png, apple-touch-icon.png) are rasterized from it in a browser
 // (draw the SVG on a canvas and save toDataURL) and committed alongside.
 //
@@ -14,11 +14,13 @@ const centaur = centaurSvg.slice(centaurSvg.indexOf('>') + 1, centaurSvg.lastInd
 
 // 512×512, full-bleed background so it also works as a maskable icon (content in the middle 80%).
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<defs><radialGradient id="bg" cx="50%" cy="35%" r="75%"><stop offset="0" stop-color="#343842"/><stop offset="1" stop-color="#1d1f24"/></radialGradient></defs>
-<rect width="512" height="512" fill="url(#bg)"/>
-<circle cx="256" cy="256" r="176" fill="none" stroke="#5fb36b" stroke-width="14"/>
-<g transform="translate(88 84) scale(0.42)">${centaur}</g>
+<rect width="512" height="512" fill="#1a1035"/>
+<g transform="rotate(8 256 256)"><rect x="106" y="122" width="300" height="300" rx="78" fill="#1f8c7e"/><rect x="106" y="106" width="300" height="300" rx="78" fill="#33c3b0"/></g>
+<g transform="rotate(-5 256 256)"><rect x="106" y="122" width="300" height="300" rx="78" fill="#c9502f"/><rect x="106" y="106" width="300" height="300" rx="78" fill="#ff7a59"/></g>
+<g transform="translate(112 100) scale(0.36)">${centaur}</g>
 </svg>
 `;
 writeFileSync(join(root, 'public', 'icon.svg'), svg);
-console.log('Wrote public/icon.svg');
+// The same tiles without the background, for the menu and header.
+writeFileSync(join(root, 'public', 'logo.svg'), svg.replace(/<rect [^>]*\/>\n/, ''));
+console.log('Wrote public/icon.svg and public/logo.svg');

@@ -8,6 +8,18 @@
       "port": 5173
     },
     {
+      "name": "dev-alt",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "5174", "--strictPort"],
+      "port": 5174
+    },
+    {
+      "name": "dev-emulator",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--mode", "emulator", "--port", "5175", "--strictPort"],
+      "port": 5175
+    },
+    {
       "name": "preview-pages",
       "runtimeExecutable": "npx",
       "runtimeArgs": [

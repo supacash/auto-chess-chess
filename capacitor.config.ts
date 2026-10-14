@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   appId: 'com.pawnedup.app',
   appName: 'Pawned Up',
   webDir: 'dist',
-  android: { backgroundColor: '#1d1f24' },
+  android: { backgroundColor: '#1a1035' },
 };
 
 export default config;
