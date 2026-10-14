@@ -18,8 +18,11 @@ export const SEARCH_DEPTH = 8;
 
 /** The part of Engine the battle loop needs (lets tests use a fake). */
 export interface MoveSource {
-  /** Starts a fresh game on the given Fairy-Stockfish variant. */
-  newGame(variant: string): Promise<void>;
+  /**
+   * Starts a fresh game on the given Fairy-Stockfish variant. `plyLimit`: the battle ends on points after
+   * that many plies from its start (our engine plays for it; Fairy-Stockfish ignores it).
+   */
+  newGame(variant: string, plyLimit?: number): Promise<void>;
   /**
    * Searches the position `fen`. `history` is how the battle got there (its start position and the
    * moves since), so the engine can see repetitions: a repeated position scores as a draw, which the
@@ -45,7 +48,7 @@ export async function runBattle(
 ): Promise<BattleResult> {
   const game = new Game(spec, fen);
   try {
-    await engine.newGame(game.variant);
+    await engine.newGame(game.variant, limits.plyLimit);
 
     let plies = 0;
     let streak = NO_STREAK;

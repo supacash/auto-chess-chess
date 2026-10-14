@@ -107,6 +107,9 @@ impl Board {
 #[wasm_bindgen]
 pub struct Searcher {
     inner: acc_core::search::Searcher,
+    limits: acc_core::search::Limits,
+    multipv: usize,
+    margin: i32,
 }
 
 impl Default for Searcher {
@@ -119,7 +122,12 @@ impl Default for Searcher {
 impl Searcher {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Searcher {
-        Searcher { inner: acc_core::search::Searcher::default() }
+        Searcher {
+            inner: acc_core::search::Searcher::default(),
+            limits: acc_core::search::Limits { depth: 8, nodes: 0 },
+            multipv: 1,
+            margin: 0,
+        }
     }
 
     /// Forgets everything learned (at the start of each battle, so battles replay exactly).
@@ -130,29 +138,39 @@ impl Searcher {
 
     /// Searches the position reached from `fen` by `moves` (UCI, space-separated) and returns up to
     /// `multipv` lines as "move score move score …", best first. Scores are for the side to move, in
-    /// centipawns, with mates encoded as src/engine/pick.ts reads them.
-    pub fn candidates(
-        &mut self,
-        variant: &str,
-        fen: &str,
-        moves: &str,
-        depth: u32,
-        nodes: f64,
-        multipv: u32,
-    ) -> Result<String, JsError> {
+    /// centipawns, with mates encoded as src/engine/pick.ts reads them. With a `margin`, the lines after
+    /// the first are moves within it of the best, scored at best - margin (Searcher::search_picks).
+    pub fn candidates(&mut self, variant: &str, fen: &str, moves: &str) -> Result<String, JsError> {
         let mut board = Board::new(variant, fen)?;
         for m in moves.split_whitespace() {
             if !board.push(m) {
                 return Err(JsError::new(&format!("illegal move {m} in {fen}")));
             }
         }
-        let limits = acc_core::search::Limits { depth, nodes: nodes as u64 };
-        let lines = self.inner.search(&mut board.pos, limits, multipv as usize);
+        let lines = if self.margin > 0 {
+            self.inner.search_picks(&mut board.pos, self.limits, self.multipv, self.margin)
+        } else {
+            self.inner.search(&mut board.pos, self.limits, self.multipv)
+        };
         Ok(lines
             .iter()
             .map(|l| format!("{} {}", board.pos.move_name(l.mv), acc_core::search::game_score(l.score)))
             .collect::<Vec<_>>()
             .join(" "))
+    }
+
+    /// How candidates() searches: plies, a node budget (0 = none), how many lines, and the pick margin
+    /// (0 = exact MultiPV; see candidates).
+    pub fn configure(&mut self, depth: u32, nodes: f64, multipv: u32, margin: i32) {
+        self.limits = acc_core::search::Limits { depth, nodes: nodes as u64 };
+        self.multipv = multipv.max(1) as usize;
+        self.margin = margin;
+    }
+
+    /// The battle ends on points this many plies after the `fen` passed to candidates (0: no limit).
+    #[wasm_bindgen(js_name = setPlyLimit)]
+    pub fn set_ply_limit(&mut self, plies: u32) {
+        self.inner.set_ply_limit((plies > 0).then_some(plies as usize));
     }
 
     /// Nodes searched by the last call.

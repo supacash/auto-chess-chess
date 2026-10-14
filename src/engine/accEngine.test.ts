@@ -15,14 +15,16 @@ describe('AccEngine', () => {
     engine.terminate();
   });
 
-  it('returns three distinct lines, best first, from a start position plus moves', async () => {
+  it('returns up to three distinct moves, best first, from a start position plus moves', async () => {
     const engine = new AccEngine({ depth: 4, nodes: 0 });
     await engine.newGame('acc8');
     const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1';
     const lines = await engine.candidates(fen, 8, { fen, moves: ['e2e4', 'e7e5'] });
-    expect(lines).toHaveLength(3);
-    expect(new Set(lines.map((l) => l.move)).size).toBe(3);
-    expect(lines[0].score).toBeGreaterThanOrEqual(lines[2].score);
+    expect(lines.length).toBeGreaterThanOrEqual(1);
+    expect(lines.length).toBeLessThanOrEqual(3);
+    expect(new Set(lines.map((l) => l.move)).size).toBe(lines.length);
+    // The others are within the pick margin of the best (src/engine/pick.ts).
+    for (const l of lines) expect(l.score).toBeGreaterThanOrEqual(lines[0].score - 50);
     engine.terminate();
   });
 

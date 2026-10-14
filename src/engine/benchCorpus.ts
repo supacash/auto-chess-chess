@@ -28,10 +28,16 @@ function roundOn(spec: BoardSpec, rng: Rng): number {
 /**
  * A battle start as the game drafts it for `round`: fairy armies at the AI's budget for that round.
  * `mirrored` gives both sides the same piece types (placed separately), so results show only the
- * engine's and the colours' bias. Needs the chess rules loaded.
+ * engine's and the colours' bias. `spec` overrides the round's board (e.g. to play late rounds on 8×8).
+ * Needs the chess rules loaded.
  */
-export function benchBattle(rng: Rng, round: number, mirrored: boolean, playerFirst: boolean): string {
-  const spec = boardForRound(round);
+export function benchBattle(
+  rng: Rng,
+  round: number,
+  mirrored: boolean,
+  playerFirst: boolean,
+  spec: BoardSpec = boardForRound(round),
+): string {
   const style = pickStyle(rng, true);
   const budget = aiBudget(round, rng);
   const whiteTypes: PieceType[] = draftAiArmy(budget, style, rng, spec, true, round);

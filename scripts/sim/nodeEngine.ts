@@ -5,7 +5,14 @@ import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { variantsIni } from '../../src/chess/boardSpec';
-import { type Candidate, ENGINE_SETUP, type History, parseInfo, positionCommand } from '../../src/engine/pick';
+import {
+  type Candidate,
+  ENGINE_SETUP,
+  type History,
+  PICK_MARGIN,
+  parseInfo,
+  positionCommand,
+} from '../../src/engine/pick';
 import type { MoveSource } from '../../src/game/runBattle';
 
 /** Runs Fairy-Stockfish WASM as a UCI process (same engine as the browser). */
@@ -84,7 +91,11 @@ export class NodeEngine implements MoveSource {
     return engine;
   }
 
-  async newGame(variant: string): Promise<void> {
+  async newGame(variant: string, plyLimit?: number): Promise<void> {
+    if (this.acc) {
+      this.send(`setoption name PlyLimit value ${plyLimit ?? 0}`);
+      this.send(`setoption name PickMargin value ${PICK_MARGIN}`);
+    }
     if (variant !== this.variant) {
       this.send(`setoption name UCI_Variant value ${variant}`);
       this.variant = variant;

@@ -13,7 +13,7 @@
 import { writeFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { parseArgs } from 'node:util';
-import { boardForRound, plyLimit } from '../../src/chess/boardSpec';
+import { BOARDS, boardForRound, plyLimit } from '../../src/chess/boardSpec';
 import { fenTurn } from '../../src/chess/fen';
 import { loadRulesForNode } from '../../src/chess/testRules';
 import { benchBattle } from '../../src/engine/benchCorpus';
@@ -34,6 +34,8 @@ const { values: opts } = parseArgs({
     rounds: { type: 'string', default: '1-25' },
     /** 'fairy' (Fairy-Stockfish at the game's depth) or the path of another acc build, at the same limits. */
     opponent: { type: 'string', default: 'fairy' },
+    /** The largest board (files), e.g. 8: later rounds are played on it with their own armies. */
+    'max-board': { type: 'string', default: '9' },
     json: { type: 'string' },
   },
 });
@@ -51,8 +53,8 @@ class Duel implements MoveSource {
     private readonly fairy: NodeEngine,
     private readonly accColor: 'w' | 'b',
   ) {}
-  async newGame(variant: string): Promise<void> {
-    await Promise.all([this.acc.newGame(variant), this.fairy.newGame(variant)]);
+  async newGame(variant: string, plyLimit?: number): Promise<void> {
+    await Promise.all([this.acc.newGame(variant, plyLimit), this.fairy.newGame(variant, plyLimit)]);
   }
   async candidates(fen: string, depth: number, history?: History): Promise<Candidate[]> {
     const who = fenTurn(fen) === this.accColor ? 'acc' : 'fairy';
@@ -95,8 +97,10 @@ async function main(): Promise<void> {
         const pair = next++;
         const setup = seededRng(SEED * 100_003 + pair);
         const round = FIRST_ROUND + randomInt(setup, LAST_ROUND - FIRST_ROUND + 1);
-        const spec = boardForRound(round);
-        const fen = benchBattle(setup, round, false, setup() < 0.5);
+        const largest = BOARDS.filter((b) => b.files <= Number(opts['max-board'])).at(-1)!;
+        const board = boardForRound(round);
+        const spec = board.files > largest.files ? largest : board;
+        const fen = benchBattle(setup, round, false, setup() < 0.5, spec);
         for (const accColor of ['w', 'b'] as const) {
           const duel = new Duel(acc, fairy, accColor);
           const rng = seededRng(SEED * 7_919 + pair);

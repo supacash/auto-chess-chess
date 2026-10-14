@@ -3,8 +3,10 @@
 //! Pure and deterministic: no I/O, no clocks, no floats in anything that decides a move, so the
 //! native CLI and the WASM build play identical battles from the same position and seed.
 
+pub mod battle;
 pub mod betza;
 pub mod eval;
+pub mod params;
 pub mod pieces;
 pub mod position;
 pub mod search;

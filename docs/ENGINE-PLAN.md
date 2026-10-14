@@ -276,3 +276,96 @@ The evaluation (Phase 4) is the main remaining strength lever.
 - The node cap bounds our worst case. On 9×9 our p95 is a quarter of Fairy-Stockfish's.
 - On 6×6–8×8 we're slower: the speed gate (p95 at or below Fairy-Stockfish's on every board) isn't met yet.
 - **The corpus has changed since Phase 0:** its random plies now use our rules' move order. Both engines above were timed on the current corpus.
+
+## Phase 4 progress (2026-10-14)
+
+**The battle rules in the search:**
+- At the move limit, and when neither side can mate (insufficient material), the side ahead on points wins, as `src/rules/battle.ts` decides it.
+- Our search now scores both as wins or losses (`POINTS_WIN` = 20,000, below the mates it can see). The game passes the move limit to the engine through `MoveSource.newGame(variant, plyLimit)`. In the UCI protocol it's the `PlyLimit` option; in WASM it's `Searcher.setPlyLimit`.
+- Near the limit the same position is worth different things at different distances from it, so the plies left (capped at 48) are part of the transposition table's key.
+- Fairy-Stockfish scores insufficient material as a draw and doesn't know the limit.
+- **Measured:** 39.2% ±5.6 against Fairy-Stockfish, from 41.0% on the same starts. That's no measurable change in 300 games; the head-to-head test is still to do.
+
+**A tunable evaluation (`eval.rs`):** terms with separate middlegame and endgame weights, blended by the non-pawn material left (capped at 8 points per file).
+- **Per piece type:** value, centralisation and advancement. These are piece-square terms, summed as moves are made and unmade.
+- **Passed pawns:** a weight for each number of ranks left to go (1–8).
+- **King shelter:** own pieces next to the royal king.
+- **Tempo.**
+- `params.rs` holds the tuned weights, or `None` for the hand-set defaults.
+- A test checks that `features()` reproduces `evaluate()` exactly.
+
+**The tuning pipeline:**
+- `npm run sim:starts` writes game-drafted battle starts.
+- `acc selfplay` plays them engine against itself, natively and in parallel, picking moves as the game does. It writes every position with the battle's result.
+- `acc tune` keeps the quiet positions and fits all the weights at once with Texel tuning (Adam, exact gradient, a slight pull towards the starting weights). It writes `params.rs`.
+
+**First tuning run:**
+- 20,000 self-play battles at 20k nodes per move gave 795k positions; 504k were quiet.
+- Prediction error fell from 0.1417 to 0.1291.
+- Piece values stayed close to the game's points. Most of the change is in the positional terms.
+- **Head to head:** 52.5% ±5.7 (Elo +17) against the untuned build at the same budget. That's within noise.
+- **Fix found along the way:** the quiet-position filter's capture search needed a node cap (5,000). Crowded 9×9 positions with cannons made it run without end.
+
+**Scope decision (2026-10-14, the user):** the gate is measured on 5×5–8×8 for now. The game may temporarily cap the board at 8×8. If it does, rounds 9–25 are played on 8×8 with their own armies (`sim:arena --max-board 8`).
+
+**Todo, 9×9:**
+- It's most of the games under the current rules, and our weakest board (about 35% against Fairy-Stockfish at 300k nodes).
+- Fairy-Stockfish spends 0.6–2.8 s per move there, so a bigger node budget for 9×9 is the first thing to try. Per-board budgets would need `ACC_LIMITS` to depend on the board.
+- Revisit before the board grows back to 9×9.
+
+**Quiescence explosion (the big one):**
+- On crowded late-round 8×8 boards the engine didn't finish even depth 1 within its node budget. The capture search ran on through cannon and fairy-piece capture chains.
+- The search then returned no move, and runBattle played a **random** legal move.
+- **Fixes:**
+  - The quiescence search stops after 8 plies.
+  - It skips losing captures: a more valuable piece taking a defended one.
+  - The node limit can't stop the search before depth 1 is done.
+- **Results:**
+  - Mean depth reached on late 8×8 positions: 2.0 → 4.6. Every search now returns a move.
+  - Against Fairy-Stockfish, capped at 8×8 over rounds 1–25: **38.3% → 53.5% ±5.6** at 300k nodes.
+
+**Cheaper move picks (`Searcher::search_picks`, the `PickMargin` UCI option):**
+- The game only picks at random among moves within 50 cp of the best, so exact MultiPV isn't needed.
+- It searches one principal line, then runs zero-window tests of up to 12 other moves against best − 50, with a quarter of the budget on top. The moves that pass are reported at best − 50.
+- 49.8% ±5.7 against Fairy-Stockfish, the same within noise.
+
+**Speed:**
+- The check test made after a move is reused by the next node.
+- Passed-pawn terms are cached by a pawn-only hash.
+- Searches are identical, about 20% faster.
+- Search stops deepening once it finds a mate.
+
+**Budget:** at 150k nodes the score is 51.3% ±5.7 against Fairy-Stockfish, with time per move about halved. `ACC_LIMITS` is now depth 8 / 150k nodes.
+
+**WASM speed at 150k nodes** (ms per move, median / p95; Fairy-Stockfish on the same corpus in brackets):
+
+| Board | Ours | Fairy-Stockfish | p95 gate |
+|---|---|---|---|
+| 5×5 | 7 / 27 | 24 / 63 | ✅ |
+| 6×6 | 36 / 68 | 68 / 166 | ✅ |
+| 7×7 | 62 / 161 | 69 / 133 | ❌ |
+| 8×8 | 94 / 200 | 124 / 300 | ✅ |
+| 9×9 | 329 / 814 | 634 / 2792 | ✅ (out of scope) |
+
+### Phase 4 gates (2026-10-14), depth 8 / 150k nodes, boards up to 8×8
+
+- **Strength: passed.** 49.7% ±2.2 (Elo −2) over 2,000 games against Fairy-Stockfish depth 8 (arena seed 7, `--max-board 8`). The bar was 48%.
+
+  | Board | Score |
+  |---|---|
+  | 5×5 | 60.1% |
+  | 6×6 | 45.8% |
+  | 7×7 | 47.3% |
+  | 8×8 | 49.4% |
+
+  Rounds 1–8 score 49.2% and rounds 9–25 (on 8×8) 50.0%.
+- **Fairness: passed.** 400 mirrored-army games of our engine against itself:
+
+  | | Ours | Fairy-Stockfish |
+  |---|---|---|
+  | White | 51.5% ±4.9 | 46.7% |
+  | First mover | 57.0% ±4.9 | 57.4% |
+
+  No colour bias, and the tempo edge is no bigger than Fairy-Stockfish's.
+- **Speed: passed except 7×7 p95** (161 ms against 133). See the WASM table above. Median times beat Fairy-Stockfish on every board.
+- **Manual-mode strength:** not run separately yet. The arena already plays from the same game-drafted starts the player gets.

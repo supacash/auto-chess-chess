@@ -77,3 +77,29 @@ fn deterministic() {
     };
     assert_eq!(run(), run());
 }
+
+#[test]
+fn insufficient_material_is_won_on_points() {
+    // King and knight against a bare king can't mate, but the battle goes to the side ahead on points.
+    let mut p = pos("acc8", "4k3/8/8/8/8/8/8/3NK3 b - - 0 1");
+    let mut s = Searcher::new(16);
+    let lines = s.search(&mut p, Limits { depth: 3, nodes: 0 }, 1);
+    assert!(lines[0].score < -19_000, "{}", lines[0].score);
+}
+
+#[test]
+fn plays_for_points_at_the_move_limit() {
+    // Even material, one ply left: taking the pawn wins the battle on points (and Rxa7 is the only capture).
+    let fen = "4k3/p7/8/8/8/8/7P/R3K3 w - - 0 1";
+    let mut p = pos("acc8", fen);
+    let mut s = Searcher::new(16);
+    s.set_ply_limit(Some(1));
+    let lines = s.search(&mut p, Limits { depth: 3, nodes: 0 }, 1);
+    assert_eq!(p.move_name(lines[0].mv), "a1a7");
+    assert!(lines[0].score > 19_000, "{}", lines[0].score);
+    // Without a limit it's just a pawn.
+    let mut q = pos("acc8", fen);
+    let mut s = Searcher::new(16);
+    let lines = s.search(&mut q, Limits { depth: 3, nodes: 0 }, 1);
+    assert!(lines[0].score < 1_000, "{}", lines[0].score);
+}

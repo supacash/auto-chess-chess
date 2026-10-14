@@ -30,7 +30,9 @@
     "e2e:fullmatch": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.fullmatch.config.ts\"",
     "check:baseline": "tsx scripts/check/baseline.ts",
     "check:perft": "tsx scripts/check/perft.ts",
-    "sim:arena": "tsx scripts/sim/arena.ts"
+    "sim:arena": "tsx scripts/sim/arena.ts",
+    "sim:starts": "tsx scripts/sim/starts.ts",
+    "check:depth": "tsx scripts/check/depth.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

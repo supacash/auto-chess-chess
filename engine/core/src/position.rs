@@ -72,10 +72,14 @@ pub struct Position {
     /// by make/unmake so check tests don't scan the board.
     kings: [[Square; MAX_KINGS]; 2],
     king_count: [u8; 2],
-    /// Piece-square values (material included) per cell and square: eval::psq_table.
-    psq: &'static [i32],
-    /// Each side's sum of piece-square values, kept up to date by make/unmake.
-    score: [i32; 2],
+    /// Piece-square values (middlegame, endgame) per cell and square: eval::psq_table.
+    psq: &'static [(i32, i32)],
+    /// White's piece-square sum minus black's, (middlegame, endgame), kept up to date by make/unmake.
+    score: (i32, i32),
+    /// Non-pawn material on the board, for the evaluation's middlegame/endgame blend (eval::phase).
+    phase: i32,
+    /// A hash of the pawn-like pieces alone (the evaluation caches its pawn terms by it).
+    pawn_hash: u64,
     /// How many pieces of each type each side has.
     counts: [[u8; PIECE_COUNT]; 2],
 }
@@ -165,7 +169,9 @@ impl Position {
             kings: [[NO_SQUARE; MAX_KINGS]; 2],
             king_count: [0; 2],
             psq: crate::eval::psq_table(size),
-            score: [0; 2],
+            score: (0, 0),
+            phase: 0,
+            pawn_hash: 0,
             counts: [[0; PIECE_COUNT]; 2],
         };
         for (sq, &c) in board.iter().enumerate().take(t.squares) {
@@ -352,7 +358,13 @@ impl Position {
         self.hash ^= piece_key(c, sq);
         let color = cell_color(c);
         let ty = cell_type(c);
-        self.score[color as usize] += self.psq[(c as usize - 1) * MAX_SQUARES + sq as usize];
+        let (mg, eg) = self.psq[(c as usize - 1) * MAX_SQUARES + sq as usize];
+        let sign = if color == WHITE { 1 } else { -1 };
+        self.score = (self.score.0 + sign * mg, self.score.1 + sign * eg);
+        self.phase += crate::eval::phase_points(c);
+        if PIECES[ty as usize].pawn {
+            self.pawn_hash ^= piece_key(c, sq);
+        }
         self.counts[color as usize][ty as usize] += 1;
         if PIECES[ty as usize].king {
             self.add_king(color, sq);
@@ -366,7 +378,13 @@ impl Position {
         self.hash ^= piece_key(c, sq);
         let color = cell_color(c);
         let ty = cell_type(c);
-        self.score[color as usize] -= self.psq[(c as usize - 1) * MAX_SQUARES + sq as usize];
+        let (mg, eg) = self.psq[(c as usize - 1) * MAX_SQUARES + sq as usize];
+        let sign = if color == WHITE { 1 } else { -1 };
+        self.score = (self.score.0 - sign * mg, self.score.1 - sign * eg);
+        self.phase -= crate::eval::phase_points(c);
+        if PIECES[ty as usize].pawn {
+            self.pawn_hash ^= piece_key(c, sq);
+        }
         self.counts[color as usize][ty as usize] -= 1;
         if PIECES[ty as usize].king {
             self.remove_king(color, sq);
@@ -374,9 +392,24 @@ impl Position {
         c
     }
 
-    /// `color`'s summed piece-square values (material included).
-    pub fn psq_score(&self, color: Color) -> i32 {
-        self.score[color as usize]
+    /// White's piece-square sum minus black's: (middlegame, endgame).
+    pub fn psq_score(&self) -> (i32, i32) {
+        self.score
+    }
+
+    /// A hash of where the pawn-like pieces stand.
+    pub fn pawn_hash(&self) -> u64 {
+        self.pawn_hash
+    }
+
+    /// Non-pawn material on the board in battle points (both sides).
+    pub fn phase_points(&self) -> i32 {
+        self.phase
+    }
+
+    /// `color`'s royal king's square, if it has one (its only king).
+    pub fn royal_square(&self, color: Color) -> Option<Square> {
+        self.royal(color)
     }
 
     /// How many pieces of type `ty` `color` has.

@@ -3,6 +3,11 @@
 //!   acc version
 //!   acc perft <variant> <depth> <fen>    e.g. acc perft acc8 5 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1"
 //!   acc uci                              the UCI subset the game's scripts use (scripts/sim/nodeEngine.ts)
+//!   acc selfplay <starts> <out> [...]    self-play positions for tuning (selfplay.rs)
+//!   acc tune <selfplay data> [...]       fit the evaluation's weights to them (tune.rs)
+
+mod selfplay;
+mod tune;
 
 use acc_core::position::{Position, perft};
 use acc_core::search::{Limits, Searcher, uci_score};
@@ -18,12 +23,28 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Some("perft") if args.len() >= 4 => perft_command(&args),
+        Some("selfplay") => match selfplay::run(&args[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("selfplay: {e}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("tune") => match tune::run(&args[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("tune: {e}");
+                ExitCode::FAILURE
+            }
+        },
         Some("uci") => {
             uci();
             ExitCode::SUCCESS
         }
         _ => {
-            eprintln!("usage: acc version | acc perft <variant> <depth> <fen> | acc uci");
+            eprintln!(
+                "usage: acc version | acc perft <variant> <depth> <fen> | acc uci | acc selfplay <starts> <out> | acc tune <data>"
+            );
             ExitCode::FAILURE
         }
     }
@@ -58,7 +79,7 @@ fn perft_command(args: &[String]) -> ExitCode {
     ExitCode::SUCCESS
 }
 
-/// A UCI loop: uci, isready, setoption (UCI_Variant, MultiPV, Nodes), ucinewgame,
+/// A UCI loop: uci, isready, setoption (UCI_Variant, MultiPV, Nodes, PlyLimit, PickMargin), ucinewgame,
 /// position fen ... [moves ...], go depth N [nodes N], quit. Searches run to completion (no stop).
 fn uci() {
     let stdin = std::io::stdin();
@@ -67,6 +88,8 @@ fn uci() {
     let mut variant = String::from("acc8");
     let mut multipv = 1usize;
     let mut node_limit = 0u64;
+    // With a margin, the extra lines are only moves within it of the best (Searcher::search_picks).
+    let mut pick_margin = 0i32;
     let mut pos: Option<Position> = None;
     for line in stdin.lock().lines() {
         let Ok(line) = line else { break };
@@ -86,6 +109,9 @@ fn uci() {
                     "UCI_Variant" => variant = value.to_string(),
                     "MultiPV" => multipv = value.parse().unwrap_or(1),
                     "Nodes" => node_limit = value.parse().unwrap_or(0),
+                    "PickMargin" => pick_margin = value.parse().unwrap_or(0),
+                    // The battle ends on points after this many plies from the `position` FEN (0: no limit).
+                    "PlyLimit" => searcher.set_ply_limit(value.parse().ok().filter(|&n: &usize| n > 0)),
                     _ => {}
                 }
             }
@@ -107,11 +133,17 @@ fn uci() {
                     writeln!(out, "bestmove (none)").ok();
                     continue;
                 };
-                let lines = searcher.search(p, Limits { depth, nodes }, multipv);
+                let limits = Limits { depth, nodes };
+                let lines = if pick_margin > 0 {
+                    searcher.search_picks(p, limits, multipv, pick_margin)
+                } else {
+                    searcher.search(p, limits, multipv)
+                };
                 for (k, l) in lines.iter().enumerate() {
                     writeln!(
                         out,
-                        "info depth {depth} multipv {} score {} nodes {} pv {}",
+                        "info depth {} multipv {} score {} nodes {} pv {}",
+                        searcher.completed_depth(),
                         k + 1,
                         uci_score(l.score),
                         searcher.nodes(),
