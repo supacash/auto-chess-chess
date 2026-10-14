@@ -23,10 +23,9 @@ import {
   plyLimit,
   variantsIni,
 } from '../../src/chess/boardSpec';
-import { setRules } from '../../src/chess/rules';
+import { loadRulesForNode } from '../../src/chess/testRules';
 import { benchBattle } from '../../src/engine/benchCorpus';
 import { Board } from '../../src/engine/wasm/acc';
-import { loadEngineForNode } from '../../src/engine/wasmNode';
 import { isPawnLike, PIECE_TYPES, type PieceType } from '../../src/rules/pieces';
 import { randomInt, type Rng, seededRng } from '../../src/rules/rng';
 
@@ -48,8 +47,7 @@ const ffish = await Module({ wasmBinary: readFileSync(require.resolve('ffish-es6
   typeof Module
 >[0]);
 ffish.loadVariantConfig(variantsIni());
-setRules(ffish); // benchBattle places armies with the game's rules (ffish)
-loadEngineForNode();
+await loadRulesForNode(); // benchBattle places armies with the game's rules (our engine)
 
 let mismatches = 0;
 let nodes = 0;

@@ -1,26 +1,22 @@
-import type { Board, FairyStockfish } from 'ffish-es6';
-import { type BoardSpec, battleVariant, engineFen, parseSquare, squareName } from './boardSpec';
-import { type Color, fenTurn, parsePlacement, placementField } from './fen';
+import { Board } from '../engine/wasm/acc';
+import { type BoardSpec, battleVariant } from './boardSpec';
+import { type Color, fenTurn } from './fen';
 
 /**
- * Chess rules for any board size, backed by ffish (Fairy-Stockfish's move generator as WASM).
- * ffish loads asynchronously, so the environment loads it once and hands it over with setRules():
- * the browser via loadRules.ts, tests and the simulator from node_modules.
+ * Chess rules for any board size, backed by the game's own engine (engine/, Rust compiled to WASM),
+ * which plays Fairy-Stockfish's rules for these variants exactly (npm run check:perft). The WASM
+ * loads asynchronously, so the environment loads it once and then calls setRulesLoaded(): the
+ * browser via loadRules.ts, tests and the simulator via testRules.ts.
  */
 
-let ffish: FairyStockfish | null = null;
+let loaded = false;
 
-export function setRules(loaded: FairyStockfish): void {
-  ffish = loaded;
+export function setRulesLoaded(): void {
+  loaded = true;
 }
 
 export function rulesLoaded(): boolean {
-  return ffish !== null;
-}
-
-function rules(): FairyStockfish {
-  if (!ffish) throw new Error('Chess rules not loaded yet (call setRules first)');
-  return ffish;
+  return loaded;
 }
 
 /** Why a game is over, if it is. */
@@ -38,43 +34,26 @@ export function parseUci(uci: string): Move | null {
 }
 
 /**
- * A position being played. Wraps an ffish Board, which lives in WASM memory:
+ * A position being played. Wraps an engine Board, which lives in WASM memory:
  * call delete() when finished with it.
  */
 export class Game {
   private readonly board: Board;
-  /** The engine variant it's played under (the board's, or its two-kings form; see battleVariant). */
+  /** The variant it's played under (the board's, or its two-kings form; see battleVariant). */
   readonly variant: string;
-  /** Where each side's Heirs stand (ffish only knows them as more kings), and their earlier squares for undo. */
-  private heirs: Record<Color, string[]> = { w: [], b: [] };
-  private heirHistory: Record<Color, string[]>[] = [];
 
   constructor(
     readonly spec: BoardSpec,
     fen: string,
   ) {
+    if (!loaded) throw new Error('Chess rules not loaded yet (call loadRules first)');
     this.variant = battleVariant(spec, fen);
-    const grid = parsePlacement(fen, spec.files);
-    grid.forEach((row, i) => {
-      row.forEach((cell, file) => {
-        if (cell?.type === 'J') this.heirs[cell.color].push(squareName(file, spec.ranks - 1 - i));
-      });
-    });
-    this.board = new (rules().Board)(this.variant, engineFen(fen));
+    this.board = new Board(this.variant, fen);
   }
 
-  /** The position, with each Heir written as 'J'. */
+  /** The position. Heirs are written 'J' (the engine tracks them as their own piece). */
   fen(): string {
-    const fen = this.board.fen();
-    if (!this.heirs.w.length && !this.heirs.b.length) return fen;
-    const grid = parsePlacement(fen, this.spec.files).reverse(); // [rank][file], rank 0 at the bottom
-    for (const color of ['w', 'b'] as const) {
-      for (const square of this.heirs[color]) {
-        const { file, rank } = parseSquare(square);
-        if (grid[rank]?.[file]) grid[rank][file] = { type: 'J', color };
-      }
-    }
-    return [placementField(grid), ...fen.split(' ').slice(1)].join(' ');
+    return this.board.fen();
   }
 
   turn(): Color {
@@ -92,14 +71,7 @@ export class Game {
   /** Plays a UCI move; null if it's illegal here. */
   play(uci: string): Move | null {
     const move = parseUci(uci);
-    const mover = this.turn();
     if (!move || !this.board.push(uci)) return null;
-    this.heirHistory.push(this.heirs);
-    const other: Color = mover === 'w' ? 'b' : 'w';
-    this.heirs = {
-      [other]: this.heirs[other].filter((sq) => sq !== move.to), // a captured Heir is gone
-      [mover]: this.heirs[mover].map((sq) => (sq === move.from ? move.to : sq)),
-    } as Record<Color, string[]>;
     return move;
   }
 
@@ -108,18 +80,17 @@ export class Game {
     if (this.board.numberLegalMoves() === 0) return this.board.isCheck() ? 'checkmate' : 'stalemate';
     if (this.board.isInsufficientMaterial()) return 'insufficient';
     if (this.board.halfmoveClock() >= 100) return 'fifty-move';
-    if (this.board.isGameOver(true)) return 'repetition';
+    if (this.board.isThreefold()) return 'repetition';
     return null;
   }
 
   /** Takes back the last move. */
   undo(): void {
     this.board.pop();
-    this.heirs = this.heirHistory.pop() ?? this.heirs;
   }
 
   delete(): void {
-    this.board.delete();
+    this.board.free();
   }
 }
 

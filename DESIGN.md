@@ -181,7 +181,7 @@ The Profile's Fun tab shows the most-bought piece (not counting pawns, Ferzes an
 
 ## Tech
 - Vite + TypeScript 7, no UI framework. Biome for formatting and linting.
-- Rules: ffish.js; engine: Fairy-Stockfish WASM (multithreaded, so the page is cross-origin isolated; coi-serviceworker provides this on GitHub Pages).
+- Rules: the game's own engine (`engine/`, Rust compiled to single-threaded WASM), which plays Fairy-Stockfish's rules for these variants exactly (checked move for move against ffish by `npm run check:perft`); engine: Fairy-Stockfish WASM (multithreaded, so the page is cross-origin isolated; coi-serviceworker provides this on GitHub Pages).
 - Code layout and conventions: see [CLAUDE.md](CLAUDE.md).
 
 ## Known issues

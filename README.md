@@ -34,14 +34,14 @@ npm run dev
 | `npm run build` | Typecheck + production build in `dist/` |
 | `npm run sim` | Headless balance simulator (see [SIMULATION.md](SIMULATION.md)) |
 
-`dev` and `build` first copy the chess engine (Fairy-Stockfish), the rules library (ffish) and a small service worker from `node_modules` into `public/`.
+`dev` and `build` first copy the chess engine (Fairy-Stockfish) and a small service worker from `node_modules` into `public/`, and build the game's own rules engine (`engine/`, Rust) to WebAssembly. That needs [Rust](https://rustup.rs) and `cargo install wasm-bindgen-cli --version 0.2.129`.
 
 ## Project layout
 
 ```
 src/
   rules/    pure game logic: placement, economy, AI drafting, battle results, run state (unit tested)
-  chess/    board sizes, FEN helpers and the rules wrapper (ffish)
+  chess/    board sizes, FEN helpers and the rules wrapper (our engine)
   engine/   Fairy-Stockfish wrapper and move picking
   game/     battle loop and save/load
   ui/       placement board and battle view (vanilla TS, Pointer Events)
@@ -49,7 +49,7 @@ src/
 scripts/    engine copy step and the balance simulator
 ```
 
-Built with [Vite](https://vite.dev), TypeScript, [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish) ([WASM build](https://github.com/fairy-stockfish/fairy-stockfish.wasm)) and [ffish.js](https://github.com/fairy-stockfish/Fairy-Stockfish/tree/master/src/ffishjs). The engine is multithreaded, so the page has to be cross-origin isolated; [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) handles that on GitHub Pages.
+Built with [Vite](https://vite.dev), TypeScript, [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish) ([WASM build](https://github.com/fairy-stockfish/fairy-stockfish.wasm)) and the game's own rules engine in Rust (`engine/`). The engine is multithreaded, so the page has to be cross-origin isolated; [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) handles that on GitHub Pages.
 
 ## License
 
@@ -57,4 +57,4 @@ This project's code is released under the [MIT License](LICENSE).
 
 The chess piece images are the Chessnut set by Alexis Luengas, licensed under the Apache License 2.0 (see [src/assets/pieces/](src/assets/pieces/README.md)).
 
-Fairy-Stockfish and ffish are licensed under the GPLv3 and are not covered by the MIT License. They aren't stored in this repo and are installed from npm. Any build you distribute that includes them must comply with the GPLv3, including crediting them and offering their source (the game's footer does this).
+Fairy-Stockfish is licensed under the GPLv3 and is not covered by the MIT License. It isn't stored in this repo and is installed from npm. Any build you distribute that includes it must comply with the GPLv3, including crediting it and offering its source (the game's footer does this). ffish (also GPLv3) is only a development dependency, used to test our rules engine; it isn't shipped.
