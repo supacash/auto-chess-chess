@@ -1,13 +1,13 @@
 {
-  "name": "Auto Chess²",
-  "short_name": "Auto Chess²",
+  "name": "Pawned Up",
+  "short_name": "Pawned Up",
   "description": "Draft and place a chess army; an engine plays the battle.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#1d1f24",
-  "theme_color": "#1d1f24",
+  "background_color": "#1a1035",
+  "theme_color": "#1a1035",
   "icons": [
     {
       "src": "icon-192.png",

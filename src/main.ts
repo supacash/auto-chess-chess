@@ -1,7 +1,10 @@
 import type { MatchSettings } from './multi/match';
+import '@fontsource/lilita-one/latin-400.css';
+import '@fontsource-variable/nunito/wght.css';
 import './style.css';
 import { achievement, battleAchievements, PRESTIGIOUS_LEVEL, runAchievements } from './game/achievements';
 import { adsAvailable, showRewardedAd } from './app/ads';
+import { startMenuDrift } from './app/menuDrift';
 import { showToast } from './app/toast';
 import { battleVariant } from './chess/boardSpec';
 import { whiteEval } from './engine/pick';
@@ -33,6 +36,7 @@ import { hasStarted, isRunOver } from './rules/run';
 const rng = Math.random;
 
 renderLayout($('#app'));
+startMenuDrift($('#menu-drift'));
 const session = new Session(rng);
 const records = new RecordBook();
 const placement = new PlacementScreen(
