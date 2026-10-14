@@ -28,7 +28,8 @@
     "test:rules": "firebase emulators:exec --only firestore --project auto-chess-chess \"vitest run --config vitest.rules.config.ts\"",
     "e2e:online": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.online.config.ts\"",
     "e2e:fullmatch": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.fullmatch.config.ts\"",
-    "check:baseline": "tsx scripts/check/baseline.ts"
+    "check:baseline": "tsx scripts/check/baseline.ts",
+    "check:perft": "tsx scripts/check/perft.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

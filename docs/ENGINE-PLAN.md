@@ -186,3 +186,36 @@ Your two constraints:
   - First-mover score no further from 50% than Fairy-Stockfish's. A bigger tempo edge would mean rebalancing.
   - 0 refused positions.
 - **Phone:** the user has an iPhone, and Fairy-Stockfish needs HTTPS there. Desktop Chrome slowed 4–6× in DevTools stands in for a phone until the Phase 4 speed gate.
+
+## Phase 1 results (2026-10-13)
+
+**Gate passed:**
+- `npm run check:perft` covered 10,000 positions on each of seeds 1 and 2: 1.38 million positions compared, **0 mismatches** against ffish.
+- At each position it compares: the legal-move set, FEN, check, insufficient material and threefold repetition. About 9,000 positions per seed also had every child compared (depth 2).
+- **Covered (per seed):**
+  - about 37,000 checks, 8,300 repetitions, 1,000 insufficient-material positions
+  - 1,600 checkmates, 120–220 stalemates
+  - 3,000 two-kings walks, 3,000 positions with an en passant square
+
+**The rules core (`engine/core`):**
+- **`betza.rs`:** parses exactly the Betza subset the pieces use. It panics on anything else, so a new piece with unsupported movement fails a test instead of moving wrongly.
+- **`tables.rs`:** per-board-size tables of leap targets, rays and capture masks.
+- **`position.rs`:** FEN, legal moves, make/unmake, Zobrist hashing, check, threefold repetition, insufficient material and perft.
+- The standard chess start position gives perft 20 / 400 / 8,902 / 197,281 / 4,865,609, which are the known values.
+- The native `acc perft` runs at about 4M positions/s with plain make/unmake legality. Speed work comes in Phase 3.
+
+**Fairy-Stockfish behaviours found by probing ffish:**
+- Promotion is to Q/R/B/N only.
+- A pawn's or Berolina pawn's double step only works from its own second rank. The Berolina's is non-jumping.
+- The 50-move count resets on pawn moves, captures and promotions, but not on other Berolina pawn moves.
+- **En passant:**
+  - Only pawns capture en passant.
+  - A pawn's double step sets the en passant square only if an enemy pawn could take it, even a pinned one.
+  - A Berolina pawn's diagonal double step always sets it. A pawn may take the Berolina on the square it passed, and the FEN lists both squares in board order (e.g. `c3b4`).
+- With two kings neither is royal, and both may be left attacked. The last king is royal.
+- In the two-kings rules insufficient material never applies, even king against king.
+- Otherwise insufficient material means: king against king, bishops all on one colour, or a single knight against a bare king. Any fairy piece counts as enough to mate.
+- Threefold repetition is claimed when a position occurs for the third time since the last pawn move or capture.
+- The grasshopper lands just past the first piece in line. The cannon captures the first piece beyond its screen.
+
+**Also added:** the WASM `Board` (ffish's method names) and a test that the engine's Betza strings match `src/rules/pieces.ts`.
