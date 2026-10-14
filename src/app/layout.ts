@@ -10,14 +10,14 @@ export const SPEEDS = [1, 2, 4];
 export function renderLayout(root: HTMLElement): void {
   root.innerHTML = `
   <header>
-    <h1><img class="logo" src="${import.meta.env.BASE_URL}icon.svg" alt="" width="28" height="28" /><span>Auto Chess<sup>2</sup></span></h1>
+    <h1><img class="logo" src="${import.meta.env.BASE_URL}icon.svg" alt="" width="28" height="28" /><span>Pawned Up</span></h1>
     <div class="header-actions">
       <button id="menu-button" type="button" class="link">Menu</button>
     </div>
   </header>
   <section id="menu" class="menu" hidden>
     <img class="menu-logo" src="${import.meta.env.BASE_URL}icon.svg" alt="" width="104" height="104" />
-    <h2 class="menu-title">Auto Chess<sup>2</sup></h2>
+    <h2 class="menu-title">Pawned Up</h2>
     <p class="menu-tagline">Draft an army, place it, and let the engine fight it out.</p>
     <p class="menu-notice" id="menu-notice" hidden></p>
     <div class="menu-buttons">
