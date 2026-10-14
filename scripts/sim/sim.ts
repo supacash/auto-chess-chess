@@ -11,7 +11,7 @@
  */
 import { availableParallelism } from 'node:os';
 import { parseArgs } from 'node:util';
-import { runBattle, SEARCH_DEPTH } from '../../src/game/runBattle';
+import { runBattle } from '../../src/game/runBattle';
 import {
   aiBudget,
   BLACK_DISCOUNT,
@@ -42,6 +42,7 @@ import { maxLives } from '../../src/rules/run';
 import { randomInt, seededRng } from '../../src/rules/rng';
 import { formatMargin, meanMargin } from './stats';
 import { loadRulesForNode } from '../../src/chess/testRules';
+import { ACC_LIMITS } from '../../src/engine/accSettings';
 import { EngineFailure, NodeEngine } from './nodeEngine';
 import { armyValue, spendGold } from './shopPlayer';
 
@@ -413,7 +414,7 @@ function report(records: RunRecord[]): string {
   const avgMoreLife = moreLife.reduce((s, x) => s + x.score, 0) / moreLife.length;
 
   const out = [
-    `Auto Chess² sim — ${RUNS} runs × ${ROUNDS} rounds, seed ${SEED}, depth ${DEPTH ?? SEARCH_DEPTH}, ` +
+    `Auto Chess² sim — ${RUNS} runs × ${ROUNDS} rounds, seed ${SEED}, ${DEPTH ? `Fairy-Stockfish depth ${DEPTH}` : `our engine ${ACC_LIMITS.depth}/${ACC_LIMITS.nodes}`}, ` +
       `mode ${MODE.name}, ply limit ${PLY_OVERRIDE ?? '10 × size + 10'}${DECISIVE ? `, decisive lead ${DECISIVE[0]} for ${DECISIVE[1]} plies` : ''}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
       `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round ±1` : `${PER_ROUND}×round × ramp${MODE.aiBonus ? ` + ${MODE.aiBonus}` : ''} ±1 (round 1: −${MODE.roundOneDiscount})`}` +
       `${PRESTIGE ? `, prestige ${PRESTIGE}` : ''}${PERKS.length ? `, perks ${PERKS.join(',')}` : ''}${SAVE ? `, saves ${SAVE} gold from round 3` : ''}`,
@@ -461,7 +462,12 @@ function report(records: RunRecord[]): string {
 async function main(): Promise<void> {
   const t0 = Date.now();
   await loadRulesForNode();
-  const engines = await Promise.all(Array.from({ length: WORKERS }, () => NodeEngine.create(DEPTH)));
+  const engines = await Promise.all(
+    Array.from({ length: WORKERS }, () =>
+      // --depth N: Fairy-Stockfish at that depth (the engine the balance work before phase 5 used).
+      DEPTH ? NodeEngine.create(DEPTH) : NodeEngine.createAcc(ACC_LIMITS),
+    ),
+  );
   const results: RunRecord[] = new Array(RUNS);
   let next = 0;
   let done = 0;

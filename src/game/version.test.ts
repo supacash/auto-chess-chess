@@ -14,6 +14,7 @@ const FINGERPRINTS: Record<number, string> = {
   6: '88c4e465', // two kings: both attacked at once isn't mate (one must be captured first)
   7: '87a056c6', // the Stackman is worth 9 (was 8)
   8: '87a056c6', // same pieces as 7; armies may hold several Stackmen and the shop changed (kept apart from 7 online)
+  9: '98c96f10', // the game's own engine plays battles instead of Fairy-Stockfish (docs/ENGINE-PLAN.md)
 };
 
 describe('rules version', () => {

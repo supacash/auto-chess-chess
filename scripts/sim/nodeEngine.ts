@@ -179,7 +179,7 @@ export class NodeEngine implements MoveSource {
     };
     this.listeners.add(onLine);
     const done = this.waitFor((l) => l.startsWith('bestmove') || UNSUPPORTED.test(l), `search of ${fen}`);
-    this.send(positionCommand(fen, history));
+    this.send(positionCommand(fen, history, !!this.acc));
     this.send(
       this.acc ? `go depth ${this.acc.depth} nodes ${this.acc.nodes}` : `go depth ${this.depthOverride ?? depth}`,
     );

@@ -19,7 +19,7 @@ import { ProfileScreen } from './app/profileScreen';
 import { RecordBook } from './app/recordBook';
 import { Session } from './app/session';
 import { loadRules } from './chess/loadRules';
-import { Engine } from './engine/stockfish';
+import { Engine } from './engine/engine';
 import { ManualBattle } from './game/manualBattle';
 import { clearMatch, loadMatch } from './game/storage';
 import { generateName } from './multi/names';

@@ -369,3 +369,30 @@ The evaluation (Phase 4) is the main remaining strength lever.
   No colour bias, and the tempo edge is no bigger than Fairy-Stockfish's.
 - **Speed: passed except 7×7 p95** (161 ms against 133). See the WASM table above. Median times beat Fairy-Stockfish on every board.
 - **Manual-mode strength:** not run separately yet. The arena already plays from the same game-drafted starts the player gets.
+
+## Phase 5 results (2026-10-14)
+
+**Our engine plays the game's battles now.**
+- **Worker:** `src/engine/engine.ts` is the `Engine` the game uses. It runs our WASM engine in a module Web Worker (`engineWorker.ts`, Vite `worker.format: 'es'`) with the same `MoveSource` interface.
+- **Safety net:** a failed or silent worker (30 s) is replaced and told the battle again, and the search returns no lines, so runBattle plays a random move.
+- **Callers:** main.ts and matchController import it in place of the Fairy-Stockfish wrapper.
+- **The move limit reaches the engine:** runBattle passes it to `newGame`.
+
+**Versioning:**
+- `RULES_VERSION` 9. The fingerprint now covers `acc`, `ENGINE_VERSION`, `ACC_LIMITS`, MultiPV and the pick margin.
+- `src/engine/accSettings.ts` holds the limits and version. `accEngine.test.ts` checks the TS version matches the WASM build.
+- **Online rooms don't check rule versions.** Each battle is computed on one phone and its result shared, so mixed versions can't desync a room. A player on an old cached build would compute their battles with Fairy-Stockfish, though, so gating rooms by version is a follow-up.
+
+**Scripts:**
+- sim, duel and determinism now use our engine (native). `sim --depth N` still runs Fairy-Stockfish at that depth.
+- The arena and baseline compare against Fairy-Stockfish explicitly.
+- `/bench.html` times our engine, or Fairy-Stockfish with `?engine=fairy`.
+- The native UCI path now sends Heirs as `J`, as the game's FENs do. It used to convert them to kings for Fairy-Stockfish, which made the native and WASM engines evaluate Heir battles differently.
+
+**Checks:**
+- `check:determinism`: 12 battles, each played twice on WASM and once natively (5×5, 8×8, 8×8 with an Heir, 9×9). All identical.
+- `test`: 320 tests pass.
+- `e2e`: 11 tests pass on the production build. They run in 33 s, from 45–55 s with Fairy-Stockfish.
+- **Download:** the engine WASM is 52 KB gzipped, against about 800 KB for both Fairy-Stockfish WASMs before.
+
+**9×9 since the quiescence fix:** 49.6% ±6.4 against Fairy-Stockfish (240 games, rounds 9–25, 150k nodes), with time per move about the same (291 against 299 ms under load). The 9×9 weakness was the same quiescence bug, so the board may not need capping at 8×8.

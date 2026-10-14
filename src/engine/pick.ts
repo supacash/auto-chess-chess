@@ -50,10 +50,14 @@ export interface History {
   moves: string[];
 }
 
-/** The UCI `position` command for a search: with history when there is one. */
-export function positionCommand(fen: string, history?: History): string {
-  if (!history || history.moves.length === 0) return `position fen ${engineFen(history?.fen ?? fen)}`;
-  return `position fen ${engineFen(history.fen)} moves ${history.moves.join(' ')}`;
+/**
+ * The UCI `position` command for a search: with history when there is one. Fairy-Stockfish sees an Heir
+ * as a second king (engineFen); the game's own engine knows the Heir, so `heirs` keeps it as 'J'.
+ */
+export function positionCommand(fen: string, history?: History, heirs = false): string {
+  const write = heirs ? (f: string) => f : engineFen;
+  if (!history || history.moves.length === 0) return `position fen ${write(history?.fen ?? fen)}`;
+  return `position fen ${write(history.fen)} moves ${history.moves.join(' ')}`;
 }
 
 // ---- evaluation display ----

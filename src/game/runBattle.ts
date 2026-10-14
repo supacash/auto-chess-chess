@@ -13,7 +13,10 @@ import {
 } from '../rules/battle';
 import { type Rng, randomInt } from '../rules/rng';
 
-/** Search depth per move. Shallow keeps rounds fast and games a little human. */
+/**
+ * The search depth asked of the engine. The game's own engine searches to its own limits (ACC_LIMITS)
+ * whatever this says; Fairy-Stockfish, still used for comparison by the scripts, searches to it.
+ */
 export const SEARCH_DEPTH = 8;
 
 /** The part of Engine the battle loop needs (lets tests use a fake). */

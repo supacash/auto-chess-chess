@@ -3,20 +3,27 @@
 import { BOARDS, battleVariant } from './chess/boardSpec';
 import { loadRules } from './chess/loadRules';
 import { benchCorpus, percentile } from './engine/benchCorpus';
-import { Engine } from './engine/stockfish';
-import { SEARCH_DEPTH } from './game/runBattle';
+import { ACC_LIMITS } from './engine/accSettings';
+import { Engine } from './engine/engine';
+import { Engine as FairyEngine } from './engine/stockfish';
+import { type MoveSource, SEARCH_DEPTH } from './game/runBattle';
 
 const $ = (id: string) => document.getElementById(id)!;
 const params = new URLSearchParams(location.search);
 const seed = Number(params.get('seed') ?? 1);
 const perBoard = Number(params.get('perBoard') ?? 10);
-$('info').textContent =
-  `Fairy-Stockfish, depth ${SEARCH_DEPTH}, seed ${seed}, ${perBoard} armies per board. ${navigator.userAgent}`;
+/** ?engine=fairy times Fairy-Stockfish (needs the page cross-origin isolated, as the dev server is). */
+const fairy = params.get('engine') === 'fairy';
+const label = fairy
+  ? `Fairy-Stockfish, depth ${SEARCH_DEPTH}`
+  : `our engine, depth ${ACC_LIMITS.depth} / ${ACC_LIMITS.nodes} nodes`;
+$('info').textContent = `${label}, seed ${seed}, ${perBoard} armies per board. ${navigator.userAgent}`;
 
 async function run(): Promise<void> {
   ($('run') as HTMLButtonElement).disabled = true;
   $('status').textContent = 'Loading engine…';
-  const [engine] = await Promise.all([Engine.create(), loadRules()]);
+  const engine: MoveSource = fairy ? await FairyEngine.create() : await Engine.create();
+  await loadRules();
   const corpus = benchCorpus(seed, perBoard);
   const times = new Map<string, number[]>();
   for (const [i, pos] of corpus.entries()) {
@@ -39,7 +46,7 @@ async function run(): Promise<void> {
     )
     .join('');
   const json = JSON.stringify({
-    engine: 'fairy-stockfish',
+    engine: fairy ? 'fairy-stockfish' : { acc: ACC_LIMITS },
     depth: SEARCH_DEPTH,
     seed,
     userAgent: navigator.userAgent,

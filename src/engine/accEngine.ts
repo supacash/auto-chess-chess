@@ -3,14 +3,9 @@ import type { Candidate, History } from './pick';
 import { MULTI_PV, PICK_MARGIN } from './pick';
 import { Searcher } from './wasm/acc';
 
-/** How far our engine searches: plies and a node budget. Never time, so every device plays the same battle. */
-export interface AccLimits {
-  depth: number;
-  nodes: number;
-}
+import { ACC_LIMITS, type AccLimits } from './accSettings';
 
-/** The limits battles use (docs/ENGINE-PLAN.md; tuned in phase 4). */
-export const ACC_LIMITS: AccLimits = { depth: 8, nodes: 150_000 };
+export { ACC_LIMITS, type AccLimits } from './accSettings';
 
 /**
  * The game's own engine as a MoveSource, running the WASM build in this thread (the browser runs it in

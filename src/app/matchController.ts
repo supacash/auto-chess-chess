@@ -1,5 +1,5 @@
 import { plyLimit } from '../chess/boardSpec';
-import type { Engine } from '../engine/stockfish';
+import type { Engine } from '../engine/engine';
 import { battleAchievements, matchAchievements, SPECTER_WATCHES } from '../game/achievements';
 import { runBattle } from '../game/runBattle';
 import {

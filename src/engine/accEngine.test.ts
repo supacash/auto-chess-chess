@@ -1,11 +1,17 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadRulesForNode } from '../chess/testRules';
 import { AccEngine } from './accEngine';
+import { ENGINE_VERSION } from './accSettings';
 import { mateIn } from './pick';
+import { engineVersion } from './wasm/acc';
 
 beforeAll(loadRulesForNode);
 
 describe('AccEngine', () => {
+  it('has the version the rules fingerprint uses', () => {
+    expect(engineVersion()).toBe(ENGINE_VERSION);
+  });
+
   it('finds a mate in one and reports it as pick.ts reads mates', async () => {
     const engine = new AccEngine({ depth: 4, nodes: 0 });
     await engine.newGame('acc8');

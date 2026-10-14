@@ -82,7 +82,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
   - Two Rooks → Queen.
   - Three Knights → Queen, or three Bishops → Queen (no mixing knights and bishops).
   - Three Men → Stackman (fairy): three 3-point Men for a 9-point piece that frees two board squares. No fee and no limit per army: a Man now costs 3 gold however it's made (the Wazir costs 2), and Ferz, Wazir, Man and Stackman offers are rarer instead. AI armies still field at most one (the drafter has no shop to make them rare). (Until RULES_VERSION 8 it cost 3 gold and was one per army, because 1-gold Ferz + Wazir fusions made Men too cheap.) It's strong for 9 points (`npm run sim:duel`, 40-point armies: 65% against a Queen, 35% against a 12-point Amazon).
-  - Three Queens → **Heir** (fairy, one per army, or two with the Dynasty prestige perk; can't be sold): a second king with its own icon (the king without its cross, smaller), benched (a queen's square may be on the front row, and like the King it can't stand there). While a side has its King and its Heir neither is royal: either can be captured (both attacked at once isn't mate either), and the last one left is a real king that can be checkmated. The battle screen announces the capture ("Their King was captured! Their Heir takes the crown.") (Fairy-Stockfish's Spartan-chess rules, on each board's two-kings variant, used only when an Heir is on the board; every other battle is unchanged). The engine only pairs kings of one type, so it sees the Heir as a second king; our FENs write it 'J' and the game follows its square through the moves. 27 points for checkmate insurance and two free squares (army totals, like the placement screen's points, the end-of-run chart and Absolute Unit, count it as 27; in battle it counts 0, like the King, so hiding it can't win on points): a late-game luxury, never sold. AI armies (and multiplayer bots) rarely field one from round 20 in fairy runs (12% of armies, paid for with 27 points of their budget, as three Queens).
+  - Three Queens → **Heir** (fairy, one per army, or two with the Dynasty prestige perk; can't be sold): a second king with its own icon (the king without its cross, smaller), benched (a queen's square may be on the front row, and like the King it can't stand there). While a side has its King and its Heir neither is royal: either can be captured (both attacked at once isn't mate either), and the last one left is a real king that can be checkmated. The battle screen announces the capture ("Their King was captured! Their Heir takes the crown.") (Fairy-Stockfish's Spartan-chess rules, on each board's two-kings variant, used only when an Heir is on the board; every other battle is unchanged). Our FENs write the Heir 'J'; the game's engine knows it as its own piece (Fairy-Stockfish, still used to test the rules, sees it as a second king). 27 points for checkmate insurance and two free squares (army totals, like the placement screen's points, the end-of-run chart and Absolute Unit, count it as 27; in battle it counts 0, like the King, so hiding it can't win on points): a late-game luxury, never sold. AI armies (and multiplayer bots) rarely field one from round 20 in fairy runs (12% of armies, paid for with 27 points of their budget, as three Queens).
   - Three of a kind merge in one tap: the selected piece shows *Merge 3 → Rook* (three plain pawns show a button each for Knight and Bishop), using it and two more of the same kind, benched ones first. The result takes the square of the first of them on the board. Two-piece merges are buttons on the selected piece, which becomes the result where it stands.
 - **Fusion** (fairy pieces on): free, like merging. Knight + Bishop → Archbishop, Knight + Rook → Chancellor, Knight + Queen → Amazon, Knight + Man → Centaur, Rook + Ferz → Dragon King, Bishop + Wazir → Dragon Horse, Knight + Camel → Wildebeest, Cannon + Bishop → Siege Cannon, Ferz + Wazir → Man (1 + 2 gold for a 3-point piece made of two 1-point ones; Ferzes and Wazirs stand on the back row and don't count toward the 8-pawn limit). The selected piece becomes the compound where it stands; the partner is used up. Fused pieces sell for their value, but never more than their parts.
 
@@ -121,7 +121,7 @@ In Growing mode the board opens up during the run:
 
 - Classic uses the 8×8 row throughout.
 - Placed pieces keep their squares when the board grows; a notice announces the new size.
-- The engine supports boards up to 12×10. Measurements for 10×10 are in [docs/SPIKE-FAIRY.md](docs/SPIKE-FAIRY.md); bigger boards would need a longer move limit (two-thirds of 10×10 battles hit 90 plies).
+- The engine supports boards up to 9×9 (its tables are sized for it); bigger boards would need a larger table and a longer move limit (two-thirds of 10×10 battles hit 90 plies under Fairy-Stockfish: [docs/SPIKE-FAIRY.md](docs/SPIKE-FAIRY.md)).
 
 ## Placement rules
 - You own the bottom home rows; the AI owns the same number at the top (mirrored).
@@ -142,7 +142,7 @@ In Growing mode the board opens up during the run:
 - **Draw:** equal material at the limit, stalemate, threefold repetition, the 50-move rule, or insufficient material.
 
 ## AI opponent
-- **Engine:** Fairy-Stockfish (WASM) plays both sides with identical settings: depth 8, MultiPV 3, picking randomly among moves within ~50 centipawns of the best for variety. Skill is in drafting and placement, not a better engine.
+- **Engine:** the game's own engine (`engine/`, Rust compiled to WASM, in a Web Worker) plays both sides with identical settings: depth 8 within 150,000 nodes, picking randomly among up to 3 moves within ~50 centipawns of the best for variety. Limits are in depth and nodes, never time, so every device plays the same battle. It plays the battle rules: at the move limit and with insufficient material the side ahead on points wins, and it plays for that. On par with Fairy-Stockfish at depth 8, which it replaced (RULES_VERSION 9; 49.7% over 2,000 game-drafted battles: docs/ENGINE-PLAN.md). Skill is in drafting and placement, not a better engine.
 - **Budget per round:** difficulty × round × the ramp (rounded), ±1 random, −1 in round 1, and +1 every round in Growing mode (matching its extra starting gold so both modes have the same balance). −2% when the player is Black. Never more than a full board of queens around the king (15 queens, 135 points, on 8×8).
 - **Ramp:** dips in rounds 2–4, peaks around round 7, back to 1 in round 10, then climbs again: 1.02 to 1.06 in rounds 11–15, 1.07 in rounds 16–20 and 1.1 from round 21. Until full sell refunds it eased to 0.95 from round 16 (SIMULATION.md §18); with them the late game was easy at that level (§19).
 - **Styles** (a new style and army each round, shown during placement):
@@ -159,7 +159,7 @@ In Growing mode the board opens up during the run:
 
 - **Drafting:** non-pawn pieces by the style's weights, the rest on pawns (at most 8, and only as many as fit), then more of the style's pieces while squares are free, then leftover points into upgrades at their value difference, as if merged (pawns last, so pawn-heavy styles keep their pawns). Armies never exceed the board's home squares.
 - **Placement:** each square is scored per piece for the style (tables written for 8×8 and scaled to smaller boards), with random noise and a random left/right flip. Pieces leave room for the pawns placed after them.
-- **Engine safety net:** a search over 10 seconds plays a random legal move instead and restarts the engine.
+- **Engine safety net:** a search that fails, or doesn't answer within 30 seconds (searches are node-limited, so only a broken worker would), plays a random legal move instead and restarts the engine's worker.
 
 ## Achievements
 
@@ -181,7 +181,7 @@ The Profile's Fun tab shows the most-bought piece (not counting pawns, Ferzes an
 
 ## Tech
 - Vite + TypeScript 7, no UI framework. Biome for formatting and linting.
-- Rules: the game's own engine (`engine/`, Rust compiled to single-threaded WASM), which plays Fairy-Stockfish's rules for these variants exactly (checked move for move against ffish by `npm run check:perft`); engine: Fairy-Stockfish WASM (multithreaded, so the page is cross-origin isolated; coi-serviceworker provides this on GitHub Pages).
+- Rules: the game's own engine (`engine/`, Rust compiled to single-threaded WASM), which plays Fairy-Stockfish's rules for these variants exactly (checked move for move against ffish by `npm run check:perft`); the same engine searches the battles, in a Web Worker. Fairy-Stockfish WASM (multithreaded, which needs the page cross-origin isolated; coi-serviceworker provides this on GitHub Pages) played them until RULES_VERSION 9 and is still set up until phase 7 removes it.
 - Code layout and conventions: see [CLAUDE.md](CLAUDE.md).
 
 ## Known issues

@@ -1,7 +1,7 @@
 import { BOARDS, plyLimit, variantsIni } from '../chess/boardSpec';
+import { ACC_LIMITS, ENGINE_VERSION } from '../engine/accSettings';
 import { MULTI_PV, PICK_MARGIN } from '../engine/pick';
 import { PIECE_TYPES, PIECES } from '../rules/pieces';
-import { SEARCH_DEPTH } from './runBattle';
 
 /**
  * The version of everything that decides a battle: piece moves and values, board sizes, move limits
@@ -11,7 +11,7 @@ import { SEARCH_DEPTH } from './runBattle';
  * Bump it whenever the rules change. version.test.ts fails when the fingerprint below changes
  * without a bump; rule changes it can't see (such as how battleResult decides a game) need a manual bump.
  */
-export const RULES_VERSION = 8;
+export const RULES_VERSION = 9;
 
 /** Everything about the rules that can be read as data, as one stable string. */
 export function rulesFingerprint(): string {
@@ -20,8 +20,9 @@ export function rulesFingerprint(): string {
     return [t, p.value, p.betza ?? '', p.pawn ? 'p' : ''].join(':');
   });
   const boards = BOARDS.map((b) => [b.variant, b.files, b.ranks, b.homeRows, plyLimit(b)].join(':'));
-  const engine = [SEARCH_DEPTH, MULTI_PV, PICK_MARGIN].join(':');
-  // The engine rules as written for Fairy-Stockfish (custom pieces, the two-kings variants, …).
+  // The game's own engine (engine/) and how it searches.
+  const engine = ['acc', ENGINE_VERSION, ACC_LIMITS.depth, ACC_LIMITS.nodes, MULTI_PV, PICK_MARGIN].join(':');
+  // The rules as written for Fairy-Stockfish (custom pieces, the two-kings variants, …); our engine plays them.
   const ini = shortHash(variantsIni());
   return [pieces.join(','), boards.join(','), engine, ini].join('|');
 }
