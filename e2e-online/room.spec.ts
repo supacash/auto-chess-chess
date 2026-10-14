@@ -137,11 +137,15 @@ test('a player who reloads mid-match rejoins it from the menu', async ({ browser
   // And the round carries on for both.
   await placeKingAndReady(host);
   await placeKingAndReady(guest);
-  for (const page of [host, guest]) {
-    await expect(page.locator('#battle')).toBeVisible();
-    await page.locator('#skip').click();
-    await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
-  }
+  // Both at once: waiting out one player's battle first lets the other's end by itself, and its
+  // Skip button is gone by the time it's clicked.
+  await Promise.all(
+    [host, guest].map(async (page) => {
+      await expect(page.locator('#battle')).toBeVisible();
+      await page.locator('#skip').click();
+      await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
+    }),
+  );
 });
 
 test('two players on quick play end up in the same room, which starts by itself', async ({ browser }) => {
