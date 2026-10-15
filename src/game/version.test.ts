@@ -24,6 +24,10 @@ describe('rules version', () => {
     );
   });
 
+  it('gives a fairy build (Fairy-Stockfish, kept to go back to) the version 8 fingerprint', () => {
+    expect(shortHash(rulesFingerprint(true))).toBe(FINGERPRINTS[8]);
+  });
+
   it('hashes stably', () => {
     expect(shortHash('')).toBe('811c9dc5');
     expect(shortHash('abc')).not.toBe(shortHash('abd'));

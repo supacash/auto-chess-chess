@@ -45,6 +45,9 @@ jobs:
       # Browser smoke tests: whole runs in Chromium against the production build.
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
+      # The same tests on a `fairy` build (Fairy-Stockfish, kept so the game can go back to it); built into
+      # dist-fairy/, so dist/ stays the build that gets deployed.
+      - run: npm run e2e:fairy
       # Firestore security rules and two-player online rooms, on the Firebase emulators (need Java).
       - uses: actions/setup-java@v5
         with:

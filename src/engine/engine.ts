@@ -1,6 +1,19 @@
 import type { MoveSource } from '../game/runBattle';
+import { USE_FAIRY } from './engineChoice';
 import type { WorkerReply, WorkerRequest } from './engineWorker';
 import type { Candidate, History } from './pick';
+
+/** The engine the game plays battles with: ours, or Fairy-Stockfish in a `fairy` build (engineChoice.ts). */
+export type GameEngine = MoveSource;
+
+/** Starts the game's battle engine. */
+export async function createEngine(): Promise<GameEngine> {
+  if (USE_FAIRY) {
+    const { Engine: FairyStockfish } = await import('./stockfish');
+    return FairyStockfish.create();
+  }
+  return Engine.create();
+}
 
 /**
  * A search that takes longer than this is treated as a hung engine. Searches are limited in nodes

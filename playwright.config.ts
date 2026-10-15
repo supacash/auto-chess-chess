@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Browser smoke tests: whole runs in a real browser against the production build. The Vite preview
-// server sends the COOP/COEP headers the multithreaded engine needs (see vite.config.ts).
+// Browser smoke tests: whole runs in a real browser against the production build. playwright.fairy.config.ts
+// runs them against a `fairy` build (Fairy-Stockfish, kept so the game can go back to it).
 const PORT = 4321;
 
 export default defineConfig({

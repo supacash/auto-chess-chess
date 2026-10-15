@@ -5,12 +5,13 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "copy-engine": "node scripts/copy-engine.mjs",
     "build-engine": "node scripts/build-engine.mjs",
-    "predev": "npm run copy-engine && npm run build-engine",
+    "predev": "npm run build-engine",
     "dev": "vite",
-    "prebuild": "npm run copy-engine && npm run build-engine",
+    "dev:fairy": "npm run build-engine && vite --mode fairy",
+    "prebuild": "npm run build-engine",
     "build": "tsc --noEmit && vite build",
+    "build:fairy": "npm run build-engine && tsc --noEmit && vite build --mode fairy",
     "preview": "vite preview",
     "android": "npm run build && cap sync android",
     "android:open": "cap open android",
@@ -25,6 +26,7 @@
     "format": "biome check --write .",
     "check:determinism": "tsx scripts/check/determinism.ts",
     "e2e": "playwright test",
+    "e2e:fairy": "playwright test --config playwright.fairy.config.ts",
     "test:rules": "firebase emulators:exec --only firestore --project auto-chess-chess \"vitest run --config vitest.rules.config.ts\"",
     "e2e:online": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.online.config.ts\"",
     "e2e:fullmatch": "firebase emulators:exec --only auth,firestore --project auto-chess-chess \"playwright test --config playwright.fullmatch.config.ts\"",
@@ -40,6 +42,8 @@
     "@firebase/rules-unit-testing": "^5.0.2",
     "@playwright/test": "^1.64.0",
     "@types/node": "^22.20.5",
+    "coi-serviceworker": "^0.1.7",
+    "fairy-stockfish-nnue.wasm": "^1.1.12",
     "ffish-es6": "^0.7.10",
     "firebase-tools": "^15.33.0",
     "tsx": "^4.23.15",
@@ -51,8 +55,6 @@
     "@capacitor-community/admob": "^8.2.1",
     "@capacitor/android": "^8.5.3",
     "@capacitor/core": "^8.5.3",
-    "coi-serviceworker": "^0.1.7",
-    "fairy-stockfish-nnue.wasm": "^1.1.12",
     "firebase": "^12.19.0"
   }
 }

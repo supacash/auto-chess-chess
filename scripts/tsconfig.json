@@ -13,6 +13,7 @@
     "../playwright.online.config.ts",
     "../rules-test/**/*.ts",
     "../playwright.config.ts",
+    "../playwright.fairy.config.ts",
     "../vitest.rules.config.ts"
   ],
   // The root config leaves tests out of the browser typecheck (they use Node APIs); check them here.

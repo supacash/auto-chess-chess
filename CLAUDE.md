@@ -3,7 +3,7 @@
 Single-player auto-battler chess for the browser: draft and place an army, then an engine plays the round for both sides. **[DESIGN.md](DESIGN.md) is the source of truth for rules, economy and milestones** — read it before changing game logic, and update it when a design decision changes.
 
 ## Commands
-- `npm run dev` — Vite dev server
+- `npm run dev` — Vite dev server. `npm run dev:fairy` / `npm run build:fairy` / `npm run e2e:fairy`: the same with Fairy-Stockfish playing the battles (the old engine, kept to go back to; `vite --mode fairy`, src/engine/engineChoice.ts; CI runs `e2e:fairy`)
 - `npm test` — Vitest (rules unit tests)
 - `npm run typecheck` — `tsc --noEmit` for the game, plus `-p scripts` for the simulator (TypeScript 7)
 - `npm run lint` — Biome lint + format check (CI runs it); `npm run format` fixes formatting and safe lint issues
@@ -29,8 +29,8 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - `src/online/` — online rooms: `room.ts` (pure room rules, tested) and `client.ts` (Firestore; loaded lazily). `firestore.rules` guards the data (tests in `rules-test/`).
 - `src/ui/` — reusable board widgets (Pointer Events, touch-first): the placement board, the battle view, and shared piece/square helpers in `boardDom.ts`.
 - `src/main.ts` — wires the session to the screens and runs the fight sequence (placement → battle → result).
-- `android/` — the Capacitor Android app. `MainActivity.java` adds the COOP/COEP headers the engine needs; `src/app/ads.ts` shows rewarded ads there (AdMob, test IDs until release).
-- `scripts/copy-engine.mjs` copies Fairy-Stockfish and coi-serviceworker into `public/` (gitignored). It runs automatically before `dev` and `build`. `scripts/build-engine.mjs` builds `engine/` to WASM and runs `wasm-bindgen` (its CLI must match the crate, 0.2.129) into `src/engine/wasm/`, before `dev`, `build`, `test` and `typecheck`.
+- `android/` — the Capacitor Android app. `MainActivity.java` keeps the COOP/COEP headers a `fairy` build needs, switched off (`ISOLATE`); `src/app/ads.ts` shows rewarded ads there (AdMob, test IDs until release).
+- `scripts/fairy-files.mjs` copies Fairy-Stockfish and coi-serviceworker into `public/` (gitignored) for a `fairy` build and removes them for any other, so GPL files never ship by accident (the `fairy-stockfish` plugin in `vite.config.ts` calls it, and adds the isolation headers and service worker in fairy mode). `scripts/build-engine.mjs` builds `engine/` to WASM and runs `wasm-bindgen` (its CLI must match the crate, 0.2.129) into `src/engine/wasm/`, before `dev`, `build`, `test` and `typecheck`.
 
 ## Conventions
 - Formatting is Biome's (2 spaces, single quotes, 120 columns, LF line endings via `.gitattributes`). Run `npm run format` before committing. ESLint/typescript-eslint can't run on TypeScript 7 (no JS API), which is why the project uses Biome.
@@ -38,6 +38,6 @@ Single-player auto-battler chess for the browser: draft and place an army, then 
 - These rules differ from standard chess and are easy to get wrong: king not on the front home row, no pawns on the back home row, no castling, two-square pawn moves only from rank 2, temporary promotion, 90-ply limit with a material ("on points") tiebreak. See DESIGN.md.
 - Keep rule functions pure and immutable (return new arrays). The UI re-renders from state.
 - No UI framework. Vanilla TS + CSS variables. Mobile layout must work at a 360px width.
-- Dependencies: Fairy-Stockfish WASM (`fairy-stockfish-nnue.wasm`, multithreaded, needs cross-origin isolation: COOP/COEP headers on the dev server, `coi-serviceworker` in production) (GPLv3), until our engine replaces it. The rules are our own engine (`engine/`); ffish (`ffish-es6`, GPLv3) is only a devDependency, the oracle for `npm run check:perft`. Test files and `testRules.ts` are typechecked by `scripts/tsconfig.json` (they use Node APIs).
+- Dependencies: the game's own engine (`engine/`) for rules and battles; it needs no cross-origin isolation. Fairy-Stockfish (`fairy-stockfish-nnue.wasm`, multithreaded, needs COOP/COEP or `coi-serviceworker`), `coi-serviceworker` and ffish (`ffish-es6`) are devDependencies (all GPLv3 except coi-serviceworker): Fairy-Stockfish for `fairy` builds, the arena and baselines; ffish as the oracle for `npm run check:perft`. Never import them into the default build. Test files and `testRules.ts` are typechecked by `scripts/tsconfig.json` (they use Node APIs).
 - Randomness is always injected as an `Rng` (`src/rules/rng.ts`). Use `seededRng` in tests. Battles are deterministic from their start position and seed (engine options are pinned in `ENGINE_SETUP`); keep them that way.
 - Bump `RULES_VERSION` (`src/game/version.ts`) whenever anything that decides a battle changes; `version.test.ts` catches the data-driven cases.

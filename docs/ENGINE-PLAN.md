@@ -396,3 +396,32 @@ The evaluation (Phase 4) is the main remaining strength lever.
 - **Download:** the engine WASM is 52 KB gzipped, against about 800 KB for both Fairy-Stockfish WASMs before.
 
 **9×9 since the quiescence fix:** 49.6% ±6.4 against Fairy-Stockfish (240 games, rounds 9–25, 150k nodes), with time per move about the same (291 against 299 ms under load). The 9×9 weakness was the same quiescence bug, so the board may not need capping at 8×8.
+
+## Phase 7 results (2026-10-14)
+
+**The game no longer ships Fairy-Stockfish, coi-serviceworker or cross-origin isolation.**
+- **Default build:** `dist/` has no `fairy/` folder, no service worker and no COOP/COEP headers.
+- **Boot:** the 4-second wait for coi-serviceworker's isolation reload, and the reload itself, now only happen in a `fairy` build.
+- **Credits:** the footer credits our own engine.
+- **Dependencies:** `fairy-stockfish-nnue.wasm` and `coi-serviceworker` are devDependencies, like ffish.
+- **Leftover:** a small, never-loaded chunk of our own Fairy-Stockfish wrapper code (`stockfish.ts`, MIT) stays in the default build's assets.
+
+## Going back to Fairy-Stockfish
+
+The old setup is kept working behind one switch: **Vite's `fairy` mode**, `VITE_ENGINE=fairy` in `.env.fairy`, read by `src/engine/engineChoice.ts`.
+
+**What a `fairy` build does:**
+- `createEngine()` starts Fairy-Stockfish (`src/engine/stockfish.ts`, loaded on demand) instead of our worker.
+- `RULES_VERSION` is 8, with version 8's exact rules fingerprint (`version.test.ts` checks this). Saves, armies and records from before the switch match it.
+- The `fairy-stockfish` plugin in `vite.config.ts` copies the engine and coi-serviceworker into `public/` (`scripts/fairy-files.mjs`) and injects the service worker into `index.html`.
+- The dev and preview servers send COOP/COEP headers.
+- `main.ts` waits for, and retries, the isolation reload as before.
+- The footer credits Fairy-Stockfish under the GPLv3 and links its source.
+- The rules stay our engine either way (identical to Fairy-Stockfish's: Phase 1). ffish isn't needed.
+
+**Kept working:** CI runs `npm run e2e:fairy`, the browser tests against a `fairy` build, built into `dist-fairy/` so `dist/` stays the deployed build. A broken way back fails CI.
+
+**To ship it:**
+1. **Web:** in `.github/workflows/pages.yml`, replace `npm run build` with `npm run build:fairy`. That's the build that gets deployed.
+2. **Android:** set `ISOLATE = true` in `android/.../MainActivity.java`, then `npm run build:fairy && npx cap sync android`.
+3. **Records:** players on version 9 then meet version-8 armies and records. Snapshots of the two versions are kept apart, as for any version change.

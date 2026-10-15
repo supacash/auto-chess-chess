@@ -1,3 +1,4 @@
+import { USE_FAIRY } from '../engine/engineChoice';
 import { DIFFICULTIES, SIDES } from '../rules/difficulty';
 import { START_HP } from '../multi/match';
 import { REROLL_COST } from '../rules/economy';
@@ -7,6 +8,13 @@ import { MODES } from '../rules/mode';
 export const SPEEDS = [1, 2, 4];
 
 /** Renders the page shell: header, placement and battle screens, the New run window and credits. */
+/** The credits' engine line. A `fairy` build ships Fairy-Stockfish, which is GPLv3: credit it and link its source. */
+const ENGINE_CREDIT = USE_FAIRY
+  ? `Chess engine: <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener">Fairy-Stockfish</a>
+    via <a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener">fairy-stockfish.wasm</a>,
+    licensed under the <a href="fairy/GPL-3.0.txt" target="_blank" rel="noopener">GPLv3</a> (source at that link).`
+  : 'Chess engine: our own, written for the game.';
+
 export function renderLayout(root: HTMLElement): void {
   root.innerHTML = `
   <header>
@@ -280,9 +288,7 @@ export function renderLayout(root: HTMLElement): void {
   </dialog>
 
   <footer class="credits">
-    Chess engine: <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener">Fairy-Stockfish</a>
-    via <a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener">fairy-stockfish.wasm</a>,
-    licensed under the <a href="fairy/GPL-3.0.txt" target="_blank" rel="noopener">GPLv3</a> (source at that link).
+    ${ENGINE_CREDIT}
     Pieces: Chessnut by Alexis Luengas (<a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache 2.0</a>).
     Game code: <a href="https://github.com/supacash/auto-chess-chess" target="_blank" rel="noopener">MIT</a>.
   </footer>`;

@@ -181,12 +181,12 @@ The Profile's Fun tab shows the most-bought piece (not counting pawns, Ferzes an
 
 ## Tech
 - Vite + TypeScript 7, no UI framework. Biome for formatting and linting.
-- Rules: the game's own engine (`engine/`, Rust compiled to single-threaded WASM), which plays Fairy-Stockfish's rules for these variants exactly (checked move for move against ffish by `npm run check:perft`); the same engine searches the battles, in a Web Worker. Fairy-Stockfish WASM (multithreaded, which needs the page cross-origin isolated; coi-serviceworker provides this on GitHub Pages) played them until RULES_VERSION 9 and is still set up until phase 7 removes it.
+- Rules: the game's own engine (`engine/`, Rust compiled to single-threaded WASM), which plays Fairy-Stockfish's rules for these variants exactly (checked move for move against ffish by `npm run check:perft`); the same engine searches the battles, in a Web Worker. Single-threaded, so the page needs no cross-origin isolation. Fairy-Stockfish WASM played the battles until RULES_VERSION 9; a `fairy` build (`npm run build:fairy`) still plays them with it, with the cross-origin isolation it needs (COOP/COEP headers, coi-serviceworker on GitHub Pages) and RULES_VERSION 8, so the game can go back to it (docs/ENGINE-PLAN.md).
 - Code layout and conventions: see [CLAUDE.md](CLAUDE.md).
 
 ## Known issues
 - **5×5 draws:** round 1 in Growing mode drew ~38% of the time; deciding insufficient material on points and showing the engine the move history brought that to 17% (SIMULATION.md section 12).
-- **Safari / iOS:** the engine needs cross-origin isolation; COEP is forced to require-corp with a one-time reload fallback (untested on a real iPhone).
+- **Safari / iOS:** the game's engine needs no cross-origin isolation, so nothing special. (A `fairy` build does: COEP forced to require-corp with a one-time reload fallback, untested on a real iPhone.)
 - **Fairy balance:** fusion pieces and the shop player buying fairy offers aren't measured yet.
 
 ## Multiplayer

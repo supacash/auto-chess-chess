@@ -19,7 +19,8 @@ import { ProfileScreen } from './app/profileScreen';
 import { RecordBook } from './app/recordBook';
 import { Session } from './app/session';
 import { loadRules } from './chess/loadRules';
-import { Engine } from './engine/engine';
+import { createEngine, type GameEngine } from './engine/engine';
+import { USE_FAIRY } from './engine/engineChoice';
 import { ManualBattle } from './game/manualBattle';
 import { clearMatch, loadMatch } from './game/storage';
 import { generateName } from './multi/names';
@@ -225,7 +226,7 @@ async function rejoinMatch(): Promise<void> {
   }
 }
 
-let engine: Engine | null = null;
+let engine: GameEngine | null = null;
 let busy = false;
 
 /** The end of a run that could still be revived, recorded once the player moves on (or leaves). */
@@ -303,14 +304,14 @@ function startNewRun(settings: RunSettings): void {
   showPlacement();
 }
 
-let background: Promise<Engine> | null = null;
+let background: Promise<GameEngine> | null = null;
 
 /**
  * A second engine for battles the player doesn't watch (multiplayer), so they run alongside the one
  * on screen instead of after it.
  */
-function backgroundEngine(): Promise<Engine> {
-  background ??= ensureEngine().then(() => Engine.create());
+function backgroundEngine(): Promise<GameEngine> {
+  background ??= ensureEngine().then(() => createEngine());
   background.catch(() => {
     background = null;
   });
@@ -318,10 +319,10 @@ function backgroundEngine(): Promise<Engine> {
 }
 
 /** Loads the engine and rules on first use. */
-async function ensureEngine(): Promise<Engine> {
+async function ensureEngine(): Promise<GameEngine> {
   if (!engine) {
     placement.setMessage('Loading engine…');
-    const [loaded] = await Promise.all([Engine.create(), loadRules()]);
+    const [loaded] = await Promise.all([createEngine(), loadRules()]);
     engine = loaded;
     placement.setMessage('');
   }
@@ -332,9 +333,10 @@ async function ensureEngine(): Promise<Engine> {
  * Runs one round: `play` shows and plays the battle and returns its result, which is then applied
  * to the run and shown. Errors return to placement without counting the battle.
  */
-async function runRound(play: (engine: Engine) => Promise<BattleResult>): Promise<void> {
+async function runRound(play: (engine: GameEngine) => Promise<BattleResult>): Promise<void> {
   if (busy) return;
-  if (!engine && !window.crossOriginIsolated && reloadForIsolation()) return;
+  // Fairy-Stockfish (a `fairy` build) needs the page cross-origin isolated; our engine doesn't.
+  if (USE_FAIRY && !engine && !window.crossOriginIsolated && reloadForIsolation()) return;
   busy = true;
   placement.setBusy(true);
   try {
@@ -415,7 +417,7 @@ function playYourself(): void {
   });
 }
 
-async function playManual(loaded: Engine, game: ManualBattle): Promise<BattleResult> {
+async function playManual(loaded: GameEngine, game: ManualBattle): Promise<BattleResult> {
   const record = session.startRecord(game.start, game.seed, true);
   try {
     const result = await battle.playManual(loaded, game, (state) => session.saveManual(state));
@@ -487,7 +489,7 @@ function resumeManual(): void {
 const ISOLATION_RELOAD_KEY = 'acc.isolation-reload';
 
 /**
- * Without cross-origin isolation the engine can't run. A page that lost it (e.g. Safari restarted
+ * Without cross-origin isolation Fairy-Stockfish (a `fairy` build) can't run. A page that lost it (e.g. Safari restarted
  * the service worker, or a hard reload bypassed it) usually gets it back on a normal reload. The run
  * is already saved, so reload once per tab; if that didn't help, the engine reports the error.
  */
@@ -517,11 +519,12 @@ function boot(): void {
 }
 
 /**
- * On hosts without COOP/COEP headers, coi-serviceworker (index.html) reloads the page once on the
+ * In a `fairy` build, on hosts without COOP/COEP headers, coi-serviceworker reloads the page once on the
  * first visit to make it cross-origin isolated. Starting before that reload would save a default
  * run and skip the New run window, so wait for it; boot anyway if it never comes (e.g. service
  * workers blocked), and the engine reports the problem when a battle starts.
  */
-const isolationReloadPending = !window.crossOriginIsolated && window.isSecureContext && 'serviceWorker' in navigator;
+const isolationReloadPending =
+  USE_FAIRY && !window.crossOriginIsolated && window.isSecureContext && 'serviceWorker' in navigator;
 if (isolationReloadPending) setTimeout(boot, 4000);
 else boot();
