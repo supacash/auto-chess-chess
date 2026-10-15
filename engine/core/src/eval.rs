@@ -15,7 +15,7 @@ use std::sync::OnceLock;
 /// battles on points; the evaluation's own (tuned) piece values are separate. Kings are 0.
 pub const VALUES: [i32; PIECE_COUNT] = {
     // K J Q R B N P E F W M L G X T A C Z D H U S Y
-    let points = [0, 0, 9, 5, 3, 3, 1, 1, 1, 1, 3, 2, 1, 3, 5, 7, 8, 12, 7, 5, 5, 6, 9];
+    let points = [0, 0, 9, 5, 3, 3, 1, 1, 1, 1, 3, 2, 1, 3, 6, 7, 8, 12, 6, 6, 6, 6, 9];
     let mut v = [0; PIECE_COUNT];
     let mut i = 0;
     while i < PIECE_COUNT {

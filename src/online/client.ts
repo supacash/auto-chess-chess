@@ -340,6 +340,7 @@ function fromStored(data: Record<string, unknown>): Room {
   const millis = (t: unknown) => (t instanceof Timestamp ? t.toMillis() : null);
   return {
     ...(data as unknown as Room),
+    version: Number.isInteger(data.version) ? (data.version as number) : 0,
     quick: data.quick === true,
     settings: parseSettings(data.settings),
     createdAt: millis(data.createdAt),

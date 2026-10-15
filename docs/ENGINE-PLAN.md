@@ -367,8 +367,8 @@ The evaluation (Phase 4) is the main remaining strength lever.
   | First mover | 57.0% ±4.9 | 57.4% |
 
   No colour bias, and the tempo edge is no bigger than Fairy-Stockfish's.
-- **Speed: passed except 7×7 p95** (161 ms against 133). See the WASM table above. Median times beat Fairy-Stockfish on every board.
-- **Manual-mode strength:** not run separately yet. The arena already plays from the same game-drafted starts the player gets.
+- **Speed: passed except 7×7 p95** (161 ms against 133). See the WASM table above. Median times beat Fairy-Stockfish on every board. *Passed since 2026-10-15 (Follow-ups below).*
+- **Manual-mode strength:** see Follow-ups below: manual games play at the same level as battles.
 
 ## Phase 5 results (2026-10-14)
 
@@ -412,7 +412,7 @@ The old setup is kept working behind one switch: **Vite's `fairy` mode**, `VITE_
 
 **What a `fairy` build does:**
 - `createEngine()` starts Fairy-Stockfish (`src/engine/stockfish.ts`, loaded on demand) instead of our worker.
-- `RULES_VERSION` is 8, with version 8's exact rules fingerprint (`version.test.ts` checks this). Saves, armies and records from before the switch match it.
+- `RULES_VERSION` is `FAIRY_RULES_VERSION`: 8 until version 11 changed piece values, 12 since (version 8's rules with the new values; `version.test.ts` checks its fingerprint).
 - The `fairy-stockfish` plugin in `vite.config.ts` copies the engine and coi-serviceworker into `public/` (`scripts/fairy-files.mjs`) and injects the service worker into `index.html`.
 - The dev and preview servers send COOP/COEP headers.
 - `main.ts` waits for, and retries, the isolation reload as before.
@@ -439,3 +439,54 @@ The old setup is kept working behind one switch: **Vite's `fairy` mode**, `VITE_
   - The Archbishop beats the Dragon King (63%).
   - The Stackman edges the Queen (60%).
 - **Price changes are left for one economy update after the engine merges** (the user's call). That update includes the new Rook recipe (2 one-gold rook-pawns + a Bishop, Knight or Man the player picks).
+
+## Follow-ups (2026-10-15)
+
+**7×7 speed: passed.** The search is 13–23% faster natively, and it picks exactly the same moves: same node counts, and `acc bench` gives the same checksum of moves picked.
+- **Attack tests skip absent pieces.** They check only the piece types the attacking side has on the board (a per-side bitmask).
+- **Captures-only generation in quiescence.** Quiescence generates only captures and promotions, not every move.
+- **Pruned quiet moves aren't played.** Quiet moves that late-move or futility pruning drops are tested for legality and check without being made: half the moves the main search made were dropped right after.
+- **Faster make and unmake.** Unmake restores the incremental scores instead of recomputing them. Zobrist keys and file/rank are lookup tables.
+
+- **New tools:**
+  - `acc bench <corpus>` times the native search on the bench corpus (`npm run check:baseline -- --dump <file>`).
+  - Rust tests check the captures-only generator and the unplayed legality test against the full versions.
+
+- **WASM, 120 positions per board** (the 20 used before made p95 a near-maximum). Median and p95 in ms:
+
+  | Board | Ours, before | Ours, now | Fairy-Stockfish (two runs) |
+  |---|---|---|---|
+  | 5×5 | 8 / 39 | 6 / 22 | 21–22 / 51–60 |
+  | 6×6 | 30 / 89 | 29 / 99 | 60–74 / 142–173 |
+  | 7×7 | 46 / 175 | 49 / 154 | 67–111 / 153–252 |
+  | 8×8 | 113 / 239 | 103 / 214 | 87–141 / 302–333 |
+  | 9×9 | 340 / 485 | 294 / 489 | 348–428 / 2797–3059 |
+
+  "Now" includes the new piece values, which change some searches. Fairy-Stockfish's own times vary a lot from run to run.
+
+**Manual-mode strength: like battles.** `npm run sim:arena -- --manual` plays as "Play it" games do: no move limit, so no win on points, only mate and the draw rules.
+- **Manual:** 45.8% ±3.1 over 1,000 games against Fairy-Stockfish (seed 11, boards up to 8×8).
+- **Same starts with the move limit:** 46.7% ±3.1.
+- Manual games aren't weaker, so the engine needs no separate setting.
+- **This seed is harder than the gate's.** Pooled with the gate's 2,000 games (49.7%), our engine scores about 48.7% ±1.8 against Fairy-Stockfish.
+- **Endings:** 94% of manual games end in mate, 2% by the 50-move rule, 1% by repetition.
+
+**A King and an Heir now count as the same piece for repetition.**
+- **Found by** `check:perft` (1 mismatch in 3,000 positions): Fairy-Stockfish plays the two-kings rules with both as the same piece, so a position with them swapped is a repetition.
+- **Fix:** our hash now treats an Heir as a King.
+- **Check:** 0 mismatches in 10,000 positions since.
+- **Why it slipped through before:** Phase 1's positions never reached the case; the economy changes since then changed the armies the check drafts.
+- **Versions:** `ENGINE_VERSION` 2, part of `RULES_VERSION` 11.
+
+**Piece values (SIMULATION.md §25):**
+- Centaur, Dragon Horse and Wildebeest go from 5 to 6.
+- The Dragon King goes from 7 to 6.
+- The engine's material values match.
+- `RULES_VERSION` 11. A `fairy` build is 12: version 8's engine with the new values.
+
+**Online rooms are kept to one version** (src/online/room.ts, `firestore.rules`). Each room records its `RULES_VERSION`.
+- **Joining:** a joiner's seat must carry the room's version.
+- **Old pages:** rooms and seats from before versions count as 0, so old pages still play with each other.
+- **Quick play** only matches rooms on the same version.
+- **Rejoining** after an update refuses a match started on another version.
+- **The new `firestore.rules` needs deploying** (`firebase deploy --only firestore:rules`). Until then the server doesn't check versions; the client still refuses.

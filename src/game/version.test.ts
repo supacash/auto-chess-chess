@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RULES_VERSION, rulesFingerprint, shortHash } from './version';
+import { FAIRY_RULES_VERSION, RULES_VERSION, rulesFingerprint, shortHash } from './version';
 
 /**
  * The rules fingerprint for each RULES_VERSION. When this test fails, the rules changed: bump
@@ -16,6 +16,8 @@ const FINGERPRINTS: Record<number, string> = {
   8: '87a056c6', // same pieces as 7; armies may hold several Stackmen and the shop changed (kept apart from 7 online)
   9: '98c96f10', // the game's own engine plays battles instead of Fairy-Stockfish (docs/ENGINE-PLAN.md)
   10: '98c96f10', // same battles as 9; a Rook is two 1-gold rook-pawns and a Bishop, Knight or Man (kept apart from 9 online)
+  11: '7a3cad7f', // Centaur, Dragon Horse and Wildebeest worth 6, Dragon King 6 (SIMULATION.md §25); an Heir hashes as a King
+  12: '7ad8c562', // a fairy build (Fairy-Stockfish) with version 11's piece values
 };
 
 describe('rules version', () => {
@@ -25,8 +27,8 @@ describe('rules version', () => {
     );
   });
 
-  it('gives a fairy build (Fairy-Stockfish, kept to go back to) the version 8 fingerprint', () => {
-    expect(shortHash(rulesFingerprint(true))).toBe(FINGERPRINTS[8]);
+  it('gives a fairy build (Fairy-Stockfish, kept to go back to) its own version', () => {
+    expect(shortHash(rulesFingerprint(true))).toBe(FINGERPRINTS[FAIRY_RULES_VERSION]);
   });
 
   it('hashes stably', () => {

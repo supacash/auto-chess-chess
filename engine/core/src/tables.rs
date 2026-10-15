@@ -66,6 +66,8 @@ pub struct Tables {
     pub files: u8,
     pub ranks: u8,
     pub squares: usize,
+    /// (file, rank) of every square, so file() and rank() don't divide.
+    coords: [(i8, i8); MAX_SQUARES],
     /// rays[sq][dir]: the squares from sq towards the edge.
     pub rays: Vec<[Vec<Square>; 8]>,
     /// moves[color][piece type]
@@ -84,11 +86,11 @@ impl Tables {
     }
 
     pub fn file(&self, sq: Square) -> i32 {
-        sq as i32 % self.files as i32
+        self.coords[sq as usize].0 as i32
     }
 
     pub fn rank(&self, sq: Square) -> i32 {
-        sq as i32 / self.files as i32
+        self.coords[sq as usize].1 as i32
     }
 
     fn build(files: u8, ranks: u8) -> Tables {
@@ -97,6 +99,7 @@ impl Tables {
             files,
             ranks,
             squares,
+            coords: std::array::from_fn(|sq| ((sq % files as usize) as i8, (sq / files as usize) as i8)),
             rays: Vec::new(),
             moves: [Vec::new(), Vec::new()],
             attacks: [empty_attacks(), empty_attacks()],

@@ -486,6 +486,18 @@ impl Searcher {
                 continue;
             }
             let quiet = pos.captured_type(m).is_none() && m.promo == NO_PROMOTION;
+            // A quiet move that the pruning below will drop unless it gives check: test it unplayed.
+            // (The same decisions as making it first; just cheaper.)
+            if quiet && legal >= 1 && best > -MATE_BOUND {
+                let late = !root && !in_check && !pv_node && depth <= 3 && legal + 1 > 3 + 2 * depth * depth;
+                if (futile || late)
+                    && let Some((is_legal, check)) = pos.quiet_check(m)
+                    && !check
+                {
+                    legal += is_legal as i32;
+                    continue;
+                }
+            }
             pos.make(m);
             if pos.royal_attacked(us) {
                 pos.unmake();
@@ -618,7 +630,11 @@ impl Searcher {
         let mut scored = std::mem::take(&mut self.scored[ply]);
         moves.clear();
         scored.clear();
-        pos.pseudo_moves(&mut moves);
+        if in_check {
+            pos.pseudo_moves(&mut moves);
+        } else {
+            pos.noisy_moves(&mut moves);
+        }
         for &m in &moves {
             let victim = pos.captured_type(m);
             if !in_check && victim.is_none() && m.promo == NO_PROMOTION {

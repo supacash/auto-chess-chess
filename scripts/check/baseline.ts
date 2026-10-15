@@ -30,6 +30,8 @@ const { values: opts } = parseArgs({
     workers: { type: 'string' },
     json: { type: 'string' },
     'skip-speed': { type: 'boolean', default: false },
+    /** Write the speed corpus to this file ("variant<TAB>fen" lines, for `acc bench`) and stop. */
+    dump: { type: 'string' },
     /** 'fairy' (Fairy-Stockfish) or 'acc' (our engine at ACC_LIMITS). */
     engine: { type: 'string', default: 'fairy' },
   },
@@ -141,6 +143,12 @@ const pct = (x: { score: number; margin: number; games: number }) =>
 async function main(): Promise<void> {
   const t0 = Date.now();
   await loadRulesForNode();
+  if (opts.dump) {
+    const corpus = benchCorpus(SEED, Number(opts['per-board']));
+    writeFileSync(opts.dump, corpus.map((p) => `${battleVariant(p.spec, p.fen)}\t${p.fen}\n`).join(''));
+    console.log(`${corpus.length} positions written to ${opts.dump}`);
+    return;
+  }
   const speedRows = opts['skip-speed'] ? [] : await speed();
   const games = await fairness();
 

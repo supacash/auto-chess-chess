@@ -99,13 +99,13 @@ Values are tuned with the simulator (SIMULATION.md section 11): at equal points,
 | Camel | 2 | Jumps (3,1) |
 | Grasshopper | 1 | Along queen lines, hopping over a piece to land just beyond it |
 | Cannon | 3 | Moves like a rook; captures by jumping over exactly one piece (Xiangqi) |
-| Centaur | 5 | King + Knight (fusion) |
+| Centaur | 6 | King + Knight (fusion) |
 | Archbishop | 7 | Bishop + Knight (fusion) |
 | Chancellor | 8 | Rook + Knight (fusion) |
 | Amazon | 12 | Queen + Knight (fusion) |
-| Dragon King | 7 | Rook + one diagonal step (fusion: Rook + Ferz) |
-| Dragon Horse | 5 | Bishop + one straight step (fusion: Bishop + Wazir) |
-| Wildebeest | 5 | Knight and Camel jumps (fusion: Knight + Camel) |
+| Dragon King | 6 | Rook + one diagonal step (fusion: Rook + Ferz) |
+| Dragon Horse | 6 | Bishop + one straight step (fusion: Bishop + Wazir) |
+| Wildebeest | 6 | Knight and Camel jumps (fusion: Knight + Camel) |
 | Siege Cannon | 6 | Moves like a queen; captures by jumping exactly one piece (fusion: Cannon + Bishop) |
 | Stackman | 9 | Jumps to any square up to two away, over anything in between (merge: three Men; also sold, rarely, for 9 gold) |
 
@@ -182,7 +182,7 @@ The Profile's Fun tab shows the most-bought piece (not counting pawns, Ferzes an
 
 ## Tech
 - Vite + TypeScript 7, no UI framework. Biome for formatting and linting.
-- Rules: the game's own engine (`engine/`, Rust compiled to single-threaded WASM), which plays Fairy-Stockfish's rules for these variants exactly (checked move for move against ffish by `npm run check:perft`); the same engine searches the battles, in a Web Worker. Single-threaded, so the page needs no cross-origin isolation. Fairy-Stockfish WASM played the battles until RULES_VERSION 9; a `fairy` build (`npm run build:fairy`) still plays them with it, with the cross-origin isolation it needs (COOP/COEP headers, coi-serviceworker on GitHub Pages) and RULES_VERSION 8, so the game can go back to it (docs/ENGINE-PLAN.md).
+- Rules: the game's own engine (`engine/`, Rust compiled to single-threaded WASM), which plays Fairy-Stockfish's rules for these variants exactly (checked move for move against ffish by `npm run check:perft`); the same engine searches the battles, in a Web Worker. Single-threaded, so the page needs no cross-origin isolation. Fairy-Stockfish WASM played the battles until RULES_VERSION 9; a `fairy` build (`npm run build:fairy`) still plays them with it, with the cross-origin isolation it needs (COOP/COEP headers, coi-serviceworker on GitHub Pages) and its own RULES_VERSION (8 until the piece values changed in 11, then 12), so the game can go back to it (docs/ENGINE-PLAN.md).
 - Code layout and conventions: see [CLAUDE.md](CLAUDE.md).
 
 ## Known issues
@@ -204,8 +204,8 @@ Live, TFT-style matches for 4 players. Everything that decides a match is determ
 - **Watching:** the round card has a *Watch* button for each other battle of the round. This device replays it from the locked armies and the battle seed, so it goes exactly as it did wherever it was computed; then back to the card. Online, starting to watch counts the player as finished with the round (nobody waits on them), and if the room moves on meanwhile the replay stops and the card offers the next round. Knocked out while others play on, the final card offers *Keep watching the match*: online it follows the room (each round's results as they come, a Watch button per battle); offline this device plays the bots' remaining rounds. Records count the match when the player is knocked out.
 - **Bots:** AI-drafted armies at the single-player Normal budget, the same on every client.
 - **Offline:** *Multiplayer* → *Play vs 3 bots* (optional Blitz).
-- **Online rooms** (Firebase project `auto-chess-chess`, anonymous sign-in): *Create room* gives a 4-letter code to share; others *Join room* with it; the host starts whenever they like and empty seats become bots. Players have generated names ("Golden Knight 19"). Ready uploads your army; the shop closes when everyone still in is ready or the deadline (server time) passes; the round ends once everyone has watched their battle (or after 2 minutes). Someone who leaves keeps their last army (or a lone king) and plays on until knocked out. *Leave* (two taps) exits a match. On the Profile a match counts as online only if another person played in it; a room that filled up with bots counts as a match against bots.
-- **Rejoining:** each device saves its side of an online match (room, shop, gold, streak). After a reload, or after leaving, the menu offers *Rejoin match* while the match is on and the player is still in it (saves older than 6 hours aren't offered). A player who missed rounds gets base income for each one (their last army fought them) and their streak starts over; one who rejoins mid-battle plays their battle, or waits if they had already finished it.
+- **Online rooms** (Firebase project `auto-chess-chess`, anonymous sign-in): each room records the game's RULES_VERSION, and only players on that version can join it (`firestore.rules` checks the joiner's seat carries the room's version), since every phone computes its own battles; quick play only matches rooms on the same version. *Create room* gives a 4-letter code to share; others *Join room* with it; the host starts whenever they like and empty seats become bots. Players have generated names ("Golden Knight 19"). Ready uploads your army; the shop closes when everyone still in is ready or the deadline (server time) passes; the round ends once everyone has watched their battle (or after 2 minutes). Someone who leaves keeps their last army (or a lone king) and plays on until knocked out. *Leave* (two taps) exits a match. On the Profile a match counts as online only if another person played in it; a room that filled up with bots counts as a match against bots.
+- **Rejoining:** each device saves its side of an online match (room, shop, gold, streak). After a reload, or after leaving, the menu offers *Rejoin match* while the match is on and the player is still in it (saves older than 6 hours aren't offered). A match started on another version of the game (RULES_VERSION) can't be rejoined: this phone would compute its battles differently. A player who missed rounds gets base income for each one (their last army fought them) and their streak starts over; one who rejoins mid-battle plays their battle, or waits if they had already finished it.
 - **Quick play:** any rules (Classic or Growing board, standard or Fairy pieces, with or without Blitz). It takes a seat in an open quick play room with the same rules, fullest first, or makes one. A quick room has no code to share and no host button: it starts by itself once 4 people are in, or 30 seconds after the last person joined, with bots in the empty seats (anyone in the room may start it when it's due). Rooms nobody joined in the last 40 seconds aren't joined (they've started, or were abandoned). If two people make rooms at the same moment, someone still alone in the newer room moves to the older one.
 
 ## Roadmap

@@ -3,6 +3,7 @@
 //!   acc version
 //!   acc perft <variant> <depth> <fen>    e.g. acc perft acc8 5 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1"
 //!   acc uci                              the UCI subset the game's scripts use (scripts/sim/nodeEngine.ts)
+//!   acc bench <corpus> [nodes]           times the game's searches on a corpus (`npm run check:baseline -- --dump`)
 //!   acc selfplay <starts> <out> [...]    self-play positions for tuning (selfplay.rs)
 //!   acc tune <selfplay data> [...]       fit the evaluation's weights to them (tune.rs)
 
@@ -37,6 +38,7 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         },
+        Some("bench") if args.len() >= 2 => bench(&args),
         Some("uci") => {
             uci();
             ExitCode::SUCCESS
@@ -81,6 +83,58 @@ fn perft_command(args: &[String]) -> ExitCode {
 
 /// A UCI loop: uci, isready, setoption (UCI_Variant, MultiPV, Nodes, PlyLimit, PickMargin), ucinewgame,
 /// position fen ... [moves ...], go depth N [nodes N], quit. Searches run to completion (no stop).
+/// Searches every position of a corpus ("variant<TAB>fen" lines) as the game does (depth 8, the node
+/// cap, 3 picks within 50 cp) and prints the time per board, the nodes, and a checksum of the moves
+/// picked: a pure speed change must leave the nodes and checksum exactly as they were.
+fn bench(args: &[String]) -> ExitCode {
+    let Ok(text) = std::fs::read_to_string(&args[1]) else {
+        eprintln!("can't read {}", args[1]);
+        return ExitCode::FAILURE;
+    };
+    let nodes: u64 = args.get(2).and_then(|n| n.parse().ok()).unwrap_or(150_000);
+    let mut searcher = Searcher::default();
+    let mut boards: Vec<(String, Vec<f64>)> = Vec::new();
+    let (mut total_nodes, mut checksum) = (0u64, 0u64);
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        let Some((variant, fen)) = line.split_once('\t') else { continue };
+        let Some((size, two_kings)) = acc_core::parse_variant(variant) else { continue };
+        let Ok(mut pos) = Position::from_fen(size, fen, two_kings) else { continue };
+        searcher.new_game();
+        let t0 = Instant::now();
+        let lines = searcher.search_picks(&mut pos, Limits { depth: 8, nodes }, 3, 50);
+        let ms = t0.elapsed().as_secs_f64() * 1000.0;
+        total_nodes += searcher.nodes();
+        for l in &lines {
+            checksum = checksum.wrapping_mul(31).wrapping_add(l.mv.from as u64 * 97 + l.mv.to as u64);
+            checksum = checksum.wrapping_mul(31).wrapping_add(l.score as u64);
+        }
+        let board = format!("{size}x{size}");
+        match boards.iter_mut().find(|(b, _)| *b == board) {
+            Some((_, times)) => times.push(ms),
+            None => boards.push((board, vec![ms])),
+        }
+    }
+    let mut all = 0.0;
+    for (board, times) in &mut boards {
+        times.sort_by(f64::total_cmp);
+        let at = |p: f64| times[((times.len() - 1) as f64 * p).round() as usize];
+        let sum: f64 = times.iter().sum();
+        all += sum;
+        println!(
+            "{board}: {} positions, p50 {:.0} ms, p95 {:.0} ms, total {:.0} ms",
+            times.len(),
+            at(0.5),
+            at(0.95),
+            sum
+        );
+    }
+    println!(
+        "total {all:.0} ms, {total_nodes} nodes ({:.2} M nodes/s), checksum {checksum:016x}",
+        total_nodes as f64 / all / 1000.0
+    );
+    ExitCode::SUCCESS
+}
+
 fn uci() {
     let stdin = std::io::stdin();
     let mut out = std::io::stdout().lock();

@@ -14,7 +14,7 @@ pub mod tables;
 
 /// Bumped whenever anything that decides a move changes. Folded into the game's RULES_VERSION
 /// fingerprint (src/game/version.ts) once the engine plays battles.
-pub const ENGINE_VERSION: u32 = 1;
+pub const ENGINE_VERSION: u32 = 2;
 
 /// Parses a Fairy-Stockfish variant name as the game uses them: `accN` (an N×N board) or `accNk2`
 /// (its two-kings rules). Returns (size, two_kings).

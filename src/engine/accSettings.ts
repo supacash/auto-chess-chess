@@ -11,4 +11,4 @@ export const ACC_LIMITS: AccLimits = { depth: 8, nodes: 150_000 };
  * The engine's version (acc_core::ENGINE_VERSION, checked by accEngine.test.ts): part of the rules
  * fingerprint, since the engine decides battles. Bump both whenever its search or evaluation changes.
  */
-export const ENGINE_VERSION = 1;
+export const ENGINE_VERSION = 2;

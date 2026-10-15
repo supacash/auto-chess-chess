@@ -420,10 +420,7 @@ Each game drafts one 40-point fairy army; one side gets it plus piece A, the oth
 - **The Rook is weak for 5 points, against the fairy 5s.** That's the opposite of what the rook-pawn premium was for (6 gold for a 5-point Rook). The tuned evaluation agrees independently: it values the Rook at about 470–500 cp, against about 500–525 for the Centaur, Dragon Horse and Wildebeest.
 - **The Centaur matches the 6-point Siege Cannon,** so the fairy 5s look underpriced rather than the Rook overpriced.
 - **Done in §24:** the Rook recipe (2 one-gold rook-pawns + a Bishop, Knight or Man).
-- **Open (decisions for an economy update):**
-  - the Centaur, Dragon Horse and Wildebeest at 6;
-  - the Dragon King or Archbishop repriced;
-  - the Stackman left at 9.
+- **Done in §25:** the Centaur, Dragon Horse and Wildebeest at 6, the Dragon King at 6; the Archbishop and the Stackman as they were.
 
 ### 24. The new Rook recipe (RULES_VERSION 10; fairy pieces, shop player, 40 runs × 25 rounds per row)
 
@@ -464,6 +461,45 @@ A Rook is now two rook-pawns at 1 gold each plus a Bishop, Knight or Man of the 
 - **On average the balance is unchanged:** 49.3% across the six suites, against 49.5% in §22. Most suites are within noise of their old level.
 - **Growing Easy is easier.** Rechecked with 120 runs (seed 5): 69% ±2, run score 11.6 ±1.4, against about 64% before. Classic Easy went the other way (61% → 56%). Growing starts on small boards, where a cheap Rook counts for more. Easy stays the easiest setting in both modes, so it was left as is.
 - **Late rounds on Classic came out harder** (rounds 16–25, Normal 28% and 53%). Most of that is the knock-on of losing more in rounds 2–15 (less win income), plus noise (±7 per five rounds).
+
+### 25. Repricing the fairy pieces (RULES_VERSION 11)
+
+More duels, same command as §23 with 300 games (±6) and seed 3:
+
+| A vs B (points) | A's score | Reading |
+|---|---|---|
+| Dragon Horse vs Centaur (5 v 5) | 46% | even |
+| Wildebeest vs Centaur (5 v 5) | 52% | even |
+| Dragon King vs Siege Cannon (7 v 6) | 52% | the Dragon King plays like a 6 |
+| Archbishop vs Chancellor (7 v 8) | 48% | even |
+| Archbishop vs Queen (7 v 9) | 36% | as priced, about |
+| Stackman vs Queen (9 v 9) | 56% | a little strong (60% in §23) |
+
+**New values:** Centaur, Dragon Horse and Wildebeest 6 (were 5), Dragon King 6 (was 7).
+- **The 6s:** the three ex-5s beat the Rook (§23), play even with each other, and the Centaur plays even with the 6-point Siege Cannon.
+- **The Dragon King:** a Rook plus a step; it plays even with the Siege Cannon and lost to the Archbishop 37% (§23), as a 6 should against a 7.
+- **Left as they were:**
+  - the Archbishop: even with the Chancellor and well below the Queen;
+  - the Stackman: 58% ±4 against the Queen over both duels, and at most one per AI army.
+- **Prices:** a fusion costs no more than its parts.
+  - The Centaur now costs and sells for 6 (a Knight and a Man), so fusing one no longer loses a point.
+  - The Dragon Horse (a Bishop and a Wazir) and Wildebeest (a Knight and a Camel) still cost 5 for a 6-point piece, like the Archbishop's 6 for 7.
+  - The Dragon King stays 6.
+
+**Balance: unchanged.** The §24 command; rows are §24 / now:
+
+| Mode, difficulty | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|
+| Classic Easy | 53% / 52% | 63% / 59% | 57% / 68% | 44% / 47% | 65% / 60% | 56% / 57% | 7.2 / 7.7 | 8% / 10% |
+| Classic Normal | 52% / 50% | 48% / 52% | 44% / 49% | 28% / 36% | 53% / 50% | 45% / 47% | 4.7 / 5.1 | 3% / 3% |
+| Classic Hard | 37% / 40% | 30% / 33% | 26% / 20% | 14% / 12% | 47% / 42% | 31% / 29% | 2.3 / 2.8 | 0% / 0% |
+| Growing Easy | 76% / 77% | 78% / 75% | 81% / 82% | 66% / 64% | 70% / 56% | 74% / 71% | 13.4 / 14.7 | 38% / 38% |
+| Growing Normal | 67% / 65% | 59% / 64% | 68% / 68% | 47% / 46% | 50% / 42% | 58% / 57% | 8.9 / 9.1 | 5% / 8% |
+| Growing Hard | 53% / 60% | 32% / 45% | 30% / 41% | 18% / 22% | 27% / 36% | 32% / 41% | 3.8 / 5.8 | 0% / 3% |
+
+- **Five suites moved by 3 points or less.**
+- **Growing Hard came out 9 points easier.** Rerun with 80 runs (seed 5), it scored 37% ±2 (run score 4.9 ±0.9), between §24's 32% and §22's 36%. The first row was a high draw, so no budget change was made.
+- **The suites' 40-run rows vary by more than their ±3** (battles in one run aren't independent). Treat moves of up to about 5 points as noise.
 
 ## Problems found
 

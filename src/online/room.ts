@@ -1,4 +1,5 @@
 import type { BoardSpec } from '../chess/boardSpec';
+import { RULES_VERSION } from '../game/version';
 import {
   applyRound,
   type MatchPlayer,
@@ -44,12 +45,20 @@ export interface Seat {
   /** The signed-in player in this seat, or null for an empty seat (a bot once the match starts). */
   uid: string | null;
   name: string;
+  /** The RULES_VERSION of the game the player sat down with (firestore.rules checks it equals the room's). */
+  version?: number;
 }
 
 /** The shared room document. Player ids are uids for people and `bot1`…`bot3` for bots. */
 export interface Room {
   code: string;
   host: string;
+  /**
+   * The RULES_VERSION the room plays by (0 for rooms made before rooms had one). Each phone computes
+   * its own battles, so everyone in a room must be on the same version: nobody joins or rejoins
+   * a room on another.
+   */
+  version: number;
   /** A quick play room: found by anyone looking for a match in its mode, and started automatically. */
   quick: boolean;
   /** When the room was created (server ms; null until the server has set it). */
@@ -108,17 +117,33 @@ export function roomCode(rng: Rng): string {
   return Array.from({ length: ROOM_CODE_LENGTH }, () => CODE_LETTERS[randomInt(rng, CODE_LETTERS.length)]).join('');
 }
 
-export function newRoom(code: string, host: string, hostName: string, settings: MatchSettings, quick = false): Room {
+/** Why a player on `version` can't play in this room, or null if they can. */
+export function versionError(room: Room, version = RULES_VERSION): string | null {
+  if (room.version === version) return null;
+  return room.version < version
+    ? 'That room was made on an older version of the game, so it can’t be played on this one.'
+    : 'That room is on a newer version of the game. Reload the page to update, then try again.';
+}
+
+export function newRoom(
+  code: string,
+  host: string,
+  hostName: string,
+  settings: MatchSettings,
+  quick = false,
+  version = RULES_VERSION,
+): Room {
   return {
     code,
     host,
+    version,
     quick,
     createdAt: null,
     waitingSince: null,
     status: 'lobby',
     settings,
     seats: Array.from({ length: MATCH_SIZE }, (_, i) =>
-      i === 0 ? { uid: host, name: hostName } : { uid: null, name: '' },
+      i === 0 ? { uid: host, name: hostName, version } : { uid: null, name: '' },
     ),
     seed: 0,
     round: 0,
@@ -137,12 +162,14 @@ export function newRoom(code: string, host: string, hostName: string, settings: 
 export type RoomChange = { ok: true; room: Room } | { ok: false; error: string };
 
 /** Takes the first free seat (or keeps the one the player already has). */
-export function joinRoom(room: Room, uid: string, name: string): RoomChange {
+export function joinRoom(room: Room, uid: string, name: string, version = RULES_VERSION): RoomChange {
+  const wrongVersion = versionError(room, version);
+  if (wrongVersion) return { ok: false, error: wrongVersion };
   if (room.seats.some((s) => s.uid === uid)) return { ok: true, room };
   if (room.status !== 'lobby') return { ok: false, error: 'That match has already started' };
   const free = room.seats.findIndex((s) => s.uid === null);
   if (free < 0) return { ok: false, error: 'That room is full' };
-  const seats = room.seats.map((s, i) => (i === free ? { uid, name } : s));
+  const seats = room.seats.map((s, i) => (i === free ? { uid, name, version } : s));
   return { ok: true, room: { ...room, seats } };
 }
 
@@ -159,10 +186,14 @@ export function sameRules(a: MatchSettings, b: MatchSettings): boolean {
   );
 }
 
-/** True when a quick room in these rules is still open to join: in the lobby, a free seat, someone waiting, and fresh. */
-export function isOpenQuickRoom(room: Room, now: number, settings: MatchSettings): boolean {
+/**
+ * True when a quick room in these rules is still open to join: on this version of the game, in the
+ * lobby, a free seat, someone waiting, and fresh.
+ */
+export function isOpenQuickRoom(room: Room, now: number, settings: MatchSettings, version = RULES_VERSION): boolean {
   return (
     room.quick &&
+    room.version === version &&
     room.status === 'lobby' &&
     sameRules(room.settings, settings) &&
     peopleSeated(room) > 0 &&
@@ -189,7 +220,7 @@ export function shouldMoveTo(mine: Room, other: Room, uid: string, now: number):
     mine.status === 'lobby' &&
     peopleSeated(mine) === 1 &&
     mine.seats.some((s) => s.uid === uid) &&
-    isOpenQuickRoom(other, now, mine.settings) &&
+    isOpenQuickRoom(other, now, mine.settings, mine.version) &&
     olderFirst(other, mine) < 0
   );
 }

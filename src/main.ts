@@ -27,7 +27,7 @@ import { USE_FAIRY } from './engine/engineChoice';
 import { ManualBattle } from './game/manualBattle';
 import { clearMatch, loadMatch } from './game/storage';
 import { generateName } from './multi/names';
-import { isRoomCode, normalizeCode } from './online/room';
+import { isRoomCode, normalizeCode, versionError } from './online/room';
 import type { RunSettings } from './rules/difficulty';
 import type { BattleResult } from './rules/battle';
 import { perk, perkChoices } from './rules/prestige';
@@ -218,6 +218,13 @@ async function rejoinMatch(): Promise<void> {
     if (!room || client.uid !== saved.uid || room.status !== 'playing' || !me || me.place !== null) {
       clearMatch();
       showMenu(room?.status === 'over' ? 'That match has finished.' : 'That match can’t be rejoined any more.');
+      return;
+    }
+    // The game updated since: this phone would compute its battles differently from everyone else's.
+    const wrongVersion = versionError(room);
+    if (wrongVersion) {
+      clearMatch();
+      showMenu(wrongVersion);
       return;
     }
     hideMenu();

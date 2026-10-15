@@ -10,7 +10,9 @@ rules_version = '2';
 //   opponents stay hidden until the battle starts.
 //
 // Clients validate everything they read (parseArmy), so these rules enforce ownership, timing and
-// size rather than every detail. Friends in a room are trusted not to tamper with the room document.
+// size rather than every detail. A room has the game's RULES_VERSION, and a joiner's seat must carry the
+// same one: a phone on another version would compute its battles differently (rooms and seats from before
+// versions count as 0, so old pages still play with each other). Friends in a room are trusted not to tamper with the room document.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -87,15 +89,18 @@ service cloud.firestore {
         && after.diff(before).affectedKeys().hasOnly(['seats', 'waitingSince'])
         && (!after.diff(before).affectedKeys().hasAny(['waitingSince']) || after.waitingSince == request.time)
         && after.seats.size() == 4
-        && seatOk(before.seats[0], after.seats[0])
-        && seatOk(before.seats[1], after.seats[1])
-        && seatOk(before.seats[2], after.seats[2])
-        && seatOk(before.seats[3], after.seats[3])
+        && seatOk(before, before.seats[0], after.seats[0])
+        && seatOk(before, before.seats[1], after.seats[1])
+        && seatOk(before, before.seats[2], after.seats[2])
+        && seatOk(before, before.seats[3], after.seats[3])
         && isSeated(after);
     }
 
-    function seatOk(before, after) {
-      return after == before || (before.uid == null && after.uid == request.auth.uid);
+    function seatOk(room, before, after) {
+      return after == before
+        || (before.uid == null
+          && after.uid == request.auth.uid
+          && after.get('version', 0) == room.get('version', 0));
     }
   }
 }
