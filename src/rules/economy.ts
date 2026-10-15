@@ -169,7 +169,8 @@ export function offerPiece(offer: Offer): Piece {
 export const OFFER_WEIGHTS: Partial<Record<Offer, number>> = {
   PN: 2.5,
   PB: 2.5,
-  PR: 2,
+  // Rook-pawns are rarer than the Ferz and Wazir: the Rook recipe is getting cheaper (SIMULATION.md §23).
+  PR: 0.8,
   PQ: 1.2,
   E: 2,
   F: 1, // Ferz, Wazir and Man were in most shops; they're rarer so the other fairy pieces show up
