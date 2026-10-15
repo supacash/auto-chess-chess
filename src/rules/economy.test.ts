@@ -155,10 +155,11 @@ describe('sellPiece', () => {
 
   it('never sells a fusion for more than its parts', () => {
     expect(sellValue('A')).toBe(6); // worth 7, made from a Knight and a Bishop
-    expect(sellValue('D')).toBe(6); // worth 7, a Rook and a Ferz
-    expect(sellValue('T')).toBe(5); // worth 5, less than a Knight and a Man
+    expect(sellValue('D')).toBe(6); // worth 6, a Rook and a Ferz
+    expect(sellValue('T')).toBe(6); // worth 6, a Knight and a Man
     expect(sellValue('M')).toBe(3); // a Ferz (1 gold) and a Wazir (2)
-    expect(sellValue('H')).toBe(5); // a Bishop and a Wazir
+    expect(sellValue('H')).toBe(5); // worth 6, a Bishop and a Wazir (2 gold)
+    expect(sellValue('U')).toBe(5); // worth 6, a Knight and a Camel
   });
 
   it('never sells the Heir', () => {

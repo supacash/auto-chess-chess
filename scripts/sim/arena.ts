@@ -6,6 +6,7 @@
  *   cargo build --release -p acc-cli   (in engine/)
  *   npm run sim:arena -- --pairs 200 --acc-depth 8 --acc-nodes 200000
  *   npm run sim:arena -- --pairs 200 --opponent path/to/old/acc.exe   (our engine against an older build)
+ *   npm run sim:arena -- --pairs 200 --manual   (as "Play it" games: no move limit, played to the end)
  *
  * Reports our engine's score (win 1, draw ½) with a 95% margin and the Elo difference, by board, and
  * each engine's time per move (parallel games slow both alike, so compare them with each other).
@@ -18,6 +19,7 @@ import { fenTurn } from '../../src/chess/fen';
 import { loadRulesForNode } from '../../src/chess/testRules';
 import { benchBattle } from '../../src/engine/benchCorpus';
 import type { Candidate, History } from '../../src/engine/pick';
+import { MANUAL_LIMITS } from '../../src/game/manualBattle';
 import { type MoveSource, runBattle } from '../../src/game/runBattle';
 import type { BattleResult } from '../../src/rules/battle';
 import { randomInt, seededRng } from '../../src/rules/rng';
@@ -36,6 +38,8 @@ const { values: opts } = parseArgs({
     opponent: { type: 'string', default: 'fairy' },
     /** The largest board (files), e.g. 8: later rounds are played on it with their own armies. */
     'max-board': { type: 'string', default: '9' },
+    /** Play as manual games do: no move limit (so no win on points), only mate and the draw rules. */
+    manual: { type: 'boolean', default: false },
     json: { type: 'string' },
   },
 });
@@ -54,7 +58,9 @@ class Duel implements MoveSource {
     private readonly accColor: 'w' | 'b',
   ) {}
   async newGame(variant: string, plyLimit?: number): Promise<void> {
-    await Promise.all([this.acc.newGame(variant, plyLimit), this.fairy.newGame(variant, plyLimit)]);
+    // No limit (a manual game): the engines play without one, as manual games start them.
+    const limit = plyLimit !== undefined && Number.isFinite(plyLimit) ? plyLimit : undefined;
+    await Promise.all([this.acc.newGame(variant, limit), this.fairy.newGame(variant, limit)]);
   }
   async candidates(fen: string, depth: number, history?: History): Promise<Candidate[]> {
     const who = fenTurn(fen) === this.accColor ? 'acc' : 'fairy';
@@ -114,7 +120,8 @@ async function main(): Promise<void> {
             plies: 0,
           };
           try {
-            const r = await runBattle(fen, duel, rng, async () => {}, { plyLimit: plyLimit(spec) }, spec);
+            const limits = opts.manual ? MANUAL_LIMITS : { plyLimit: plyLimit(spec) };
+            const r = await runBattle(fen, duel, rng, async () => {}, limits, spec);
             row.score = r.winner === 'draw' ? 0.5 : r.winner === accColor ? 1 : 0;
             row.reason = r.reason;
             row.plies = r.plies;
@@ -147,7 +154,7 @@ async function main(): Promise<void> {
   };
   const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
   console.log(
-    `\nOur engine (depth ${ACC.depth}, nodes ${ACC.nodes || '∞'}) vs ${opts.opponent === 'fairy' ? 'Fairy-Stockfish (depth 8)' : opts.opponent}, ${rows.length} games:`,
+    `\nOur engine (depth ${ACC.depth}, nodes ${ACC.nodes || '∞'}${opts.manual ? ', manual games' : ''}) vs ${opts.opponent === 'fairy' ? 'Fairy-Stockfish (depth 8)' : opts.opponent}, ${rows.length} games:`,
   );
   console.log(`  all:   ${summary(rows)}`);
   for (const board of [...new Set(rows.map((r) => r.board))].sort()) {

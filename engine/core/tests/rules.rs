@@ -1,5 +1,5 @@
 use acc_core::parse_variant;
-use acc_core::position::{Position, perft};
+use acc_core::position::{NO_PROMOTION, Position, perft};
 
 fn pos(variant: &str, fen: &str) -> Position {
     let (size, two_kings) = parse_variant(variant).unwrap();
@@ -137,12 +137,87 @@ fn threefold_repetition() {
 }
 
 #[test]
+fn a_king_and_an_heir_swapped_is_the_same_position() {
+    // As in Fairy-Stockfish: with two kings they're the same piece, so this repeats twice before.
+    let mut p = pos("acc7k2", "7/1G5/3K3/J4j1/5k1/7/7 b - - 33 17");
+    for (ply, uci) in ["f3e3", "d5e4", "e3f3", "e4d5", "f4g4", "d5e4", "f3e3", "e4d5", "e3f4", "d5e4", "g4f3", "e4d5"]
+        .iter()
+        .enumerate()
+    {
+        let m = p.parse_move(uci).unwrap();
+        p.make(m);
+        assert_eq!(p.is_threefold(), ply == 11, "ply {ply}: {}", p.fen());
+    }
+}
+
+#[test]
 fn make_unmake_restores_everything() {
     let mut p = pos("acc8", "r3k2r/pPpp1ppp/1n3n2/2bPp3/1pB1P3/2N2N2/PPPP1PPP/R3K2R w - e6 0 3");
-    let before = (p.fen(), p.hash());
+    let state = |p: &Position| (p.fen(), p.hash(), p.psq_score(), p.phase_points(), p.pawn_hash());
+    let before = state(&p);
     for m in p.legal_moves() {
         p.make(m);
         p.unmake();
-        assert_eq!((p.fen(), p.hash()), before);
+        assert_eq!(state(&p), before);
+    }
+}
+
+/// Fairy armies on every board size, two kings included, played out a little with fixed move choices.
+fn fairy_positions() -> Vec<Position> {
+    let starts = [
+        ("acc5", "gxk1e/pplp1/5/1PEP1/XNK1G w - - 0 1"),
+        ("acc6", "1tk1d1/ppeppp/6/6/PEPPPP/1HK1US w - - 0 1"),
+        ("acc7", "1axkg1y/pppeppp/7/7/7/PPEPPPP/1MXKCZ1 w - - 0 1"),
+        ("acc8k2", "r1sjk1x1/ppepppep/8/8/8/8/PEPPPEPP/1YXJKS1R w - - 0 1"),
+        ("acc9", "lwfjkd1hu/pppepppep/9/9/9/9/9/PEPPPEPPP/LWFJKD1HU b - - 0 1"),
+    ];
+    let mut out = Vec::new();
+    let mut seed = 12_345u64;
+    for (v, fen) in starts {
+        let mut p = pos(v, fen);
+        for _ in 0..40 {
+            out.push(p.clone());
+            let moves = p.legal_moves();
+            if moves.is_empty() {
+                break;
+            }
+            seed = seed.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407);
+            p.make(moves[(seed >> 33) as usize % moves.len()]);
+        }
+    }
+    out
+}
+
+#[test]
+fn noisy_moves_are_the_captures_and_promotions_of_pseudo_moves() {
+    let mut captures = 0;
+    for p in fairy_positions() {
+        let (mut all, mut noisy) = (Vec::new(), Vec::new());
+        p.pseudo_moves(&mut all);
+        p.noisy_moves(&mut noisy);
+        all.retain(|&m| p.captured_type(m).is_some() || m.promo != NO_PROMOTION);
+        assert_eq!(noisy, all, "{}", p.fen());
+        captures += noisy.len();
+    }
+    assert!(captures > 100);
+}
+
+#[test]
+fn quiet_check_answers_as_making_the_move_would() {
+    for mut p in fairy_positions() {
+        let mut moves = Vec::new();
+        p.pseudo_moves(&mut moves);
+        moves.retain(|&m| p.captured_type(m).is_none() && m.promo == NO_PROMOTION);
+        for m in moves {
+            let us = p.side();
+            let tested = p.quiet_check(m);
+            p.make(m);
+            let legal = !p.royal_attacked(us);
+            let made = (legal, legal && p.in_check());
+            p.unmake();
+            if let Some(t) = tested {
+                assert_eq!(t, made, "{} {}", p.fen(), p.move_name(m));
+            }
+        }
     }
 }
