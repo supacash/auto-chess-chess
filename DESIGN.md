@@ -175,7 +175,7 @@ Easy, fun goals (src/game/achievements.ts), unlocked once and kept in the record
 The Profile's Fun tab shows the most-bought piece (not counting pawns, Ferzes and Wazirs, which everyone buys most) and the collections' progress.
 
 ## Look and feel
-- Chessnut SVG pieces (Apache 2.0). The board always shows the player at the bottom, and squares scale so every board size fills the same width.
+- The game's own piece art (`scripts/make-pieces.mjs` → `src/assets/pieces.svg`, MIT): each piece drawn as what it stands for (a crown, a tower, a mitre, a horse), one drawing per piece coloured by CSS variables (`--piece-fill`, `--piece-line`, `--piece-detail`), so pieces can come in any colours. The board always shows the player at the bottom, and squares scale so every board size fills the same width.
 - Moves animate at ~0.4 s at 1×, with an eval bar from the player's side.
 - Results name the reason ("Victory on points", "Drawn by threefold repetition").
 - **Landscape:** the board never grows taller than fits on screen. On landscape phones (and touch tablets held sideways) the header, run bar and Menu button share one short row, and the shop and battle screens use two columns: the board and bench stay in view on the left while the shop, opponent and battle controls scroll on the right, with the fight bar pinned to the bottom. The installed web app no longer locks to portrait.

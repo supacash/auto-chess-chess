@@ -209,7 +209,20 @@ h1 .logo {
   touch-action: none;
 }
 
-.piece img {
+/* Piece art (src/ui/boardDom.ts): each side's colours. */
+.piece-art {
+  --piece-fill: #fff;
+  --piece-line: #111;
+  --piece-detail: #111;
+}
+
+.piece-art.piece-b {
+  --piece-fill: #2b2b2b;
+  --piece-line: #111;
+  --piece-detail: #f4f4f4;
+}
+
+.piece .piece-art {
   width: 90%;
   height: 90%;
   pointer-events: none;
@@ -1462,7 +1475,7 @@ body.in-menu header {
   pointer-events: none;
 }
 
-.menu-drift img {
+.menu-drift .piece-art {
   position: absolute;
   top: 0;
   left: var(--x);
@@ -1492,7 +1505,7 @@ body.in-menu header {
 
 /* With reduced motion the pieces stay put, scattered down the screen. */
 @media (prefers-reduced-motion: reduce) {
-  .menu-drift img {
+  .menu-drift .piece-art {
     top: var(--y);
     transform: rotate(var(--r0));
   }

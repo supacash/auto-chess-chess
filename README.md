@@ -58,6 +58,6 @@ Built with [Vite](https://vite.dev), TypeScript and the game's own chess engine 
 
 This project's code is released under the [MIT License](LICENSE).
 
-The chess piece images are the Chessnut set by Alexis Luengas, licensed under the Apache License 2.0 (see [src/assets/pieces/](src/assets/pieces/README.md)).
+The piece art is the game's own, drawn as code in `scripts/pieces/` and covered by the MIT License like the rest of the project.
 
 The game as built and deployed contains no GPL code. Fairy-Stockfish and ffish (both GPLv3, not covered by the MIT License) are development dependencies, used to test and measure our engine; they aren't stored in this repo. A `fairy` build (`npm run build:fairy`) does include Fairy-Stockfish: if you distribute one, it must comply with the GPLv3, including crediting it and offering its source (its footer does this).

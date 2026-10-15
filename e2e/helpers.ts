@@ -19,7 +19,7 @@ export async function startRun(page: Page, manual = false): Promise<void> {
 export async function placeKing(page: Page): Promise<void> {
   await page
     .locator('.bench .piece')
-    .filter({ has: page.getByAltText('King') })
+    .filter({ has: page.getByRole('img', { name: 'King' }) })
     .click();
   await page.locator('#board-root .square[data-file="2"][data-rank="0"]').click();
   await expect(page.locator('#fight-hint')).toBeHidden(); // the army can fight

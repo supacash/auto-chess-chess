@@ -17,7 +17,7 @@ async function openMultiplayer(page: Page): Promise<void> {
 async function placeKingAndReady(page: Page): Promise<void> {
   await page
     .locator('.bench .piece')
-    .filter({ has: page.getByAltText('King') })
+    .filter({ has: page.getByRole('img', { name: 'King' }) })
     .click();
   await page.locator('#board-root .square[data-file="4"][data-rank="0"]').click();
   await page.locator('#fight').click();

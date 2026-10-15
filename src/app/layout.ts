@@ -290,7 +290,6 @@ export function renderLayout(root: HTMLElement): void {
 
   <footer class="credits">
     ${ENGINE_CREDIT}
-    Pieces: Chessnut by Alexis Luengas (<a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache 2.0</a>).
     Game code: <a href="https://github.com/supacash/auto-chess-chess" target="_blank" rel="noopener">MIT</a>.
   </footer>`;
 }

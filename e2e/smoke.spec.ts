@@ -161,7 +161,7 @@ test('a refused placement flashes its square, and a merged piece is not left sel
   const pawn = () =>
     page
       .locator('.bench .piece')
-      .filter({ has: page.getByAltText('Pawn', { exact: true }) })
+      .filter({ has: page.getByRole('img', { name: 'Pawn', exact: true }) })
       .first();
   // Pawns can't stand on the back row: the square flashes and the reason shows.
   await pawn().click();
@@ -171,6 +171,6 @@ test('a refused placement flashes its square, and a merged piece is not left sel
   await expect(page.locator('#board-root .square.rejected')).toHaveCount(0); // the flash fades
   // Three plain pawns merge into a Knight, which isn't left selected.
   await page.getByRole('button', { name: /Merge 3 .*Knight/ }).click();
-  await expect(page.locator('.bench .piece').filter({ has: page.getByAltText('Knight') })).toHaveCount(1);
+  await expect(page.locator('.bench .piece').filter({ has: page.getByRole('img', { name: 'Knight' }) })).toHaveCount(1);
   await expect(page.locator('.piece.selected')).toHaveCount(0);
 });

@@ -109,7 +109,7 @@ async function shop(p: Player, holdBack: boolean, log: string[]): Promise<void> 
   }
   // Place everything on the bench that fits (the king first).
   for (let tries = 0; tries < 16 && (await inShop(page)); tries++) {
-    const king = page.locator('.bench .piece').filter({ has: page.getByAltText('King') });
+    const king = page.locator('.bench .piece').filter({ has: page.getByRole('img', { name: 'King' }) });
     const next = (await king.count()) ? king.first() : page.locator('.bench .piece').first();
     if (!(await next.count())) break;
     await next.click();
