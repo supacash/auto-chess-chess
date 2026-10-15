@@ -1012,22 +1012,31 @@ dialog::backdrop {
   margin-bottom: 8px;
 }
 
+/* White's share in white from the left, Black's in black: the bar leans to whoever is winning. */
 .eval-bar {
   position: relative;
   flex: 1;
   height: 16px;
   overflow: hidden;
-  background: var(--deep);
+  background: #16121f;
   border-radius: 999px;
+  box-shadow: inset 0 0 0 2px var(--deep);
 }
 
-/* Your share, whichever colour you play. */
+/* Your share, drawn in your pieces' colour. */
 .eval-fill {
   width: 50%;
   height: 100%;
-  background: var(--accent);
-  border-radius: 999px;
+  background: #f4f1fb;
   transition: width 0.35s ease-out;
+}
+
+/* Playing Black: your share is the black part, the opponent's the white. */
+.eval-bar.as-black {
+  background: #f4f1fb;
+}
+.eval-bar.as-black .eval-fill {
+  background: #16121f;
 }
 
 /* Centre tick marks equality. */
@@ -1039,7 +1048,7 @@ dialog::backdrop {
   left: 50%;
   width: 2px;
   margin-left: -1px;
-  background: rgb(255 255 255 / 0.25);
+  background: rgb(128 120 150 / 0.8);
 }
 
 .eval-label {
