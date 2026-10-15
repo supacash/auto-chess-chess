@@ -144,6 +144,7 @@ test('a player who reloads mid-match rejoins it from the menu', async ({ browser
   // And the round carries on for both.
   await placeKingAndReady(host);
   await placeKingAndReady(guest);
+  // Both at once: waiting out one player's battle first lets the other's end by itself.
   await Promise.all([host, guest].map(skipBattle));
   for (const page of [host, guest]) await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
 });

@@ -1,23 +1,40 @@
+/* The Arcade look: deep violet, chunky buttons that sit on a solid shadow, a coral accent with teal
+   and yellow beside it, Lilita One for display text and Nunito for everything else. */
 :root {
-  --bg: #1d1f24;
-  --panel: #2a2d34;
-  --text: #e8e6e3;
-  --muted: #9a9ca3;
-  --light: #e9dcc2;
-  --dark: #a98a66;
-  --accent: #5fb36b;
-  --danger: #e06c5a;
-  --gold: #f2c94c;
-  --border: rgb(255 255 255 / 0.08);
-  --border-strong: rgb(255 255 255 / 0.16);
-  --radius: 10px;
+  --bg: #1a1035;
+  --panel: #2e2159;
+  /* A button raised off a panel. */
+  --raised: #45347f;
+  /* Wells sunk into a panel (bench, offers, bars). */
+  --deep: #120a29;
+  --text: #ffffff;
+  --muted: #c9bfe6;
+  --faint: #9488bc;
+  /* Dark text on the bright fills (coral, teal, yellow). */
+  --ink: #1a1035;
+  --light: #e9e0fc;
+  --dark: #a08bdd;
+  --accent: #ff7a59;
+  --accent-shadow: #c9502f;
+  --teal: #33c3b0;
+  --teal-shadow: #1f8c7e;
+  --danger: #ff5e8a;
+  --gold: #ffc93c;
+  --gold-shadow: #c9951a;
+  --border: rgb(255 255 255 / 0.06);
+  --border-strong: rgb(255 255 255 / 0.12);
+  --radius: 16px;
+  /* The solid shadow under a raised button or panel; pressed buttons drop onto it. */
+  --lift: 0 4px 0 var(--deep);
+  --display: "Lilita One", "Nunito Variable", system-ui, sans-serif;
   /* The page column. */
   --column: min(88vw, 448px);
   /* The board fills the column, but never more than fits above the sticky fight bar (landscape
      phones, short windows); squares shrink or grow with the board size (see .board). */
   --board: min(var(--column), max(240px, 100svh - 88px));
   --sq: calc(var(--board) / 8);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Nunito Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-weight: 600;
   color: var(--text);
   background: var(--bg);
 }
@@ -29,7 +46,7 @@
 body {
   margin: 0;
   min-height: 100dvh;
-  background: radial-gradient(120% 60% at 50% 0%, #2a2e37 0%, var(--bg) 60%) fixed;
+  background: radial-gradient(120% 60% at 50% 0%, #241749 0%, var(--bg) 60%) fixed;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-font-smoothing: antialiased;
@@ -81,15 +98,17 @@ h1 {
   align-items: center;
   gap: 8px;
   margin: 0 0 8px;
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 h1 .logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+  width: 34px;
+  height: 34px;
+  margin: -2px -2px -2px -4px;
 }
 
 .stats {
@@ -103,13 +122,12 @@ h1 .logo {
   --sq: calc((var(--board) - 8px) / var(--files, 8));
   grid-template-columns: repeat(var(--files, 8), var(--sq));
   grid-template-rows: repeat(var(--ranks, 8), var(--sq));
-  border-radius: 6px;
+  border-radius: 12px;
   overflow: hidden;
-  /* A thin wooden frame around the squares. */
+  /* A chunky panel-coloured frame sitting on its shadow. */
   box-shadow:
-    0 0 0 4px #3b3027,
-    0 0 0 5px rgb(0 0 0 / 0.5),
-    0 10px 28px rgb(0 0 0 / 0.5);
+    0 0 0 4px var(--panel),
+    0 10px 0 0 var(--deep);
   /* Centred in the column when the screen's height makes it narrower (landscape). */
   margin: 4px auto;
   width: calc(var(--board) - 8px);
@@ -134,7 +152,7 @@ h1 .logo {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgb(20 22 28 / 0.6);
+  background: rgb(46 33 89 / 0.88);
 }
 
 /* Middle (no-man's-land) rows are dimmed slightly. */
@@ -142,7 +160,7 @@ h1 .logo {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgb(20 22 28 / 0.25);
+  background: rgb(26 16 53 / 0.22);
 }
 
 .square.legal::after {
@@ -151,7 +169,7 @@ h1 .logo {
   width: 30%;
   height: 30%;
   border-radius: 50%;
-  background: rgb(60 140 70 / 0.55);
+  background: rgb(31 140 126 / 0.7);
   pointer-events: none;
 }
 
@@ -159,15 +177,15 @@ h1 .logo {
   width: 90%;
   height: 90%;
   background: none;
-  border: 4px solid rgb(60 140 70 / 0.55);
+  border: 4px solid rgb(31 140 126 / 0.7);
 }
 
 .rank-label,
 .file-label {
   position: absolute;
   font-size: 11px;
-  font-weight: 700;
-  color: rgb(0 0 0 / 0.6);
+  font-weight: 800;
+  color: rgb(26 16 53 / 0.55);
   pointer-events: none;
 }
 .rank-label {
@@ -197,14 +215,14 @@ h1 .logo {
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
-  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.3));
+  filter: drop-shadow(0 3px 0 rgb(26 16 53 / 0.28));
 }
 
 .piece.selected {
-  background: rgb(95 179 107 / 0.45);
-  border-radius: 6px;
-  outline: 2px solid rgb(95 179 107);
-  outline-offset: -2px;
+  background: rgb(255 201 60 / 0.4);
+  border-radius: 8px;
+  outline: 3px solid var(--gold);
+  outline-offset: -3px;
 }
 
 /* A square a piece couldn't go to: a short red flash with the reason below the board. */
@@ -239,7 +257,7 @@ h1 .logo {
   height: 46%;
   padding: 1px;
   border-radius: 50%;
-  background: rgb(20 22 26 / 0.75);
+  background: rgb(26 16 53 / 0.8);
   box-shadow: 0 0 0 1.5px var(--gold);
   filter: none;
 }
@@ -256,7 +274,7 @@ h1 .logo {
   width: 60%;
   height: 60%;
   border-radius: 50%;
-  background: rgb(20 22 26 / 0.8);
+  background: rgb(26 16 53 / 0.85);
   box-shadow: 0 0 0 1px var(--gold);
 }
 
@@ -276,11 +294,12 @@ h1 .logo {
 }
 
 .bench-label {
-  margin: 14px 0 4px;
-  font-size: 0.8rem;
-  color: var(--muted);
+  margin: 18px 0 4px;
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: var(--faint);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 /* Eight slots in one row (BENCH_SIZE): pieces shrink a little to fit inside the padding and border. */
@@ -290,13 +309,13 @@ h1 .logo {
   grid-template-columns: repeat(8, minmax(0, 1fr));
   align-items: center;
   padding: 6px;
-  background: var(--panel);
-  border: 2px dashed var(--border);
+  background: var(--deep);
+  border: 2px dashed var(--border-strong);
   border-radius: var(--radius);
 }
 
 .bench.legal {
-  border-color: rgb(95 179 107 / 0.6);
+  border-color: var(--teal);
 }
 
 .bench .piece {
@@ -325,50 +344,78 @@ h1 .logo {
   margin-top: 8px;
 }
 
+/* Buttons sit on a solid shadow (--lift) and drop onto it when pressed. */
 button {
   flex: 1;
-  min-height: 44px;
+  min-height: 46px;
   padding: 12px;
+  margin-bottom: 4px;
   font: inherit;
-  font-weight: 600;
+  font-weight: 800;
   color: var(--text);
-  background: linear-gradient(rgb(255 255 255 / 0.04), transparent) var(--panel);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  background: var(--panel);
+  border: 0;
+  border-radius: 14px;
+  box-shadow: var(--lift);
   cursor: pointer;
   transition:
     background-color 0.15s,
-    border-color 0.15s,
+    box-shadow 0.08s,
     transform 0.08s,
     filter 0.15s;
 }
 
 button:hover:not(:disabled) {
-  filter: brightness(1.12);
+  filter: brightness(1.1);
 }
 
 button:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--deep);
 }
 
 button:focus-visible,
 select:focus-visible,
 input:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 3px solid var(--gold);
   outline-offset: 2px;
 }
 
 button.primary {
-  background: linear-gradient(#6cc278, #54a35f);
-  border-color: #6cc278;
-  color: #0e200d;
-  box-shadow: 0 2px 10px rgb(95 179 107 / 0.25);
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.15em;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  background: var(--accent);
+  --shade: var(--accent-shadow);
+  box-shadow: 0 4px 0 var(--shade);
+}
+
+button.teal:not(.primary) {
+  color: var(--ink);
+  background: var(--teal);
+  --shade: var(--teal-shadow);
+  box-shadow: 0 4px 0 var(--shade);
+}
+
+button.primary:active:not(:disabled),
+button.teal:not(.primary):active:not(:disabled) {
+  box-shadow: 0 1px 0 var(--shade);
+}
+
+/* Plain buttons on a panel (windows, the result card, the lobby, the shop) are a shade lighter. */
+dialog button:not(.primary):not(.teal):not(.link-button):not(.prestige-button),
+.result button:not(.primary):not(.revive-button):not(.prestige-button),
+.lobby button:not(.primary),
+.piece-actions button:not(.primary):not(.fuse),
+.offer-detail button:not(.primary):not(.fuse) {
+  background: var(--raised);
 }
 
 button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
 .fight-hint {
@@ -386,20 +433,27 @@ button:disabled {
   color: var(--muted);
 }
 
+/* Light chips, so the opponent's black pieces show up against the violet. */
 .opponent button.foe {
   flex: none;
   min-height: 0;
-  padding: 1px;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 4px;
+  margin: 1px 0;
+  padding: 1px 2px;
+  background: var(--light);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.opponent button.foe:active:not(:disabled) {
+  box-shadow: none;
 }
 
 .opponent .foe-count {
-  margin-left: 1px;
+  margin: 0 2px 0 1px;
   font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text);
+  font-weight: 900;
+  color: var(--ink);
 }
 
 .opponent .foe-points {
@@ -412,12 +466,12 @@ button:disabled {
 
 .opponent-info {
   margin: -4px 0 8px;
-  padding: 8px 10px;
+  padding: 8px 12px;
   font-size: 0.9rem;
   color: var(--muted);
   background: var(--panel);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: var(--lift);
   animation: fade-in 0.15s ease-out;
 }
 
@@ -452,8 +506,11 @@ button:disabled {
   cursor: default;
 }
 
-.square.last {
-  box-shadow: inset 0 0 0 100px rgb(240 210 80 / 0.4);
+.square.light.last {
+  background: #ffe48a;
+}
+.square.dark.last {
+  background: #f2c443;
 }
 
 .square.check {
@@ -461,36 +518,48 @@ button:disabled {
 }
 
 #playback {
-  margin-top: 12px;
+  margin-top: 16px;
+}
+
+button.speed {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.1rem;
 }
 
 button.speed.active {
-  border-color: var(--accent);
-  color: var(--accent);
+  color: var(--ink);
+  background: var(--gold);
+  box-shadow: 0 4px 0 var(--gold-shadow);
 }
 
 .result {
-  margin-top: 14px;
-  padding: 18px 16px 16px;
+  margin-top: 18px;
+  padding: 22px 16px 16px;
   background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 24px;
   text-align: center;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.3);
+  box-shadow: 0 6px 0 var(--deep);
   animation: pop-in 0.25s ease-out;
 }
 
 .result h2 {
-  margin: 0 0 6px;
-  font-size: 1.6rem;
-  font-weight: 800;
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: 2.6rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .result[data-winner="w"] h2 {
-  color: var(--accent);
+  color: var(--gold);
+  text-shadow: 0 4px 0 #8a5a00;
 }
 .result[data-winner="b"] h2 {
   color: var(--danger);
+  text-shadow: 0 4px 0 #7a1e3f;
 }
 
 .result p {
@@ -507,13 +576,18 @@ button.speed.active {
   display: block;
   min-height: 0;
   margin: 6px auto 0;
-  padding: 6px 10px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--muted);
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--gold);
   background: none;
   border: none;
-  text-decoration: underline;
+  box-shadow: none;
+  text-decoration: none;
+}
+
+.link-button:active:not(:disabled) {
+  box-shadow: none;
 }
 
 [hidden] {
@@ -523,11 +597,11 @@ button.speed.active {
 /* ---- shop ---- */
 
 .shop {
-  margin-top: 10px;
+  margin-top: 14px;
   padding: 12px;
   background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 20px;
+  box-shadow: 0 6px 0 var(--deep);
 }
 
 .shop-row {
@@ -536,27 +610,33 @@ button.speed.active {
   gap: 10px;
 }
 
+/* Gold: a yellow coin badge. */
 .gold {
-  min-width: 3.5em;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--gold);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 8px;
+  font-family: var(--display);
+  font-size: 1.25rem;
+  color: var(--ink);
+  background: var(--gold);
+  border-radius: 12px;
+  box-shadow: 0 4px 0 var(--gold-shadow);
   font-variant-numeric: tabular-nums;
 }
 
 .gold::before {
   content: "";
   display: inline-block;
-  width: 0.8em;
-  height: 0.8em;
-  margin-right: 6px;
+  width: 0.85em;
+  height: 0.85em;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ffe58a, #d4a017);
-  vertical-align: -0.05em;
+  background: #fff1c2;
+  box-shadow: inset 0 0 0 0.12em var(--gold-shadow);
 }
 
 .shop button {
-  min-height: 38px;
+  min-height: 40px;
   padding: 8px 10px;
 }
 
@@ -596,29 +676,38 @@ button.speed.active {
 }
 
 button.fuse {
-  border-color: rgb(95 179 107 / 0.6);
+  color: var(--ink);
+  background: var(--teal);
+  box-shadow: 0 4px 0 var(--teal-shadow);
 }
 
 .offers-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
+  letter-spacing: 0.1em;
+  color: var(--faint);
 }
 
 .shop .shop-row #reroll {
   margin-left: auto;
   flex: 0 0 auto;
-  min-height: 32px;
-  padding: 4px 12px;
-  font-size: 0.85rem;
+  min-height: 38px;
+  padding: 4px 14px;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  background: var(--teal);
+  box-shadow: 0 4px 0 var(--teal-shadow);
 }
 
 .offers {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin-top: 6px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .shop button.offer {
@@ -626,12 +715,14 @@ button.fuse {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
-  padding: 8px 3px 6px;
+  padding: 8px 3px 8px;
   font-size: 0.75rem;
-  font-weight: 500;
-  background: var(--bg);
+  font-weight: 800;
+  background: var(--deep);
+  border-radius: 14px;
+  box-shadow: 0 4px 0 #0a0518;
 }
 
 .offer .inline-piece {
@@ -655,19 +746,22 @@ button.fuse {
 }
 
 .offer-price {
-  font-weight: 700;
-  color: var(--gold);
+  padding: 0 9px;
+  font-family: var(--display);
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--gold);
+  border-radius: 999px;
 }
 
 .offer.pricey .offer-price {
-  color: var(--danger);
+  background: var(--danger);
 }
 
-.offer.selected {
-  border-color: var(--accent);
+.shop button.offer.selected {
   box-shadow:
-    inset 0 0 0 1px var(--accent),
-    0 0 12px rgb(95 179 107 / 0.25);
+    inset 0 0 0 3px var(--gold),
+    0 4px 0 #0a0518;
 }
 
 .offer-detail {
@@ -685,42 +779,48 @@ button.fuse {
 
 button.sell {
   color: var(--danger);
-  border-color: rgb(224 108 90 / 0.5);
 }
 
 /* ---- run ---- */
 
 header .link {
   flex: 0 0 auto;
-  min-height: 32px;
-  padding: 4px 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  min-height: 40px;
+  padding: 4px 16px;
+  font-size: 0.9rem;
+  font-weight: 800;
   color: var(--text);
   background: var(--panel);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: 12px;
 }
 
 .run-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 14px;
-  margin-bottom: 10px;
+  gap: 6px 12px;
+  margin-bottom: 12px;
   font-size: 0.85rem;
+  font-weight: 800;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
 #round {
-  font-weight: 600;
+  padding: 5px 12px;
+  font-family: var(--display);
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
   color: var(--text);
+  background: var(--panel);
+  border-radius: 12px;
+  box-shadow: var(--lift);
 }
 
 .lives {
   letter-spacing: 2px;
-  font-size: 1rem;
+  font-size: 1.1rem;
 }
 
 .heart.full {
@@ -728,7 +828,7 @@ header .link {
 }
 
 .heart.empty {
-  color: #555;
+  color: #45386f;
 }
 
 .help {
@@ -737,9 +837,8 @@ header .link {
   font-size: 0.85rem;
   line-height: 1.45;
   background: var(--panel);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
   border-radius: var(--radius);
+  box-shadow: var(--lift);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -753,7 +852,7 @@ header .link {
   margin-top: 28px;
   font-size: 0.75rem;
   line-height: 1.5;
-  color: var(--muted);
+  color: var(--faint);
   text-align: center;
 }
 
@@ -773,26 +872,25 @@ header .link {
 
 /* ---- new run window ---- */
 
-dialog#new-run-dialog,
-dialog#match-dialog {
+dialog {
   width: min(420px, calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
   padding: 0;
   color: var(--text);
   background: var(--panel);
-  border: 1px solid var(--border-strong);
-  border-radius: 14px;
-  box-shadow: 0 16px 48px rgb(0 0 0 / 0.55);
+  border: 0;
+  border-radius: 24px;
+  box-shadow:
+    0 8px 0 var(--deep),
+    0 24px 60px rgb(0 0 0 / 0.5);
 }
 
-dialog#new-run-dialog[open],
-dialog#match-dialog[open] {
+dialog[open] {
   animation: pop-in 0.2s ease-out;
 }
 
-dialog#new-run-dialog::backdrop,
-dialog#match-dialog::backdrop {
-  background: rgb(0 0 0 / 0.6);
+dialog::backdrop {
+  background: rgb(12 7 32 / 0.7);
   backdrop-filter: blur(2px);
 }
 
@@ -800,12 +898,15 @@ dialog#match-dialog::backdrop {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 18px;
+  padding: 20px;
 }
 
 .new-run-form h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-family: var(--display);
+  font-size: 1.6rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 .new-run-form fieldset {
@@ -820,27 +921,27 @@ dialog#match-dialog::backdrop {
 .new-run-form legend,
 .new-run-form .field {
   margin-bottom: 4px;
-  font-size: 0.8rem;
-  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: var(--faint);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .new-run-form .choice {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  padding: 10px 12px;
-  background: var(--bg);
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--deep);
+  border: 0;
+  border-radius: 14px;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: box-shadow 0.15s;
 }
 
 .new-run-form .choice:has(input:checked) {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: inset 0 0 0 3px var(--accent);
 }
 
 .new-run-form .choice span {
@@ -862,15 +963,17 @@ dialog#match-dialog::backdrop {
 }
 
 .new-run-form select {
-  padding: 8px;
+  min-height: 46px;
+  padding: 8px 10px;
   font: inherit;
   font-size: 0.95rem;
+  font-weight: 700;
   text-transform: none;
   letter-spacing: normal;
   color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  background: var(--deep);
+  border: 0;
+  border-radius: 12px;
 }
 
 .new-run-form .check {
@@ -892,7 +995,7 @@ dialog#match-dialog::backdrop {
 .new-run-form .warning {
   margin: 0;
   font-size: 0.85rem;
-  color: #f0907f;
+  color: var(--danger);
 }
 
 .new-run-form .actions {
@@ -909,29 +1012,31 @@ dialog#match-dialog::backdrop {
   margin-bottom: 8px;
 }
 
+/* White's share in white from the left, Black's in black: the bar leans to whoever is winning. */
 .eval-bar {
   position: relative;
   flex: 1;
-  height: 14px;
+  height: 16px;
   overflow: hidden;
-  background: #2b2b2b;
-  border: 1px solid var(--border-strong);
+  background: #16121f;
   border-radius: 999px;
+  box-shadow: inset 0 0 0 2px var(--deep);
 }
 
+/* Your share, drawn in your pieces' colour. */
 .eval-fill {
   width: 50%;
   height: 100%;
-  background: #f0f0f0;
+  background: #f4f1fb;
   transition: width 0.35s ease-out;
 }
 
-/* Playing Black: your share is the dark part. */
+/* Playing Black: your share is the black part, the opponent's the white. */
 .eval-bar.as-black {
-  background: #f0f0f0;
+  background: #f4f1fb;
 }
 .eval-bar.as-black .eval-fill {
-  background: #2b2b2b;
+  background: #16121f;
 }
 
 /* Centre tick marks equality. */
@@ -941,15 +1046,16 @@ dialog#match-dialog::backdrop {
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 1px;
-  background: rgb(127 127 127 / 0.7);
+  width: 2px;
+  margin-left: -1px;
+  background: rgb(128 120 150 / 0.8);
 }
 
 .eval-label {
   min-width: 3.5em;
   text-align: right;
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-family: var(--display);
+  font-size: 1.05rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -967,16 +1073,17 @@ dialog#match-dialog::backdrop {
   margin: 0 0 8px;
   padding: 8px 12px;
   font-size: 0.9rem;
-  font-weight: 600;
-  color: #10240f;
-  background: var(--accent);
-  border-radius: var(--radius);
+  font-weight: 800;
+  color: var(--ink);
+  background: var(--teal);
+  border-radius: 12px;
+  box-shadow: 0 4px 0 var(--teal-shadow);
   animation: pop-in 0.25s ease-out;
 }
 
 button.muted {
   color: var(--muted);
-  font-weight: 500;
+  font-weight: 700;
 }
 
 /* ---- playing your own side ---- */
@@ -990,7 +1097,7 @@ button.muted {
 }
 
 .square.from {
-  box-shadow: inset 0 0 0 3px var(--accent);
+  box-shadow: inset 0 0 0 4px var(--gold);
 }
 
 .promo {
@@ -1035,18 +1142,20 @@ body.in-match #menu-button {
 }
 
 .match-hud {
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   padding: 10px 12px;
   background: var(--panel);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: var(--lift);
 }
 
 .match-top {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-family: var(--display);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
 }
 
 .match-timer {
@@ -1055,10 +1164,10 @@ body.in-match #menu-button {
 }
 
 .timer-bar {
-  height: 4px;
-  margin: 6px 0 8px;
+  height: 6px;
+  margin: 8px 0 10px;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--deep);
   border-radius: 999px;
 }
 
@@ -1084,6 +1193,7 @@ body.in-match #menu-button {
   align-items: center;
   gap: 8px;
   font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .match-players .player.me .name {
@@ -1108,16 +1218,16 @@ body.in-match #menu-button {
 }
 
 .hp-bar {
-  height: 8px;
+  height: 10px;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--deep);
   border-radius: 999px;
 }
 
 .hp-bar span {
   display: block;
   height: 100%;
-  background: var(--accent);
+  background: var(--teal);
   border-radius: 999px;
   transition:
     width 0.4s ease-out,
@@ -1163,15 +1273,16 @@ body.in-match #menu-button {
 .join-row input {
   flex: 1;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 8px 12px;
   font: inherit;
-  font-weight: 700;
+  font-family: var(--display);
+  font-size: 1.1rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  background: var(--deep);
+  border: 0;
+  border-radius: 12px;
 }
 
 .join-row button {
@@ -1187,15 +1298,17 @@ button.big-choice {
 }
 
 button.big-choice small {
+  font-family: "Nunito Variable", system-ui, sans-serif;
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 700;
+  letter-spacing: 0;
   opacity: 0.8;
 }
 
 details.rules summary {
   cursor: pointer;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 800;
   color: var(--muted);
 }
 
@@ -1215,28 +1328,31 @@ body.in-lobby #menu-button {
 }
 
 .lobby {
-  padding: 16px;
+  padding: 18px 16px;
   background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 24px;
+  box-shadow: 0 6px 0 var(--deep);
   text-align: center;
   animation: fade-in 0.2s ease-out;
 }
 
 .lobby-label {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
+  letter-spacing: 0.1em;
+  color: var(--faint);
 }
 
 .lobby-code {
   margin: 4px 0 8px;
-  font-size: 2.6rem;
-  font-weight: 800;
-  letter-spacing: 0.25em;
+  font-family: var(--display);
+  font-size: 3rem;
+  font-weight: 400;
+  letter-spacing: 0.22em;
   color: var(--gold);
+  text-shadow: 0 4px 0 #8a5a00;
   user-select: all;
 }
 
@@ -1259,10 +1375,9 @@ body.in-lobby #menu-button {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--deep);
+  border-radius: 12px;
 }
 
 .seat small {
@@ -1276,8 +1391,9 @@ body.in-lobby #menu-button {
   line-height: 1.6em;
   text-align: center;
   font-size: 0.8rem;
-  font-weight: 700;
-  background: var(--panel);
+  font-weight: 900;
+  color: var(--ink);
+  background: var(--teal);
   border-radius: 50%;
 }
 
@@ -1303,22 +1419,23 @@ body.in-lobby #menu-button {
 .leave-button {
   flex: none;
   min-height: 0;
-  padding: 2px 8px;
+  margin: 0;
+  padding: 4px 10px;
+  font-family: "Nunito Variable", system-ui, sans-serif;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 800;
+  letter-spacing: 0;
   color: var(--muted);
-  background: none;
-  border: 1px solid var(--border-strong);
+  background: var(--deep);
   border-radius: 999px;
+  box-shadow: none;
+}
+
+.leave-button:active:not(:disabled) {
+  box-shadow: none;
 }
 
 /* ---- main menu ---- */
-
-h1 sup,
-.menu-title sup {
-  font-size: 0.55em;
-  color: var(--accent);
-}
 
 body.in-menu .run-bar,
 body.in-menu #placement,
@@ -1336,25 +1453,78 @@ body.in-menu header {
   animation: fade-in 0.25s ease-out;
 }
 
+/* Pieces drifting up behind the menu (menuDrift.ts), each a different one every pass. */
+.menu-drift {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.menu-drift img {
+  position: absolute;
+  top: 0;
+  left: var(--x);
+  width: var(--size);
+  height: var(--size);
+  margin-left: calc(var(--size) / -2);
+  opacity: 0.08;
+  animation: menu-drift linear infinite;
+  will-change: transform;
+}
+
+@keyframes menu-drift {
+  from {
+    transform: translate3d(0, 105vh, 0) rotate(var(--r0));
+  }
+  to {
+    transform: translate3d(var(--dx), -160px, 0) rotate(var(--r1));
+  }
+}
+
+/* The menu's content (and the credits under it) sits above the drifting pieces. */
+.menu > :not(.menu-drift),
+.credits {
+  position: relative;
+  z-index: 1;
+}
+
+/* With reduced motion the pieces stay put, scattered down the screen. */
+@media (prefers-reduced-motion: reduce) {
+  .menu-drift img {
+    top: var(--y);
+    transform: rotate(var(--r0));
+  }
+}
+
 .menu-logo {
-  width: 104px;
-  height: 104px;
-  border-radius: 24px;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+  width: 148px;
+  height: 148px;
+  margin: -12px 0 -18px;
 }
 
 .menu-title {
-  margin: 18px 0 4px;
-  font-size: 2.2rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  margin: 26px 0 0;
+  font-family: var(--display);
+  font-size: 3rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-shadow: 0 4px 0 #0c0720;
 }
 
-.menu-tagline {
-  margin: 0 0 22px;
-  max-width: 300px;
-  color: var(--muted);
-  line-height: 1.45;
+.menu-badge {
+  margin: 10px 0 32px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--gold);
+  border-radius: 999px;
 }
 
 .menu-notice {
@@ -1364,27 +1534,45 @@ body.in-menu header {
   font-size: 0.9rem;
   color: var(--gold);
   background: var(--panel);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: var(--lift);
 }
 
 .menu-buttons {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  width: min(100%, 320px);
+  gap: 12px;
+  width: min(100%, 340px);
 }
 
 .menu-buttons button {
-  min-height: 54px;
-  font-size: 1.05rem;
+  min-height: 58px;
+  font-size: 1.1rem;
+  font-weight: 900;
+  border-radius: 18px;
+}
+
+.menu-buttons button.primary {
+  min-height: 68px;
+  font-size: 1.35rem;
+  box-shadow: 0 6px 0 var(--shade);
+}
+
+.menu-buttons button.teal:not(.primary) {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  box-shadow: 0 5px 0 var(--shade);
 }
 
 .menu-buttons button small {
   display: block;
   margin-top: 2px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-family: "Nunito Variable", system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0;
   opacity: 0.8;
 }
 
@@ -1403,20 +1591,21 @@ body.in-menu .credits {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 34px;
-  margin: 4px 0;
-  padding: 4px 8px;
+  min-height: 36px;
+  margin: 6px 0;
+  padding: 4px 10px;
   font-size: 0.8rem;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--deep);
+  border-radius: 12px;
 }
 
 .side-label {
   flex: none;
-  width: 4.6em;
-  color: var(--muted);
-  font-weight: 600;
+  width: 6.2em;
+  color: var(--faint);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .side-list {
@@ -1430,6 +1619,17 @@ body.in-menu .credits {
 .side-piece {
   display: inline-flex;
   align-items: center;
+}
+
+/* The opponent's pieces on light chips, like the shop's opponent line. */
+#side-them .side-piece {
+  padding: 0 2px;
+  background: var(--light);
+  border-radius: 6px;
+}
+
+#side-them .side-piece small {
+  color: var(--ink);
 }
 
 .side-piece .inline-piece {
@@ -1446,7 +1646,8 @@ body.in-menu .credits {
 
 .side-points {
   flex: none;
-  font-weight: 700;
+  font-family: var(--display);
+  font-size: 1rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1469,7 +1670,6 @@ body.in-menu .credits {
 
 .profile-logo {
   flex: none;
-  border-radius: 12px;
 }
 
 .profile-name {
@@ -1478,52 +1678,60 @@ body.in-menu .credits {
   flex-wrap: wrap;
   gap: 8px;
   margin: 0 0 2px;
-  font-size: 1.25rem;
-  font-weight: 800;
+  font-family: var(--display);
+  font-size: 1.45rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 .tabs {
   display: flex;
   gap: 4px;
-  padding: 4px;
-  margin-bottom: 12px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  padding: 5px;
+  margin-bottom: 14px;
+  background: var(--deep);
+  border-radius: 16px;
 }
 
 .tabs button {
   flex: 1 1 auto; /* longer labels get more room */
-  min-height: 34px;
+  min-height: 38px;
   min-width: 0;
+  margin: 0;
   padding: 4px 3px;
   font-size: 0.85rem;
+  color: var(--muted);
   background: none;
   border: none;
-  border-radius: 999px;
+  border-radius: 12px;
+  box-shadow: none;
 }
 
 .tabs button.active {
-  color: #0e200d;
+  color: var(--ink);
   background: var(--accent);
+  box-shadow: 0 3px 0 var(--accent-shadow);
 }
 
 .profile-body {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   min-height: 120px;
 }
 
 .record-card {
-  padding: 12px;
+  padding: 14px;
   background: var(--panel);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: var(--lift);
 }
 
 .record-card h3 {
-  margin: 0 0 8px;
-  font-size: 0.95rem;
+  margin: 0 0 10px;
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
 }
 
 .stats {
@@ -1541,15 +1749,16 @@ body.in-menu .credits {
 
 .stat-value {
   color: var(--text);
-  font-size: 1.15rem;
-  font-weight: 800;
+  font-family: var(--display);
+  font-size: 1.4rem;
   font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
   font-size: 0.75rem;
+  font-weight: 800;
   line-height: 1.25;
-  color: var(--muted);
+  color: var(--faint);
 }
 
 .place-bar {
@@ -1565,22 +1774,22 @@ body.in-menu .credits {
 }
 
 .place-bar .place-1 {
-  color: #0e200d;
+  color: var(--ink);
   background: var(--gold);
 }
 
 .place-bar .place-2 {
-  color: #0e200d;
-  background: #c9ccd3;
+  color: var(--ink);
+  background: var(--teal);
 }
 
 .place-bar .place-3 {
-  color: #0e200d;
-  background: #c08a5a;
+  color: var(--ink);
+  background: var(--accent);
 }
 
 .place-bar .place-4 {
-  background: #4a4e57;
+  background: #45386f;
 }
 
 .history {
@@ -1595,11 +1804,11 @@ body.in-menu .credits {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 2px 10px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   font-size: 0.85rem;
   background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
+  box-shadow: var(--lift);
 }
 
 .history-mode {
@@ -1648,7 +1857,29 @@ body.in-menu .credits {
   z-index: 5;
   margin: 0 -16px;
   padding: 2px 16px calc(10px + env(safe-area-inset-bottom));
-  background: linear-gradient(to top, var(--bg) 70%, rgb(29 31 36 / 0));
+  background: linear-gradient(to top, var(--bg) 70%, rgb(26 16 53 / 0));
+}
+
+#placement .fight-bar .actions {
+  margin-top: 12px;
+}
+
+#placement .fight-bar #fight {
+  flex: 1.5;
+  font-size: 1.15rem;
+}
+
+/* Solid even when disabled, so the shop scrolling underneath doesn't show through. */
+#placement .fight-bar button:disabled {
+  opacity: 1;
+  color: var(--faint);
+  background: var(--panel);
+  box-shadow: var(--lift);
+}
+
+#placement .fight-bar button {
+  min-height: 54px;
+  border-radius: 16px;
 }
 
 .record-note {
@@ -1664,34 +1895,23 @@ body.in-menu .credits {
   font-weight: 600;
 }
 
-.revive-button {
-  width: 100%;
-  margin-top: 8px;
-  font-weight: 700;
-}
-
+/* The opt-in ad and the Prestige offer: bright yellow, like a reward. */
+.revive-button,
 .prestige-button {
   width: 100%;
-  margin-top: 8px;
-  color: #241c05;
-  font-weight: 700;
-  background: linear-gradient(180deg, #f6d873, var(--gold));
-  border: 1px solid rgb(0 0 0 / 0.2);
+  min-height: 56px;
+  margin-top: 12px;
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--ink);
+  background: var(--gold);
+  border-radius: 16px;
+  box-shadow: 0 5px 0 var(--gold-shadow);
 }
 
-dialog#prestige-dialog {
-  width: min(420px, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  padding: 0;
-  color: var(--text);
-  background: var(--panel);
-  border: 1px solid var(--border-strong);
-  border-radius: 14px;
-}
-
-dialog#prestige-dialog::backdrop {
-  background: rgb(0 0 0 / 0.6);
-  backdrop-filter: blur(2px);
+.revive-button:active:not(:disabled),
+.prestige-button:active:not(:disabled) {
+  box-shadow: 0 1px 0 var(--gold-shadow);
 }
 
 .prestige-choices {
@@ -1707,26 +1927,29 @@ dialog#prestige-dialog::backdrop {
 /* Shop lock and interest. */
 .shop .shop-row #lock {
   flex: 0 0 auto;
-  width: 38px;
-  min-height: 32px;
+  width: 44px;
+  min-height: 38px;
   margin-left: auto;
   padding: 0;
   font-size: 1rem;
+  background: var(--deep);
+  box-shadow: 0 4px 0 #0a0518;
 }
 
 .shop .shop-row #lock + #reroll {
-  margin-left: -4px;
+  margin-left: -2px;
 }
 
-#lock.active {
-  border-color: var(--gold);
-  background: rgb(242 201 76 / 0.15);
+.shop .shop-row #lock.active {
+  background: var(--gold);
+  box-shadow: 0 4px 0 var(--gold-shadow);
 }
 
 .gold .interest {
+  font-family: "Nunito Variable", system-ui, sans-serif;
   font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--accent);
+  font-weight: 900;
+  color: #7a4f00;
 }
 
 /* First-run tip: one line of help, dismissible. */
@@ -1734,14 +1957,15 @@ dialog#prestige-dialog::backdrop {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 0 0 8px;
-  padding: 8px 6px 8px 10px;
+  margin: 0 0 10px;
+  padding: 10px 6px 10px 12px;
   font-size: 0.85rem;
+  font-weight: 700;
   line-height: 1.35;
   color: var(--text);
-  background: rgb(242 201 76 / 0.1);
-  border: 1px solid rgb(242 201 76 / 0.35);
+  background: var(--panel);
   border-radius: var(--radius);
+  box-shadow: inset 0 0 0 2px rgb(255 201 60 / 0.5);
 }
 
 .tip[hidden] {
@@ -1755,14 +1979,20 @@ dialog#prestige-dialog::backdrop {
 button.tip-close {
   flex: 0 0 auto;
   min-height: 0;
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
+  margin: 0;
   padding: 0;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   line-height: 1;
   color: var(--muted);
   background: none;
   border: none;
+  box-shadow: none;
+}
+
+button.tip-close:active:not(:disabled) {
+  box-shadow: none;
 }
 
 /* End-of-run summary on the result card. */
@@ -1774,8 +2004,8 @@ button.tip-close {
   display: block;
   width: 100%;
   height: 72px;
-  background: rgb(255 255 255 / 0.03);
-  border-radius: 6px;
+  background: var(--deep);
+  border-radius: 12px;
 }
 
 .run-summary polyline {
@@ -1790,7 +2020,7 @@ button.tip-close {
 }
 
 .run-summary polyline.them {
-  stroke: var(--danger);
+  stroke: var(--teal);
   opacity: 0.8;
 }
 
@@ -1810,7 +2040,7 @@ button.tip-close {
 }
 
 .summary-legend .them {
-  color: var(--danger);
+  color: var(--teal);
 }
 
 .summary-stats strong {
@@ -1845,9 +2075,10 @@ button.tip-close {
 /* Multiplayer: the rules for a created room (or vs bots). */
 .room-rules {
   margin: 0;
-  padding: 6px 10px 2px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  padding: 8px 12px 6px;
+  background: var(--deep);
+  border: 0;
+  border-radius: 14px;
 }
 
 .room-rules legend {
@@ -1955,7 +2186,7 @@ button.tip-close {
 .mini-board {
   display: grid;
   max-width: 300px;
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -1982,12 +2213,15 @@ button.tip-close {
 
 /* A King or Heir captured: a short notice over the board. */
 .battle-announce {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--gold);
-  color: #1d1f24;
-  font-weight: 700;
+  box-shadow: 0 4px 0 var(--gold-shadow);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
   text-align: center;
 }
 
@@ -2008,8 +2242,13 @@ button.tip-close {
   padding: 10px 14px;
   border-radius: var(--radius);
   background: var(--gold);
-  color: #1d1f24;
-  box-shadow: 0 6px 24px rgb(0 0 0 / 0.35);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 5px 0 var(--gold-shadow),
+    0 12px 32px rgb(0 0 0 / 0.4);
   transform: translateX(-50%);
 }
 
@@ -2030,7 +2269,10 @@ button.tip-close {
 }
 
 .toast span {
+  font-family: "Nunito Variable", system-ui, sans-serif;
   font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 @keyframes toast-in {
@@ -2065,14 +2307,16 @@ button.tip-close {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
   background: var(--panel);
+  box-shadow: var(--lift);
 }
 
 .achievement.unlocked {
-  border-color: var(--gold);
+  box-shadow:
+    inset 0 0 0 2px var(--gold),
+    var(--lift);
 }
 
 .achievement.locked {
@@ -2080,7 +2324,7 @@ button.tip-close {
 }
 
 .achievement-name {
-  font-weight: 700;
+  font-weight: 900;
 }
 
 .achievement-text,

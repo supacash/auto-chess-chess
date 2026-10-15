@@ -18,7 +18,7 @@ const foreground = icon
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">',
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-45 -45 602 602">',
   );
-const BACKGROUND = '#1d1f24';
+const BACKGROUND = '#1a1035';
 
 const browser = await chromium.launch();
 const page = await browser.newPage();

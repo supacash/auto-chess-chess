@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "io.github.supacash.autochess"
+    namespace = "com.pawnedup.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "io.github.supacash.autochess"
+        applicationId "com.pawnedup.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -16,8 +16,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Play Store signing: the upload key's path and passwords come from Gradle properties kept out
+    // of the repo (%USERPROFILE%\.gradle\gradle.properties), so a release is signed only where the key is.
+    def uploadStore = project.findProperty('ACC_UPLOAD_STORE_FILE')
+    signingConfigs {
+        release {
+            if (uploadStore) {
+                storeFile file(uploadStore)
+                storePassword project.findProperty('ACC_UPLOAD_STORE_PASSWORD')
+                keyAlias project.findProperty('ACC_UPLOAD_KEY_ALIAS')
+                keyPassword project.findProperty('ACC_UPLOAD_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
         release {
+            if (uploadStore) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

@@ -1,4 +1,4 @@
-package io.github.supacash.autochess;
+package com.pawnedup.app;
 
 import android.os.Bundle;
 import android.webkit.WebResourceRequest;

@@ -1,4 +1,4 @@
-# Auto Chess² — Design Document
+# Pawned Up — Design Document
 
 The source of truth for how the game works. Update it whenever a rule or tuning decision changes.
 Balance numbers come from the simulator; see [SIMULATION.md](SIMULATION.md) for the data behind them.
