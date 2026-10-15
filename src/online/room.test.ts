@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BOARD_8, BOARDS } from '../chess/boardSpec';
+import { RULES_VERSION } from '../game/version';
 import { START_HP } from '../multi/match';
 import { makePiece } from '../rules/pieces';
 import { seededRng } from '../rules/rng';
@@ -33,6 +34,7 @@ import {
   startBattle,
   shouldMoveTo,
   startRoom,
+  versionError,
 } from './room';
 
 const lobby = () => newRoom('ABCD', 'host', 'Brave Knight 10', { blitz: false });
@@ -70,6 +72,20 @@ describe('lobby', () => {
     expect(leaveLobby(room, 'p3').seats[2].uid).toBeNull();
     const started = startRoom(lobby(), 1, []);
     expect(joinRoom(started, 'p9', 'P9')).toEqual({ ok: false, error: 'That match has already started' });
+  });
+
+  it('only seats players on the room’s version of the game', () => {
+    const room = lobby();
+    expect(room.version).toBe(RULES_VERSION);
+    expect(room.seats[0].version).toBe(RULES_VERSION);
+    expect(joined(room, 'p2').seats[1].version).toBe(RULES_VERSION);
+    expect(versionError(room)).toBeNull();
+    const older = { ...room, version: RULES_VERSION - 1 };
+    expect(joinRoom(older, 'p2', 'P2')).toEqual({ ok: false, error: versionError(older) });
+    expect(versionError(older)).toMatch(/older version/);
+    // Even someone already seated (a reload after an update): their battles would come out differently.
+    expect(joinRoom(older, 'host', 'Host').ok).toBe(false);
+    expect(versionError(room, RULES_VERSION - 1)).toMatch(/newer version.*Reload/);
   });
 
   it('starts with bots in the empty seats', () => {
@@ -249,5 +265,12 @@ describe('quick play', () => {
     expect(shouldMoveTo(mine, older, 'me', now)).toBe(true);
     expect(shouldMoveTo(older, mine, 'a', now)).toBe(false); // the older room stays put
     expect(shouldMoveTo(withPeople(mine, 'b'), older, 'me', now)).toBe(false); // not alone any more
+  });
+
+  it('only matches rooms on the same version of the game', () => {
+    const now = 10_000;
+    const old = { ...quick('AAAA', 'a', now - 3_000), version: 0 }; // made before rooms had a version
+    expect(quickRoomsToTry([old], 'me', now, { blitz: false })).toEqual([]);
+    expect(shouldMoveTo(quick('ZZZZ', 'me', now - 1_000), old, 'me', now)).toBe(false);
   });
 });

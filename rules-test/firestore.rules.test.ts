@@ -32,10 +32,12 @@ beforeAll(async () => {
 afterAll(() => env.cleanup());
 beforeEach(() => env.clearFirestore());
 
-const seat = (uid: string | null, name = '') => ({ uid, name });
+const VERSION = 10;
+const seat = (uid: string | null, name = '', version = VERSION) => (uid ? { uid, name, version } : { uid, name });
 const lobby = (host = 'host') => ({
   code: 'ABCD',
   host,
+  version: VERSION,
   status: 'lobby',
   settings: { blitz: false },
   seats: [seat(host, 'Host'), seat(null), seat(null), seat(null)],
@@ -73,6 +75,20 @@ describe('rooms', () => {
         seats: [seat('host', 'Host'), seat('p2', 'P2'), seat('zz'), seat(null)],
       }),
     );
+  });
+
+  it('only seats players on the room’s version of the game', async () => {
+    await seed(lobby());
+    const other = [seat('host', 'Host'), seat('p2', 'P2', VERSION - 1), seat(null), seat(null)];
+    await assertFails(updateDoc(doc(as('p2'), 'rooms/ABCD'), { seats: other }));
+    const none = [seat('host', 'Host'), { uid: 'p2', name: 'P2' }, seat(null), seat(null)];
+    await assertFails(updateDoc(doc(as('p2'), 'rooms/ABCD'), { seats: none }));
+    // A room from before versions (none on it) still seats players from before versions.
+    const { version: _, ...old } = lobby();
+    const oldHost = { uid: 'host', name: 'Host' };
+    await seed({ ...old, seats: [oldHost, seat(null), seat(null), seat(null)] });
+    const oldJoin = [oldHost, { uid: 'p2', name: 'P2' }, seat(null), seat(null)];
+    await assertSucceeds(updateDoc(doc(as('p2'), 'rooms/ABCD'), { seats: oldJoin }));
   });
 
   it('lets a joiner stamp the join time with the server time only', async () => {
