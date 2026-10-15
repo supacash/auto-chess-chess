@@ -1,6 +1,6 @@
 # Balance Simulator
 
-A headless script that plays whole runs (round 1 → N) with Stockfish playing both sides, so the economy, AI budget curve and move limit can be tuned with data instead of single playtests.
+A headless script that plays whole runs (round 1 → N) with the game's engine playing both sides (Fairy-Stockfish until §22; `--depth N` still runs it), so the economy, AI budget curve and move limit can be tuned with data instead of single playtests.
 
 ```bash
 npm run sim -- --rounds 10 --games 100
@@ -11,8 +11,8 @@ npm run sim -- --rounds 10 --games 100
 | `--rounds` | 10 | Rounds per run |
 | `--games` | 20 | Number of runs (total battles = runs × rounds) |
 | `--seed` | 1 | Seed for drafting, placement, first mover and move picks. Runs are reproducible. |
-| `--depth` | `SEARCH_DEPTH` (8) | Overrides the engine depth |
-| `--workers` | CPU count − 2 | Parallel Stockfish processes |
+| `--depth` | — | Plays with Fairy-Stockfish at this depth instead of the game's engine (sections before §22 used depth 8) |
+| `--workers` | CPU count − 2 | Parallel engine processes (the native `acc` build: `cargo build --release -p acc-cli` in `engine/`) |
 | `--player` | `redraft` | Stand-in player policy. `redraft` re-drafts the whole army each round at its full value. `shop` keeps a persistent `Shop` and spends gold greedily (see below). |
 | `--player-style` | `random` | Stand-in player style (`balanced`, `fortress`, `heavy`, `cavalry`), or random per run |
 | `--player-points` | `economy` | `economy` = the player's army value follows DESIGN.md income. `ai` = the player gets the same budget as the AI each round, which isolates engine and style balance from the economy. |
@@ -22,7 +22,7 @@ npm run sim -- --rounds 10 --games 100
 | `--lead` | 5 | Material lead threshold for the "lead≥N / no mate / no win" columns |
 | `--json` | off | Dumps every game record instead of the tables |
 
-**How it works.** The script lives in `scripts/sim/` and runs with `tsx`, so it is not part of the browser bundle. It reuses `draftAiArmy`/`placeAiArmy`/`aiBudget`, `startPosition`, `runBattle` and `roundIncome` unchanged. `nodeEngine.ts` is a `MoveSource` that runs `stockfish-19-lite-single.js` as a child process with the same UCI flow as `src/engine/stockfish.ts` (MultiPV 3, `pickMove`). The stand-in player has an AI style for the whole run and places with `placeAiArmy`. With `--player redraft` it re-drafts its whole army each round at its current army value (3 pawns + 3 gold = 6 at the start, then +5/+6/+7 per round). This is an optimistic "spends everything well" player that can freely reshape its army. With `--player shop` (`scripts/sim/shopPlayer.ts`) it keeps one `Shop` from `startingShop()`, adds `roundIncome` after each battle, and before each battle spends greedily through `buyPawn`/`upgradePiece`, so the 16-piece cap and the piece limit apply as in the real shop. Each step buys a pawn while pawns are below the style's pawn share of army + gold, otherwise makes an affordable upgrade picked by the style's weights for the target piece, otherwise buys a pawn. It never sells, and gold that fits nothing (usually 0–1) carries over. It plays on through all rounds even after a third loss, so later rounds have samples. The run score applies the 3 lives afterwards.
+**How it works.** The script lives in `scripts/sim/` and runs with `tsx`, so it is not part of the browser bundle. It reuses `draftAiArmy`/`placeAiArmy`/`aiBudget`, `startPosition`, `runBattle` and `roundIncome` unchanged. `nodeEngine.ts` is a `MoveSource` that runs the game's engine natively (the same moves as the WASM build the game ships: `npm run check:determinism`), or Fairy-Stockfish with `--depth`, as a child process speaking UCI, with the game's move picking (`pickMove`). The stand-in player has an AI style for the whole run and places with `placeAiArmy`. With `--player redraft` it re-drafts its whole army each round at its current army value (3 pawns + 3 gold = 6 at the start, then +5/+6/+7 per round). This is an optimistic "spends everything well" player that can freely reshape its army. With `--player shop` (`scripts/sim/shopPlayer.ts`) it keeps one `Shop` from `startingShop()`, adds `roundIncome` after each battle, and before each battle spends greedily through `buyPawn`/`upgradePiece`, so the 16-piece cap and the piece limit apply as in the real shop. Each step buys a pawn while pawns are below the style's pawn share of army + gold, otherwise makes an affordable upgrade picked by the style's weights for the target piece, otherwise buys a pawn. It never sells, and gold that fits nothing (usually 0–1) carries over. It plays on through all rounds even after a third loss, so later rounds have samples. The run score applies the 3 lives afterwards.
 
 **Columns.** W/D/L are from the player's side. `pts P/AI` is the average army value. `limit` = the battle hit the 60-ply limit. `mate` = it ended in checkmate. `lead≥5` = one side was ever 5+ points of material ahead. `no mate` / `no win` = of those games, how often that side failed to checkmate, or failed to win at all.
 
@@ -378,6 +378,52 @@ The prestige step (0.25 AI points per round per level) was worth about 10 points
 
 - **Chosen: 1 point per round per level.** ★1 with a perk plays about like a fresh Normal run (run score 4–7 against 6.8), and each level after is a little harder (★2 5.5, ★3 4.7): later perks add less than the step does. Perks make the early rounds easy; the AI's extra points make rounds 6–20 the fight. Rounds 21–25 stay easy because both armies hit the full-board cap.
 - The stand-in rarely reaches round 25 here, but a player who earned a prestige builds better than it does.
+
+### 22. The game's own engine (RULES_VERSION 9; fairy pieces, shop player, 40 runs × 25 rounds per row)
+
+Same command as §20, now on the game's own engine (depth 8 / 150k nodes, the native build; docs/ENGINE-PLAN.md). Rows are ours / Fairy-Stockfish (§20):
+
+| Mode, difficulty | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|
+| Classic Easy | 59% / 48% | 59% / 46% | 57% / 60% | 55% / 49% | 74% / 69% | **61% / 54%** | 6.9 / 5.4 | 8% / 8% |
+| Classic Normal | 45% / 47% | 42% / 55% | 49% / 54% | 41% / 50% | 68% / 67% | **49% / 54%** | 5.6 / 5.4 | 10% / 10% |
+| Classic Hard | 26% / 20% | 15% / 14% | 26% / 25% | 28% / 24% | 67% / 49% | **32% / 26%** | 1.6 / 1.0 | 0% / 0% |
+| Growing Easy | 61% / 67% | 58% / 62% | 67% / 77% | 63% / 57% | 71% / 68% | **64% / 66%** | 7.1 / 9.8 | 8% / 5% |
+| Growing Normal | 60% / 56% | 52% / 56% | 62% / 68% | 43% / 55% | 59% / 67% | **55% / 60%** | 7.7 / 6.7 | 8% / 8% |
+| Growing Hard | 52% / 47% | 32% / 25% | 32% / 33% | 22% / 30% | 45% / 54% | **36% / 38%** | 4.2 / 3.1 | 0% / 0% |
+
+- **The balance holds: no budget change needed.** The suites' overall win rates moved by −5 to +7 points, in both directions, and run scores by less than their ±2.2 margin. Nothing moved the same way across suites, so this is noise and engine variety, not a stronger or weaker AI.
+- **Difficulty ordering is cleaner.** Easy > Normal > Hard now holds in both modes. In §20 Classic Easy and Normal had come out level (54% each).
+- **More decisive battles.** 68–76% of battles end in checkmate and 23–30% at the move limit. Our engine converts a material lead better than Fairy-Stockfish did. Win rates didn't move with it, because both sides convert better.
+- **The late game is still easy** (rounds 21–25, as §20 found): both armies hit the full-board cap and the stand-in moves first. Classic Hard's 67% there (§20: 49%) is part of the same thing.
+- **No engine failures.** 0 stalled or hung searches in 6,000 battles. Fairy-Stockfish hung 2–9 times per suite (left out, counted as draws).
+- **Time:** 12–17 minutes per suite with 14 engines.
+
+### 23. Piece duels on the game's own engine (`npm run sim:duel -- --a X --b Y --games 200 --budget 40`)
+
+Each game drafts one 40-point fairy army; one side gets it plus piece A, the other plus piece B, and the engine plays it out (colours alternate). The table shows A's score, ±7 points (95%).
+
+| A vs B (points) | A's score | Reading |
+|---|---|---|
+| Bishop vs Knight (3 v 3) | 48% | even (sanity check) |
+| Cannon vs Knight (3 v 3) | 48% | even |
+| Man vs Knight (3 v 3) | 51% | even |
+| Centaur vs Rook (5 v 5) | **69%** | the Rook is weaker |
+| Dragon Horse vs Rook (5 v 5) | **64%** | the Rook is weaker |
+| Wildebeest vs Rook (5 v 5) | **68%** | the Rook is weaker |
+| Siege Cannon vs Centaur (6 v 5) | 47% | the Centaur plays like a 6 |
+| Dragon King vs Archbishop (7 v 7) | **37%** | the Archbishop is stronger |
+| Stackman vs Queen (9 v 9) | 60% | the Stackman is a little strong |
+| Camel vs Wazir (2 v 1) | 77% | as its extra point says |
+
+- **The minor pieces are priced right** at 3.
+- **The Rook is weak for 5 points, against the fairy 5s.** That's the opposite of what the rook-pawn premium was for (6 gold for a 5-point Rook). The tuned evaluation agrees independently: it values the Rook at about 470–500 cp, against about 500–525 for the Centaur, Dragon Horse and Wildebeest.
+- **The Centaur matches the 6-point Siege Cannon,** so the fairy 5s look underpriced rather than the Rook overpriced.
+- **Open (decisions for an economy update after the engine merges):**
+  - the Rook recipe (2 one-gold rook-pawns + a Bishop, Knight or Man);
+  - the Centaur, Dragon Horse and Wildebeest at 6;
+  - the Dragon King or Archbishop repriced;
+  - the Stackman left at 9.
 
 ## Problems found
 

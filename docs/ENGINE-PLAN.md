@@ -425,3 +425,17 @@ The old setup is kept working behind one switch: **Vite's `fairy` mode**, `VITE_
 1. **Web:** in `.github/workflows/pages.yml`, replace `npm run build` with `npm run build:fairy`. That's the build that gets deployed.
 2. **Android:** set `ISOLATE = true` in `android/.../MainActivity.java`, then `npm run build:fairy && npx cap sync android`.
 3. **Records:** players on version 9 then meet version-8 armies and records. Snapshots of the two versions are kept apart, as for any version change.
+
+## Phase 6 results (2026-10-14)
+
+**The balance holds on our engine, so no rule changes were made.**
+- **Balance suite:** the SIMULATION.md suite (Classic and Growing × Easy, Normal and Hard; shop player; 40 runs × 25 rounds) moved by −5 to +7 points overall, in both directions. Run scores moved within their ±2.2 margin.
+- **Difficulty ordering:** Easy > Normal > Hard now holds in both modes.
+- **Battle endings:** 68–76% of battles end in mate.
+- **No engine failures:** 0 stalls in 6,000 battles (SIMULATION.md §22).
+- **Piece duels (§23):**
+  - The 3-point pieces are even.
+  - The Rook loses to the Centaur, Dragon Horse and Wildebeest (64–69%).
+  - The Archbishop beats the Dragon King (63%).
+  - The Stackman edges the Queen (60%).
+- **Price changes are left for one economy update after the engine merges** (the user's call). That update includes the new Rook recipe (2 one-gold rook-pawns + a Bishop, Knight or Man the player picks).
