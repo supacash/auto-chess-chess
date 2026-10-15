@@ -14,6 +14,8 @@ const FINGERPRINTS: Record<number, string> = {
   6: '88c4e465', // two kings: both attacked at once isn't mate (one must be captured first)
   7: '87a056c6', // the Stackman is worth 9 (was 8)
   8: '87a056c6', // same pieces as 7; armies may hold several Stackmen and the shop changed (kept apart from 7 online)
+  9: '98c96f10', // the game's own engine plays battles instead of Fairy-Stockfish (docs/ENGINE-PLAN.md)
+  10: '98c96f10', // same battles as 9; a Rook is two 1-gold rook-pawns and a Bishop, Knight or Man (kept apart from 9 online)
 };
 
 describe('rules version', () => {
@@ -21,6 +23,10 @@ describe('rules version', () => {
     expect(shortHash(rulesFingerprint()), 'The rules changed: bump RULES_VERSION and record the new fingerprint').toBe(
       FINGERPRINTS[RULES_VERSION],
     );
+  });
+
+  it('gives a fairy build (Fairy-Stockfish, kept to go back to) the version 8 fingerprint', () => {
+    expect(shortHash(rulesFingerprint(true))).toBe(FINGERPRINTS[8]);
   });
 
   it('hashes stably', () => {

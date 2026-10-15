@@ -1,4 +1,6 @@
 import { BOARDS, plyLimit, variantsIni } from '../chess/boardSpec';
+import { ACC_LIMITS, ENGINE_VERSION } from '../engine/accSettings';
+import { USE_FAIRY } from '../engine/engineChoice';
 import { MULTI_PV, PICK_MARGIN } from '../engine/pick';
 import { PIECE_TYPES, PIECES } from '../rules/pieces';
 import { SEARCH_DEPTH } from './runBattle';
@@ -11,17 +13,21 @@ import { SEARCH_DEPTH } from './runBattle';
  * Bump it whenever the rules change. version.test.ts fails when the fingerprint below changes
  * without a bump; rule changes it can't see (such as how battleResult decides a game) need a manual bump.
  */
-export const RULES_VERSION = 8;
+// A `fairy` build plays battles with Fairy-Stockfish, exactly as version 8 did (src/engine/engineChoice.ts).
+export const RULES_VERSION = USE_FAIRY ? 8 : 10;
 
-/** Everything about the rules that can be read as data, as one stable string. */
-export function rulesFingerprint(): string {
+/** Everything about the rules that can be read as data, as one stable string. `fairy`: for a `fairy` build. */
+export function rulesFingerprint(fairy = USE_FAIRY): string {
   const pieces = PIECE_TYPES.map((t) => {
     const p = PIECES[t];
     return [t, p.value, p.betza ?? '', p.pawn ? 'p' : ''].join(':');
   });
   const boards = BOARDS.map((b) => [b.variant, b.files, b.ranks, b.homeRows, plyLimit(b)].join(':'));
-  const engine = [SEARCH_DEPTH, MULTI_PV, PICK_MARGIN].join(':');
-  // The engine rules as written for Fairy-Stockfish (custom pieces, the two-kings variants, …).
+  // The game's own engine (engine/) and how it searches.
+  const engine = fairy
+    ? [SEARCH_DEPTH, MULTI_PV, PICK_MARGIN].join(':')
+    : ['acc', ENGINE_VERSION, ACC_LIMITS.depth, ACC_LIMITS.nodes, MULTI_PV, PICK_MARGIN].join(':');
+  // The rules as written for Fairy-Stockfish (custom pieces, the two-kings variants, …); our engine plays them.
   const ini = shortHash(variantsIni());
   return [pieces.join(','), boards.join(','), engine, ini].join('|');
 }

@@ -98,7 +98,7 @@ async function shop(p: Player, holdBack: boolean, log: string[]): Promise<void> 
     const count = await pieces.count();
     for (let i = 0; i < count && !merged; i++) {
       await pieces.nth(i).click();
-      const merge = page.locator('#piece-actions [data-merge-set]').first();
+      const merge = page.locator('#piece-actions [data-merge-set], #piece-actions [data-rook-keep]').first();
       if (await merge.isVisible()) {
         log.push(`${p.name} merges → ${(await merge.innerText()).replace(/\s+/g, ' ').trim()}`);
         await merge.click();

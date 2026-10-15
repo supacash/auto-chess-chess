@@ -1,0 +1,17 @@
+# The game's own chess engine: rules (move generation), search and evaluation. See docs/ENGINE-PLAN.md.
+[workspace]
+members = ["core", "wasm", "cli"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[profile.release]
+# Small, fast WASM for phones: one codegen unit, LTO, abort on panic (no unwinding tables).
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"

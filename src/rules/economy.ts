@@ -121,10 +121,11 @@ export function sellPiece(shop: Shop, pieceId: string): ShopResult {
 
 /**
  * Pawns with an affinity: they fight as ordinary pawns, and three with the same affinity merge into
- * that piece. Rook-pawns cost a premium (three make a 5-point rook for 6 gold): rooks proved strong
- * for their value.
+ * that piece, except rook-pawns: two of them and a Bishop, Knight or Man make a Rook (5 gold: 1 + 1 + 3;
+ * see makeRook). Rooks used to cost 6 gold in three rook-pawns, but on the game's own engine they're no
+ * stronger than other 5-point pieces (SIMULATION.md §23).
  */
-export const AFFINITY_PRICE: Record<Affinity, number> = { N: 1, B: 1, R: 2, Q: 3 };
+export const AFFINITY_PRICE: Record<Affinity, number> = { N: 1, B: 1, R: 1, Q: 3 };
 
 /** A piece's name, with its affinity ("Rook-pawn"). */
 export function pieceName(piece: Pick<Piece, 'type' | 'affinity'>): string {
@@ -169,7 +170,8 @@ export function offerPiece(offer: Offer): Piece {
 export const OFFER_WEIGHTS: Partial<Record<Offer, number>> = {
   PN: 2.5,
   PB: 2.5,
-  PR: 2,
+  // Rook-pawns are rarer than the Ferz and Wazir: the Rook recipe is getting cheaper (SIMULATION.md §23).
+  PR: 0.8,
   PQ: 1.2,
   E: 2,
   F: 1, // Ferz, Wazir and Man were in most shops; they're rarer so the other fairy pieces show up
@@ -339,10 +341,92 @@ export function fusePieces(
   };
 }
 
+// ---- the Rook: two rook-pawns and a Bishop, Knight or Man ----
+
+/** Rook-pawns in a Rook. */
+export const ROOK_PAWNS = 2;
+/** The pieces that complete a Rook with two rook-pawns (any of them, however it was made). */
+export const ROOK_PARTNERS: readonly PieceType[] = ['B', 'N', 'M'];
+
+function isRookPawn(p: Piece): boolean {
+  return p.type === 'P' && p.affinity === 'R';
+}
+
+function isRookPartner(p: Piece): boolean {
+  return !p.affinity && ROOK_PARTNERS.includes(p.type);
+}
+
+/** Benched pieces first, so merging doesn't empty a board square the player arranged. */
+function benchedFirst(a: Piece, b: Piece): number {
+  return Number(a.square !== null) - Number(b.square !== null);
+}
+
+/** A Rook the selected piece can make: `keepId` becomes the Rook where it stands; `usedIds` are used up. */
+export interface RookOption {
+  keepId: string;
+  usedIds: string[];
+  /** The Bishop, Knight or Man used. */
+  partner: PieceType;
+}
+
+/**
+ * The Rooks the piece `pieceId` can make. The player chooses which Bishop, Knight or Man goes:
+ * - select a rook-pawn: one option per partner type the army has (that type's benched piece first,
+ *   and the other rook-pawn benched first); the rook-pawn becomes the Rook;
+ * - select a Bishop, Knight or Man: that very piece, with two rook-pawns (benched first), becomes the
+ *   Rook where it stands.
+ */
+export function rookOptions(shop: Shop, pieceId: string): RookOption[] {
+  const piece = shop.pieces.find((p) => p.id === pieceId);
+  if (!piece) return [];
+  const rookPawns = shop.pieces.filter(isRookPawn).sort(benchedFirst);
+  if (isRookPawn(piece)) {
+    const other = rookPawns.find((p) => p.id !== pieceId);
+    if (!other) return [];
+    const seen = new Set<PieceType>();
+    const out: RookOption[] = [];
+    for (const partner of [...shop.pieces].sort(benchedFirst)) {
+      if (!isRookPartner(partner) || seen.has(partner.type)) continue;
+      seen.add(partner.type);
+      out.push({ keepId: piece.id, usedIds: [other.id, partner.id], partner: partner.type });
+    }
+    return out;
+  }
+  if (isRookPartner(piece) && rookPawns.length >= ROOK_PAWNS) {
+    return [{ keepId: piece.id, usedIds: rookPawns.slice(0, ROOK_PAWNS).map((p) => p.id), partner: piece.type }];
+  }
+  return [];
+}
+
+/**
+ * Makes a Rook from exactly `keepId` and `usedIds` (the player's pick): two rook-pawns and one Bishop,
+ * Knight or Man, in any order. It takes `keepId`'s place (square and id); the others are used up.
+ */
+export function makeRook(shop: Shop, keepId: string, usedIds: string[]): ShopResult {
+  const ids = [keepId, ...usedIds];
+  const parts = ids.map((id) => shop.pieces.find((p) => p.id === id));
+  const valid =
+    new Set(ids).size === ROOK_PAWNS + 1 &&
+    parts.every((p) => p) &&
+    (parts as Piece[]).filter(isRookPawn).length === ROOK_PAWNS &&
+    (parts as Piece[]).filter(isRookPartner).length === 1;
+  if (!valid) return { ok: false, error: 'A Rook needs two rook-pawns and a Bishop, Knight or Man' };
+  const used = new Set(usedIds);
+  return {
+    ok: true,
+    shop: {
+      ...shop,
+      pieces: shop.pieces
+        .filter((p) => !used.has(p.id))
+        .map((p) => (p.id === keepId ? { id: p.id, type: 'R', square: p.square } : p)),
+    },
+  };
+}
+
 // ---- three-piece merges: three of a kind ----
 
 /**
- * Three pawns with the same affinity merge into that piece; three plain pawns (the starting ones, or
+ * Three pawns with the same affinity merge into that piece (not rook-pawns: see makeRook); three plain pawns (the starting ones, or
  * three Berolina pawns) into a Knight or Bishop; three Knights (or three Bishops) into a Queen. Free;
  * two board squares are freed.
  */
@@ -362,7 +446,9 @@ export function canMakeHeir(shop: Shop, fairy: boolean, maxHeirs = MAX_HEIRS): b
 export function setMergeResults(parts: MergePart[], heir = false): PieceType[] {
   if (parts.length !== SET_MERGE_SIZE) return [];
   const [first] = parts;
-  if (first.affinity) return parts.every((p) => p.affinity === first.affinity) ? [first.affinity] : [];
+  if (first.affinity) {
+    return first.affinity !== 'R' && parts.every((p) => p.affinity === first.affinity) ? [first.affinity] : [];
+  }
   if (!parts.every((p) => p.type === first.type && !p.affinity)) return [];
   if (isPawnLike(first.type)) return ['N', 'B'];
   if (first.type === 'N' || first.type === 'B') return ['Q'];
@@ -373,6 +459,8 @@ export function setMergeResults(parts: MergePart[], heir = false): PieceType[] {
 
 /** Pieces that can take part in a three-piece merge (what the picker lets you circle). */
 export function canSetMerge(piece: MergePart, heir = false): boolean {
+  // Rook-pawns make a Rook with a Bishop, Knight or Man instead (rookOptions).
+  if (piece.affinity === 'R') return false;
   return (
     piece.affinity !== undefined ||
     isPawnLike(piece.type) ||

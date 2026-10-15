@@ -3,9 +3,10 @@
  * each round with a simple greedy plan built around affinity pawns.
  *
  * Per step:
- * 1. Merge any finished set: three affinity pawns with the same affinity into that piece; once the
- *    board is full, two rooks into a queen, and three knights or three bishops into a queen.
- * 2. Buy an affinity pawn that adds to a set it's collecting (fullest set first), or starts one (at
+ * 1. Merge any finished set: three affinity pawns with the same affinity into that piece, or two
+ *    rook-pawns and a Bishop, Knight or Man into a Rook (benched pieces first); once the board is full,
+ *    two rooks into a queen, and three knights or three bishops into a queen.
+ * 2. Buy an affinity pawn that adds to a set it's collecting (closest to done first), or starts one (at
  *    most MAX_SETS at a time, the affinity its style likes best, rook- and queen-pawns weighted by the
  *    style's rook and queen weights). Plain pawns (Berolina) fill pawn slots while pawns are below the
  *    style's pawn share; finished pieces are bought when the style likes them and they fit.
@@ -22,11 +23,14 @@ import {
   fusePieces,
   fuseSet,
   isAffinityOffer,
+  makeRook,
   type Offer,
   type OfferOdds,
   offerPrice,
   REROLL_COST,
+  ROOK_PAWNS,
   rerollOffers,
+  rookOptions,
   type Shop,
   sellPiece,
   sellValue,
@@ -46,21 +50,30 @@ export function armyValue(shop: Shop): number {
 const MAX_SETS = 2;
 /** Rerolls a round at most. */
 const MAX_REROLLS = 6;
-/** Gold kept back when rerolling: enough to buy a rook-pawn from the new offers. */
+/** Gold kept back when rerolling: enough to buy an affinity pawn or two from the new offers. */
 const REROLL_RESERVE = 2;
 
 const ids = (pieces: Piece[]) => pieces.map((p) => p.id);
 const affinityOf = (offer: Offer): Affinity | null => (isAffinityOffer(offer) ? (offer[1] as Affinity) : null);
+/** Affinity pawns in a finished set: two for a Rook (with a Bishop, Knight or Man), three for the rest. */
+const setSize = (a: Affinity) => (a === 'R' ? ROOK_PAWNS : 3);
 
 /** One merge, best first, or null. Affinity sets always; the rest only to free squares. */
 function bestMerge(shop: Shop, full: boolean, fairy: boolean): Shop | null {
   const byAffinity = new Map<Affinity, Piece[]>();
   for (const p of shop.pieces) if (p.affinity) byAffinity.set(p.affinity, [...(byAffinity.get(p.affinity) ?? []), p]);
   for (const [affinity, set] of byAffinity) {
-    if (set.length >= 3) {
+    if (affinity !== 'R' && set.length >= 3) {
       const r = fuseSet(shop, ids(set.slice(0, 3)), affinity);
       if (r.ok) return r.shop;
     }
+  }
+  // A Rook: two rook-pawns and the first Bishop, Knight or Man on offer (benched first).
+  const rookPawn = byAffinity.get('R')?.[0];
+  const [rook] = rookPawn ? rookOptions(shop, rookPawn.id) : [];
+  if (rook) {
+    const r = makeRook(shop, rook.keepId, rook.usedIds);
+    if (r.ok) return r.shop;
   }
   if (!full) return null;
   const plain = (t: PieceType) => shop.pieces.filter((p) => p.type === t && !p.affinity);
@@ -125,10 +138,13 @@ export function spendGold(
     const candidates = offers
       .map((o, i) => ({ o, i, a: affinityOf(o) }))
       .filter((c): c is { o: Offer; i: number; a: Affinity } => c.a !== null && offerPrice(c.o) <= spendable())
-      .filter((c) => sets.has(c.a) || sets.size < MAX_SETS);
+      .filter((c) => sets.has(c.a) || sets.size < MAX_SETS)
+      // A Rook needs only two rook-pawns; more wait on the bench for a Bishop, Knight or Man.
+      .filter((c) => count(c.a) < setSize(c.a));
     if (candidates.length > 0) {
+      const left = (a: Affinity) => setSize(a) - count(a);
       const best = candidates.reduce((x, y) =>
-        count(y.a) > count(x.a) || (count(y.a) === count(x.a) && like(y.a) > like(x.a)) ? y : x,
+        left(y.a) < left(x.a) || (left(y.a) === left(x.a) && like(y.a) > like(x.a)) ? y : x,
       );
       const r = buyOffer(shop, best.i);
       if (r.ok) {

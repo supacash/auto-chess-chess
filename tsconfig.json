@@ -14,5 +14,5 @@
     "noEmit": true
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/chess/testRules.ts"]
+  "exclude": ["src/**/*.test.ts", "src/chess/testRules.ts", "src/engine/wasmNode.ts"]
 }

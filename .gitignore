@@ -1,5 +1,6 @@
 node_modules
 dist
+dist-fairy
 public/engine
 public/fairy
 public/coi-serviceworker.min.js
@@ -7,3 +8,6 @@ test-results/
 playwright-report/
 *-debug.log
 dist-emulator/
+# The Rust engine's build output and its generated WASM bindings (scripts/build-engine.mjs).
+engine/target
+src/engine/wasm

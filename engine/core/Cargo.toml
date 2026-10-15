@@ -1,0 +1,9 @@
+[package]
+name = "acc-core"
+description = "Rules, search and evaluation for Auto Chess². No I/O; shared by the WASM build and the CLI."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]

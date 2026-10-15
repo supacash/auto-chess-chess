@@ -34,22 +34,25 @@ npm run dev
 | `npm run build` | Typecheck + production build in `dist/` |
 | `npm run sim` | Headless balance simulator (see [SIMULATION.md](SIMULATION.md)) |
 
-`dev` and `build` first copy the chess engine (Fairy-Stockfish), the rules library (ffish) and a small service worker from `node_modules` into `public/`.
+`dev` and `build` first build the game's own chess engine (`engine/`, Rust) to WebAssembly. That needs [Rust](https://rustup.rs) and `cargo install wasm-bindgen-cli --version 0.2.129`.
+
+`npm run dev:fairy` / `npm run build:fairy` build the game with Fairy-Stockfish instead, the engine it used before, kept so it can go back to it (see [docs/ENGINE-PLAN.md](docs/ENGINE-PLAN.md), "Going back to Fairy-Stockfish").
 
 ## Project layout
 
 ```
 src/
   rules/    pure game logic: placement, economy, AI drafting, battle results, run state (unit tested)
-  chess/    board sizes, FEN helpers and the rules wrapper (ffish)
-  engine/   Fairy-Stockfish wrapper and move picking
+  chess/    board sizes, FEN helpers and the rules wrapper (our engine)
+  engine/   the engine in a Web Worker, move picking (and the old Fairy-Stockfish wrapper)
   game/     battle loop and save/load
   ui/       placement board and battle view (vanilla TS, Pointer Events)
   main.ts   app wiring and screen flow
-scripts/    engine copy step and the balance simulator
+engine/     the game's own chess engine (Rust → WebAssembly)
+scripts/    engine build, the balance simulator and engine checks
 ```
 
-Built with [Vite](https://vite.dev), TypeScript, [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish) ([WASM build](https://github.com/fairy-stockfish/fairy-stockfish.wasm)) and [ffish.js](https://github.com/fairy-stockfish/Fairy-Stockfish/tree/master/src/ffishjs). The engine is multithreaded, so the page has to be cross-origin isolated; [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) handles that on GitHub Pages.
+Built with [Vite](https://vite.dev), TypeScript and the game's own chess engine in Rust (`engine/`), compiled to single-threaded WebAssembly. Its rules were checked move for move against [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish)'s, which played the battles until RULES_VERSION 9.
 
 ## License
 
@@ -57,4 +60,4 @@ This project's code is released under the [MIT License](LICENSE).
 
 The chess piece images are the Chessnut set by Alexis Luengas, licensed under the Apache License 2.0 (see [src/assets/pieces/](src/assets/pieces/README.md)).
 
-Fairy-Stockfish and ffish are licensed under the GPLv3 and are not covered by the MIT License. They aren't stored in this repo and are installed from npm. Any build you distribute that includes them must comply with the GPLv3, including crediting them and offering their source (the game's footer does this).
+The game as built and deployed contains no GPL code. Fairy-Stockfish and ffish (both GPLv3, not covered by the MIT License) are development dependencies, used to test and measure our engine; they aren't stored in this repo. A `fairy` build (`npm run build:fairy`) does include Fairy-Stockfish: if you distribute one, it must comply with the GPLv3, including crediting it and offering its source (its footer does this).

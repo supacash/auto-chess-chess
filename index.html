@@ -13,13 +13,6 @@
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="manifest" href="manifest.webmanifest" />
     <title>Pawned Up</title>
-    <!-- Cross-origin isolation for the multithreaded chess engine on hosts without COOP/COEP headers. -->
-    <!-- Always use COEP require-corp: the default "credentialless" for non-Chromium browsers isn't
-         supported by Safari, which then never becomes isolated. Everything here is same-origin. -->
-    <script>
-      window.coi = { coepCredentialless: () => false };
-    </script>
-    <script src="coi-serviceworker.min.js"></script>
   </head>
   <body>
     <div id="app"></div>

@@ -23,6 +23,16 @@ async function placeKingAndReady(page: Page): Promise<void> {
   await page.locator('#fight').click();
 }
 
+/**
+ * Skips the battle on screen to its end. A round-1 battle (a lone king against a bot's army) can be
+ * over before the test gets to it, and then there's no Skip button left to press.
+ */
+async function skipBattle(page: Page): Promise<void> {
+  await expect(page.locator('#battle')).toBeVisible();
+  const skip = page.locator('#skip');
+  if (await skip.isVisible()) await skip.click({ timeout: 2_000 }).catch(() => {});
+}
+
 test('two players create and join a room, play a round together, and move on to round 2', async ({ browser }) => {
   const host = await player(browser);
   const guest = await player(browser);
@@ -59,10 +69,7 @@ test('two players create and join a room, play a round together, and move on to 
   await expect(guest.locator('#match-players')).toContainText('ready');
   await placeKingAndReady(guest);
 
-  for (const page of [host, guest]) {
-    await expect(page.locator('#battle')).toBeVisible();
-    await page.locator('#skip').click();
-  }
+  await Promise.all([host, guest].map(skipBattle));
   for (const page of [host, guest]) {
     await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
     await expect(page.locator('#next')).toHaveText('Continue');
@@ -107,7 +114,7 @@ test('a player who leaves mid-shop is timed out and the match carries on', async
   await guest.context().close();
   await placeKingAndReady(host);
   await expect(host.locator('#battle')).toBeVisible({ timeout: 40_000 });
-  await host.locator('#skip').click();
+  await skipBattle(host);
   await expect(host.locator('#result')).toBeVisible({ timeout: 120_000 });
 });
 
@@ -137,15 +144,9 @@ test('a player who reloads mid-match rejoins it from the menu', async ({ browser
   // And the round carries on for both.
   await placeKingAndReady(host);
   await placeKingAndReady(guest);
-  // Both at once: waiting out one player's battle first lets the other's end by itself, and its
-  // Skip button is gone by the time it's clicked.
-  await Promise.all(
-    [host, guest].map(async (page) => {
-      await expect(page.locator('#battle')).toBeVisible();
-      await page.locator('#skip').click();
-      await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
-    }),
-  );
+  // Both at once: waiting out one player's battle first lets the other's end by itself.
+  await Promise.all([host, guest].map(skipBattle));
+  for (const page of [host, guest]) await expect(page.locator('#result')).toBeVisible({ timeout: 120_000 });
 });
 
 test('two players on quick play end up in the same room, which starts by itself', async ({ browser }) => {

@@ -3,6 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [master]
+  # Pull requests run every check but never deploy (the deploy job and the Pages artifact are skipped).
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -11,7 +13,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  # One run per branch or PR, so a PR run never cancels a deploy from master.
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,6 +27,17 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # The game's own engine (engine/, Rust → WASM). rustup reads the pinned toolchain from
+      # engine/rust-toolchain.toml; the wasm-bindgen CLI must match the crate (scripts/build-engine.mjs).
+      - run: rustup toolchain install
+        working-directory: engine
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: engine
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.129
+      - run: npm run engine:check
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
@@ -31,6 +45,9 @@ jobs:
       # Browser smoke tests: whole runs in Chromium against the production build.
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
+      # The same tests on a `fairy` build (Fairy-Stockfish, kept so the game can go back to it); built into
+      # dist-fairy/, so dist/ stays the build that gets deployed.
+      - run: npm run e2e:fairy
       # Firestore security rules and two-player online rooms, on the Firebase emulators (need Java).
       - uses: actions/setup-java@v5
         with:
@@ -50,11 +67,13 @@ jobs:
             test-results
           retention-days: 7
       - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
         with:
           path: dist
 
   deploy:
     needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

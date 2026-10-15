@@ -1,0 +1,5 @@
+# Pinned so CI and every machine build the same engine (battles must replay exactly).
+[toolchain]
+channel = "1.99.0"
+targets = ["wasm32-unknown-unknown"]
+components = ["rustfmt", "clippy"]

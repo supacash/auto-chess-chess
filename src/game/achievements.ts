@@ -82,7 +82,11 @@ export const ABSOLUTE_UNIT_POINTS = 120;
 
 export const ACHIEVEMENTS: Achievement[] = [
   { id: 'cavalry', name: 'Bring in the Cavalry!', description: `Have ${CROWD} knights on the board.` },
-  { id: 'boulder', name: 'It’s not a boulder…', description: 'Merge three rook-pawns into a Rook.' },
+  {
+    id: 'boulder',
+    name: 'It’s not a boulder…',
+    description: 'Make a Rook from two rook-pawns and a Bishop, Knight or Man.',
+  },
   { id: 'wall', name: 'The Wall', description: `Have ${CROWD} rooks on the board.` },
   { id: 'solomon', name: 'Solomon', description: `Have ${CROWD} queens on the board.` },
   {
@@ -236,9 +240,9 @@ export function shopAchievements(gold: number, rerollsThisRound: number): Achiev
   return out;
 }
 
-/** Achievements earned by a three-piece merge into `result` (with `pieces` the army after it). */
+/** Achievements earned by a three-piece merge into `result` (a Rook from its recipe too), with `pieces` the army after it. */
 export function mergeAchievements(result: PieceType, pieces: readonly Piece[]): AchievementId[] {
-  if (result === 'R') return ['boulder']; // only three rook-pawns merge into a Rook
+  if (result === 'R') return ['boulder']; // only the rook recipe makes a Rook
   if (result === 'Y') return ['stackman'];
   if (result === 'J') return pieces.filter((p) => p.type === 'J').length >= 2 ? ['son', 'secondSon'] : ['son'];
   return [];

@@ -1,0 +1,15 @@
+[package]
+name = "acc-wasm"
+description = "WebAssembly bindings for acc-core (browser worker, tests and the simulator)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+acc-core = { path = "../core" }
+# Must match the wasm-bindgen CLI exactly; scripts/build-engine.mjs checks it.
+wasm-bindgen = "=0.2.129"

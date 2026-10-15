@@ -15,6 +15,7 @@ import { runBattle } from '../../src/game/runBattle';
 import { draftAiArmy, pickStyle, placeAiArmy, placeForBattle } from '../../src/rules/aiArmy';
 import { isPieceType, PIECE_NAME, type PieceType } from '../../src/rules/pieces';
 import { seededRng } from '../../src/rules/rng';
+import { ACC_LIMITS } from '../../src/engine/accSettings';
 import { EngineFailure, NodeEngine } from './nodeEngine';
 
 const { values: opts } = parseArgs({
@@ -60,7 +61,7 @@ async function playGame(game: number, engine: NodeEngine): Promise<Outcome> {
 async function main(): Promise<void> {
   const t0 = Date.now();
   await loadRulesForNode();
-  const engines = await Promise.all(Array.from({ length: WORKERS }, () => NodeEngine.create()));
+  const engines = await Promise.all(Array.from({ length: WORKERS }, () => NodeEngine.createAcc(ACC_LIMITS)));
   const outcomes: Outcome[] = [];
   let next = 0;
   await Promise.all(

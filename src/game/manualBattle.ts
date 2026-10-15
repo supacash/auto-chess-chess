@@ -19,7 +19,7 @@ export interface ManualState {
 
 /**
  * A battle where the player moves their own pieces (white in the FEN) and the engine plays the
- * opponent exactly as in auto battles. Wraps an ffish Game: call delete() when finished.
+ * opponent exactly as in auto battles. Wraps a Game (WASM memory): call delete() when finished.
  */
 export class ManualBattle {
   private readonly game: Game;
