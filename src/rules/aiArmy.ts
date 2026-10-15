@@ -162,10 +162,11 @@ export function aiBudget(
  */
 export const RAMP = [
   // Rounds 1–10: dip early (few pieces, no merges yet), peak around round 7, back to 1.
-  1, 0.93, 0.92, 0.94, 1, 1.06, 1.1, 1.08, 1.04, 1,
+  1, 0.98, 0.97, 0.99, 1.05, 1.11, 1.16, 1.13, 1.09, 1.05,
   // Rounds 11–15: climbs again. Once the player's board is full they sell to make room, and full
   // sell refunds (RULES_VERSION 8) made the late game easy at a flat 1 (SIMULATION.md §19).
-  1.02, 1.03, 1.04, 1.05, 1.06,
+  // Rounds 2–15 are 5% higher since a Rook became 5 gold (RULES_VERSION 10, SIMULATION.md §24).
+  1.07, 1.08, 1.09, 1.1, 1.11,
   // Rounds 16–20, then 21+ (the budget stops at a full board of queens anyway).
   1.07, 1.07, 1.07, 1.07, 1.07, 1.1,
 ];
@@ -201,11 +202,13 @@ export function pickStyle(rng: Rng, fairy = false): AiStyle {
  * player who merged), plus, with fairy pieces on, the fusions it could have made (partner bought outright).
  */
 const LADDER: Partial<Record<PieceType, PieceType[]>> = { P: ['N', 'B'], N: ['R'], B: ['R'], R: ['Q'] };
+// A Rook is two rook-pawns and a Bishop, Knight or Man (economy.ts makeRook): with fairy pieces on, a Man upgrades too.
 
 /** Fusions, with fairy pieces on. */
 const FAIRY_UPGRADES: Partial<Record<PieceType, PieceType[]>> = {
   F: ['M'],
   W: ['M'],
+  M: ['R'],
   N: ['T', 'A', 'C', 'U'],
   B: ['A', 'H', 'S'],
   R: ['C', 'D'],

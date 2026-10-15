@@ -14,10 +14,17 @@ describe('nextTip', () => {
   });
 
   it('puts a ready set right after how to play', () => {
-    const rookPawns = [1, 2, 3].map(() => makePiece('P', null, 'R'));
-    const army = shop({ pieces: [makePiece('K'), ...rookPawns], gold: 12 });
+    const knightPawns = [1, 2, 3].map(() => makePiece('P', null, 'N'));
+    const army = shop({ pieces: [makePiece('K'), ...knightPawns], gold: 12 });
     expect(nextTip(army, 1, none)).toBe('start');
     expect(nextTip(army, 4, new Set<TipId>(['start']))).toBe('merge');
+  });
+
+  it('counts a Rook recipe as a ready set: two rook-pawns and a Bishop, Knight or Man', () => {
+    const rookPawns = [1, 2].map(() => makePiece('P', null, 'R'));
+    const seen = new Set<TipId>(['start']);
+    expect(nextTip(shop({ pieces: [makePiece('K'), ...rookPawns] }), 4, seen)).not.toBe('merge');
+    expect(nextTip(shop({ pieces: [makePiece('K'), ...rookPawns, makePiece('B')] }), 4, seen)).toBe('merge');
   });
 
   it('mentions interest with gold to save and the opponent list from round 2', () => {

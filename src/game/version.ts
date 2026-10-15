@@ -14,7 +14,7 @@ import { SEARCH_DEPTH } from './runBattle';
  * without a bump; rule changes it can't see (such as how battleResult decides a game) need a manual bump.
  */
 // A `fairy` build plays battles with Fairy-Stockfish, exactly as version 8 did (src/engine/engineChoice.ts).
-export const RULES_VERSION = USE_FAIRY ? 8 : 9;
+export const RULES_VERSION = USE_FAIRY ? 8 : 10;
 
 /** Everything about the rules that can be read as data, as one stable string. `fairy`: for a `fairy` build. */
 export function rulesFingerprint(fairy = USE_FAIRY): string {

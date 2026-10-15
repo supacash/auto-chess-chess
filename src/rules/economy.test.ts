@@ -5,6 +5,7 @@ import {
   buyOffer,
   fuseDefaultSet,
   fuseSet,
+  makeRook,
   fusePieces,
   interest,
   restock,
@@ -15,6 +16,7 @@ import {
   fusionOptions,
   fusionResults,
   QUEEN_OFFER_ROUND,
+  rookOptions,
   setMergePartners,
   setMergeResults,
   maxOfferCost,
@@ -32,7 +34,7 @@ import {
   upgradeCost,
   upgradePiece,
 } from './economy';
-import { makePiece, PIECES, type PieceType, PIECE_VALUE } from './pieces';
+import { makePiece, PIECES, type Piece, type PieceType, PIECE_VALUE } from './pieces';
 import { BENCH_SIZE } from './placement';
 import { seededRng } from './rng';
 
@@ -272,13 +274,13 @@ describe('shop offers', () => {
     expect(offers.filter((o) => o === 'R' || o === 'Q').length / offers.length).toBeLessThan(0.1);
   });
 
-  it('buys and sells affinity pawns at their price: rook-pawns 2 gold, queen-pawns 3', () => {
-    expect(AFFINITY_PRICE).toEqual({ N: 1, B: 1, R: 2, Q: 3 });
+  it('buys and sells affinity pawns at their price: rook-pawns 1 gold, queen-pawns 3', () => {
+    expect(AFFINITY_PRICE).toEqual({ N: 1, B: 1, R: 1, Q: 3 });
     const shop: Shop = { gold: 5, pieces: [makePiece('K')], offers: ['PR', 'PQ'] };
     const next = ok(buyOffer(shop, 0));
-    expect(next.gold).toBe(3);
+    expect(next.gold).toBe(4);
     expect(next.pieces.at(-1)).toMatchObject({ type: 'P', affinity: 'R', square: null });
-    expect(sellValue(next.pieces.at(-1)!)).toBe(2);
+    expect(sellValue(next.pieces.at(-1)!)).toBe(1);
     expect(sellValue(makePiece('P', null, 'Q'))).toBe(3);
   });
 
@@ -387,20 +389,111 @@ describe('two-piece merges and fusion', () => {
 
 describe('three-piece merges', () => {
   it('merges three pawns with the same affinity into that piece, keeping the first placed one’s square', () => {
-    const benched = makePiece('P', null, 'R');
-    const placed = makePiece('P', { file: 1, rank: 1 }, 'R');
-    const third = makePiece('P', null, 'R');
-    const other = makePiece('P', null, 'N');
+    const benched = makePiece('P', null, 'N');
+    const placed = makePiece('P', { file: 1, rank: 1 }, 'N');
+    const third = makePiece('P', null, 'N');
+    const other = makePiece('P', null, 'B');
     const shop: Shop = { gold: 0, pieces: [makePiece('K'), benched, placed, third, other] };
-    const next = ok(fuseSet(shop, [benched.id, placed.id, third.id], 'R'));
+    const next = ok(fuseSet(shop, [benched.id, placed.id, third.id], 'N'));
     expect(next.gold).toBe(0);
-    expect(next.pieces).toEqual([shop.pieces[0], { id: placed.id, type: 'R', square: { file: 1, rank: 1 } }, other]);
-    expect(fuseSet(shop, [benched.id, placed.id, other.id], 'R').ok).toBe(false); // mixed affinities
+    expect(next.pieces).toEqual([shop.pieces[0], { id: placed.id, type: 'N', square: { file: 1, rank: 1 } }, other]);
+    expect(fuseSet(shop, [benched.id, placed.id, other.id], 'N').ok).toBe(false); // mixed affinities
     expect(fuseSet(shop, [benched.id, placed.id, third.id], 'Q').ok).toBe(false);
-    expect(fuseSet(shop, [benched.id, placed.id], 'R').ok).toBe(false);
-    expect(fuseSet(shop, [benched.id, benched.id, third.id], 'R').ok).toBe(false);
+    expect(fuseSet(shop, [benched.id, placed.id], 'N').ok).toBe(false);
+    expect(fuseSet(shop, [benched.id, benched.id, third.id], 'N').ok).toBe(false);
   });
 
+  it('no longer merges three rook-pawns: a Rook takes two and a Bishop, Knight or Man', () => {
+    const pawns = [1, 2, 3].map(() => makePiece('P', null, 'R'));
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), ...pawns] };
+    expect(setMergeResults(pawns)).toEqual([]);
+    expect(
+      fuseSet(
+        shop,
+        pawns.map((p) => p.id),
+        'R',
+      ).ok,
+    ).toBe(false);
+    expect(setMergePartners(shop, pawns[0].id)).toBeNull();
+    expect(rookOptions(shop, pawns[0].id)).toEqual([]); // no Bishop, Knight or Man yet
+  });
+});
+
+describe('the Rook recipe', () => {
+  const rookPawn = (square: Piece['square'] = null) => makePiece('P', square, 'R');
+
+  it('from a rook-pawn: one option per Bishop, Knight or Man type, benched pieces first', () => {
+    const selected = rookPawn({ file: 2, rank: 1 });
+    const placedPawn = rookPawn({ file: 3, rank: 1 });
+    const benchedPawn = rookPawn();
+    const placedKnight = makePiece('N', { file: 1, rank: 0 });
+    const benchedKnight = makePiece('N');
+    const bishop = makePiece('B', { file: 2, rank: 0 });
+    const man = makePiece('M');
+    const rook = makePiece('R');
+    const shop: Shop = {
+      gold: 0,
+      pieces: [makePiece('K'), selected, placedPawn, benchedPawn, placedKnight, benchedKnight, bishop, man, rook],
+    };
+    const options = rookOptions(shop, selected.id);
+    expect(options).toEqual([
+      { keepId: selected.id, usedIds: [benchedPawn.id, benchedKnight.id], partner: 'N' },
+      { keepId: selected.id, usedIds: [benchedPawn.id, man.id], partner: 'M' },
+      { keepId: selected.id, usedIds: [benchedPawn.id, bishop.id], partner: 'B' },
+    ]);
+    const next = ok(makeRook(shop, options[0].keepId, options[0].usedIds));
+    expect(next.pieces.find((p) => p.id === selected.id)).toEqual({
+      id: selected.id,
+      type: 'R',
+      square: { file: 2, rank: 1 },
+    });
+    expect(next.pieces.map((p) => p.id)).not.toContain(benchedPawn.id);
+    expect(next.pieces.map((p) => p.id)).not.toContain(benchedKnight.id);
+    expect(next.pieces).toHaveLength(shop.pieces.length - 2);
+    expect(next.gold).toBe(0); // merging is free
+  });
+
+  it('from a Bishop, Knight or Man: that very piece becomes the Rook where it stands', () => {
+    const placedKnight = makePiece('N', { file: 1, rank: 0 });
+    const benchedKnight = makePiece('N');
+    const pawns = [rookPawn({ file: 4, rank: 1 }), rookPawn(), rookPawn()];
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), placedKnight, benchedKnight, ...pawns] };
+    // The player chose the placed Knight, not the benched one: that's the one used.
+    const [option] = rookOptions(shop, placedKnight.id);
+    expect(option).toEqual({ keepId: placedKnight.id, usedIds: [pawns[1].id, pawns[2].id], partner: 'N' });
+    const next = ok(makeRook(shop, option.keepId, option.usedIds));
+    expect(next.pieces.find((p) => p.id === placedKnight.id)).toEqual({
+      id: placedKnight.id,
+      type: 'R',
+      square: { file: 1, rank: 0 },
+    });
+    expect(next.pieces.find((p) => p.id === benchedKnight.id)).toEqual(benchedKnight);
+    expect(next.pieces.find((p) => p.id === pawns[0].id)).toEqual(pawns[0]);
+  });
+
+  it('needs exactly two rook-pawns and one Bishop, Knight or Man', () => {
+    const [a, b, c] = [rookPawn(), rookPawn(), rookPawn()];
+    const knight = makePiece('N');
+    const queen = makePiece('Q');
+    const knightPawn = makePiece('P', null, 'N');
+    const shop: Shop = { gold: 0, pieces: [makePiece('K'), a, b, c, knight, queen, knightPawn] };
+    expect(makeRook(shop, a.id, [b.id, knight.id]).ok).toBe(true);
+    expect(makeRook(shop, knight.id, [a.id, b.id]).ok).toBe(true);
+    expect(makeRook(shop, a.id, [b.id, c.id]).ok).toBe(false); // three rook-pawns
+    expect(makeRook(shop, a.id, [b.id, queen.id]).ok).toBe(false);
+    expect(makeRook(shop, a.id, [knightPawn.id, knight.id]).ok).toBe(false);
+    expect(makeRook(shop, a.id, [a.id, knight.id]).ok).toBe(false);
+    expect(makeRook(shop, a.id, [b.id]).ok).toBe(false);
+    expect(rookOptions(shop, queen.id)).toEqual([]);
+    expect(rookOptions(shop, knightPawn.id)).toEqual([]);
+  });
+
+  it('costs what a Rook is worth, so making one and selling it gains nothing', () => {
+    expect(2 * AFFINITY_PRICE.R + 3).toBe(sellValue(makePiece('R')));
+  });
+});
+
+describe('three-piece merges (continued)', () => {
   it('merges three knights or three bishops into a queen, three plain pawns into a minor piece, but not a mix', () => {
     const plain = (t: PieceType) => ({ type: t });
     expect(setMergeResults([plain('N'), plain('N'), plain('N')])).toEqual(['Q']);

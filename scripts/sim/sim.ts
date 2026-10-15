@@ -66,6 +66,8 @@ const { values: opts } = parseArgs({
     difficulty: { type: 'string', default: 'normal' },
     side: { type: 'string', default: 'white' },
     'per-round': { type: 'string' },
+    /** Overrides the mode's round-1 discount (points off the AI's first army), for tuning. */
+    'round-one-discount': { type: 'string' },
     'black-discount': { type: 'string' },
     perks: { type: 'string', default: '' },
     prestige: { type: 'string', default: '0' },
@@ -136,7 +138,11 @@ const BLACK = opts['black-discount'] ? Number(opts['black-discount']) : BLACK_DI
 const SIDE = opts.side!;
 if (!['white', 'black', 'random'].includes(SIDE)) throw new Error('--side must be white, black or random');
 const playerFirst = (rng: () => number) => (SIDE === 'random' ? rng() < 0.5 : SIDE === 'white');
-const MODE = gameMode(BOARD_MODE === '8' ? 'classic' : 'growing');
+const BASE_MODE = gameMode(BOARD_MODE === '8' ? 'classic' : 'growing');
+const MODE =
+  opts['round-one-discount'] === undefined
+    ? BASE_MODE
+    : { ...BASE_MODE, roundOneDiscount: Number(opts['round-one-discount']) };
 const boardFor = (round: number): BoardSpec => MODE.board(round);
 /** `--plies N` replaces the board's move limit (10 × size + 10). */
 const PLY_OVERRIDE = opts.plies ? Number(opts.plies) : null;

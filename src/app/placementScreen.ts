@@ -18,12 +18,16 @@ import {
   toggleLock,
   fuseDefaultSet,
   fusionOptions,
+  makeRook,
   isAffinityOffer,
   type Offer,
   offerName,
   offerPrice,
   pieceName,
   REROLL_COST,
+  ROOK_PARTNERS,
+  ROOK_PAWNS,
+  rookOptions,
   SET_MERGE_SIZE,
   setMergePartners,
   setMergeResults,
@@ -126,6 +130,10 @@ export class PlacementScreen {
         const fused = fusePieces(shop, this.selected, btn.dataset.fuse, to, this.session.run.settings.fairy);
         this.applyShop(fused, to);
         if (fused.ok) this.onCollect?.('fused', [to]);
+      } else if (btn.dataset.rookKeep && btn.dataset.rookUse) {
+        const made = makeRook(shop, btn.dataset.rookKeep, btn.dataset.rookUse.split(','));
+        this.applyShop(made, 'R');
+        if (made.ok) this.onAchievements?.(mergeAchievements('R', made.shop.pieces));
       } else if (btn.dataset.mergeSet) {
         const to = btn.dataset.mergeSet as PieceType;
         const bonus = to === 'J' ? (this.session.crownGold?.() ?? 0) : 0;
@@ -462,6 +470,18 @@ export class PlacementScreen {
           `<button type="button" class="fuse" data-merge-set="${to}" title="Uses up ${SET_MERGE_SIZE} ${pieceName(piece).toLowerCase()}s">Merge ${SET_MERGE_SIZE} → ${inlinePiece(to)} ${to === 'J' ? 'Heir (a second king)' : PIECE_NAME[to]}</button>`,
       )
       .join('');
+    // A Rook: two rook-pawns and a Bishop, Knight or Man. The player picks which piece goes: from a
+    // rook-pawn, one button per partner type; from a Bishop, Knight or Man, that very piece.
+    const rooks = rookOptions(shop, piece.id)
+      .map(({ keepId, usedIds, partner }) => {
+        const fromPawn = piece.affinity === 'R';
+        const title = fromPawn
+          ? `Uses up a ${PIECE_NAME[partner]} and another rook-pawn`
+          : `Uses up this ${PIECE_NAME[partner]} and ${ROOK_PAWNS} rook-pawns`;
+        const parts = fromPawn ? inlinePiece(partner) : `${ROOK_PAWNS} ${inlinePiece('P', 'w', 'R')}`;
+        return `<button type="button" class="fuse" data-rook-keep="${keepId}" data-rook-use="${usedIds.join(',')}" title="${title}">+ ${parts} → ${inlinePiece('R')} Rook</button>`;
+      })
+      .join('');
     const info = piece.affinity
       ? affinityText(piece.affinity, pieces)
       : `${PIECE_VALUE[piece.type]} pts. ${PIECES[piece.type].description}${
@@ -473,7 +493,7 @@ export class PlacementScreen {
         }`;
     actions.innerHTML =
       `<p class="piece-info"><strong>${pieceName(piece)}</strong> · ${info}</p>` +
-      `${fusions}${pawnFusions}${upgrades}${sell}`;
+      `${fusions}${rooks}${pawnFusions}${upgrades}${sell}`;
   }
 
   /** How many Heirs the army may have (a prestige perk can allow more). */
@@ -509,5 +529,9 @@ function offerIcon(offer: Offer): string {
 function affinityText(affinity: Affinity, pieces: Piece[]): string {
   const have = pieces.filter((p) => p.affinity === affinity).length;
   const name = PIECE_NAME[affinity];
+  if (affinity === 'R') {
+    const partner = pieces.some((p) => !p.affinity && ROOK_PARTNERS.includes(p.type));
+    return `Fights as a pawn. Two rook-pawns and a Bishop, Knight or Man of your choice make a Rook (you have ${have}/${ROOK_PAWNS}${partner ? '' : ', and no Bishop, Knight or Man yet'}).`;
+  }
   return `Fights as a pawn. Three ${name.toLowerCase()}-pawns merge into a ${name} (you have ${have}/${SET_MERGE_SIZE}).`;
 }

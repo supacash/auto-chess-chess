@@ -419,11 +419,51 @@ Each game drafts one 40-point fairy army; one side gets it plus piece A, the oth
 - **The minor pieces are priced right** at 3.
 - **The Rook is weak for 5 points, against the fairy 5s.** That's the opposite of what the rook-pawn premium was for (6 gold for a 5-point Rook). The tuned evaluation agrees independently: it values the Rook at about 470–500 cp, against about 500–525 for the Centaur, Dragon Horse and Wildebeest.
 - **The Centaur matches the 6-point Siege Cannon,** so the fairy 5s look underpriced rather than the Rook overpriced.
-- **Open (decisions for an economy update after the engine merges):**
-  - the Rook recipe (2 one-gold rook-pawns + a Bishop, Knight or Man);
+- **Done in §24:** the Rook recipe (2 one-gold rook-pawns + a Bishop, Knight or Man).
+- **Open (decisions for an economy update):**
   - the Centaur, Dragon Horse and Wildebeest at 6;
   - the Dragon King or Archbishop repriced;
   - the Stackman left at 9.
+
+### 24. The new Rook recipe (RULES_VERSION 10; fairy pieces, shop player, 40 runs × 25 rounds per row)
+
+A Rook is now two rook-pawns at 1 gold each plus a Bishop, Knight or Man of the player's choice (5 gold; it was three rook-pawns at 2 gold, 6 for a 5-point piece), and rook-pawn offers are rarer (weight 0.8, was 2). Same command as §22.
+
+**The recipe alone made the player much stronger early.** Normal suites, player win rate (rows: §22 before / new recipe):
+
+| Normal | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score |
+|---|---|---|---|---|---|---|---|
+| Classic | 45% / 61% | 42% / 60% | 49% / 66% | 41% / 45% | 68% / 64% | 49% / 59% | 5.6 / 8.1 |
+| Growing | 60% / 75% | 52% / 74% | 62% / 80% | 43% / 53% | 59% / 54% | 55% / 67% | 7.7 / 10.9 |
+
+- **Rounds 1–15 rose about 15 points.** The stand-in's army is 3–4 points bigger for the same gold: a Rook costs 5 instead of 6, and Knights merged from the free starting pawns are free partners.
+- **Rounds 16–25 didn't move:** both armies are near the full-board cap there.
+
+**Retuned: the AI budget ramp is 5% higher in rounds 2–15** (`RAMP` in aiArmy.ts).
+- An 8% bump measured the same as 5% (Classic 45%, Growing 58%), so the smaller one was kept.
+- **Round 1 needed no change.** 400 round-1 battles per row (`--rounds 1 --games 400`, the new `--round-one-discount` option):
+
+  | Round 1, Normal | Old recipe | New recipe, discount 1 | Discount 0 | Discount −1 |
+  |---|---|---|---|---|
+  | Classic | 51% | 53% | 30% | 18% |
+  | Growing | 66% | 67% | 55% | 38% |
+
+  The jump the 40-game rows showed (53% → 68%) was noise. A round-1 Rook (two rook-pawns plus a Knight merged from the starting pawns) is 5 points for 2 gold, but the old best opening already reached about 6 points from that gold. The discount stays 1.
+
+**All suites, recipe plus ramp** (rows: §22 / now):
+
+| Mode, difficulty | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|
+| Classic Easy | 59% / 53% | 59% / 63% | 57% / 57% | 55% / 44% | 74% / 65% | 61% / 56% | 6.9 / 7.2 | 8% / 8% |
+| Classic Normal | 45% / 52% | 42% / 48% | 49% / 44% | 41% / 28% | 68% / 53% | 49% / 45% | 5.6 / 4.7 | 10% / 3% |
+| Classic Hard | 26% / 37% | 15% / 30% | 26% / 26% | 28% / 14% | 67% / 47% | 32% / 31% | 1.6 / 2.3 | 0% / 0% |
+| Growing Easy | 61% / 76% | 58% / 78% | 67% / 81% | 63% / 66% | 71% / 70% | 64% / 74% | 7.1 / 13.4 | 8% / 38% |
+| Growing Normal | 60% / 67% | 52% / 59% | 62% / 68% | 43% / 47% | 59% / 50% | 55% / 58% | 7.7 / 8.9 | 8% / 5% |
+| Growing Hard | 52% / 53% | 32% / 32% | 32% / 30% | 22% / 18% | 45% / 27% | 36% / 32% | 4.2 / 3.8 | 0% / 0% |
+
+- **On average the balance is unchanged:** 49.3% across the six suites, against 49.5% in §22. Most suites are within noise of their old level.
+- **Growing Easy is easier.** Rechecked with 120 runs (seed 5): 69% ±2, run score 11.6 ±1.4, against about 64% before. Classic Easy went the other way (61% → 56%). Growing starts on small boards, where a cheap Rook counts for more. Easy stays the easiest setting in both modes, so it was left as is.
+- **Late rounds on Classic came out harder** (rounds 16–25, Normal 28% and 53%). Most of that is the knock-on of losing more in rounds 2–15 (less win income), plus noise (±7 per five rounds).
 
 ## Problems found
 
