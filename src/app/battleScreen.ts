@@ -13,6 +13,7 @@ import { PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
 import { BattleView } from '../ui/battleView';
 import { displayColor, inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { throwConfetti } from './confetti';
+import { reduceMotion, settings } from './settings';
 import { sfx } from './sound';
 import { $, escapeHtml, pts, sleep } from './dom';
 import type { BattleOutcome } from './session';
@@ -97,7 +98,6 @@ export class BattleScreen {
   private readonly result = $('#result');
   private readonly playback = $('#playback');
   private readonly view = new BattleView($('#battle-root'));
-  private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private readonly manual = $('#manual');
   private readonly promo = $('#promo');
   private readonly undoBtn = $<HTMLButtonElement>('#undo');
@@ -196,7 +196,7 @@ export class BattleScreen {
     const square = (s: string) => (flip ? mirrorSquare(s, spec.ranks) : s);
     const mine = flip ? 'b' : 'w';
     this.waiting = false;
-    this.speed = 1;
+    this.speed = settings().speed;
     this.skipping = false;
     this.renderPlaybackButtons();
     this.section.hidden = false;
@@ -253,7 +253,7 @@ export class BattleScreen {
         const ms = this.skipping ? 0 : MOVE_MS / this.speed;
         this.view.render(show(game.fen()), game.spec, {
           last: { from: square(move.from), to: square(move.to) },
-          animateMs: this.reduceMotion ? 0 : ms * 0.8,
+          animateMs: reduceMotion() ? 0 : ms * 0.8,
           check: game.isCheck(),
         });
         if (evalScore !== null) this.showEval(flip ? -evalScore : evalScore);
@@ -364,7 +364,7 @@ export class BattleScreen {
       const f = frames[index];
       this.view.render(f.fen, spec, {
         ...(f.last ? { last: f.last } : {}),
-        animateMs: animate && !this.reduceMotion ? MOVE_MS * 0.4 : 0,
+        animateMs: animate && !reduceMotion() ? MOVE_MS * 0.4 : 0,
         check: f.check,
       });
       this.renderSides(f.fen, spec.files);
@@ -448,7 +448,7 @@ export class BattleScreen {
       before = game.fen;
       this.view.render(game.fen, game.spec, {
         last,
-        animateMs: last && !this.reduceMotion ? 150 : 0,
+        animateMs: last && !reduceMotion() ? 150 : 0,
         check: game.isCheck(),
       });
       this.renderSides(game.fen, game.spec.files);

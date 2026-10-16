@@ -1,7 +1,7 @@
 /**
  * The game's sound effects, synthesised with the Web Audio API (no sound files to ship or load):
  * short tones and filtered noise for placing pieces, the shop, battle moves and results. The
- * player can turn them off from the menu; the choice is kept on the device. The audio starts on
+ * player can turn them off (and set their volume) in Settings; the choice is kept on the device. The audio starts on
  * the first sound after a tap (browsers only allow it then).
  */
 
@@ -23,9 +23,15 @@ export type Sfx =
   | 'grow'
   | 'tick';
 
+import { settings } from './settings';
+
 const SOUND_KEY = 'acc.sound.v1';
-/** Overall loudness: effects are meant to sit under whatever else the phone is playing. */
-const VOLUME = 0.32;
+/** Loudness at the top of the Settings volume slider; the default (50%) puts effects under whatever else the phone is playing. */
+const MAX_GAIN = 0.64;
+
+function gain(): number {
+  return (MAX_GAIN * settings().volume) / 100;
+}
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -53,6 +59,11 @@ export function setSoundOn(on: boolean): void {
   }
 }
 
+/** Applies a changed effects volume (Settings) to sounds from now on. */
+export function volumeChanged(): void {
+  if (master) master.gain.value = gain();
+}
+
 /** The audio graph, made on first use; null when sound is off or the browser has no Web Audio. */
 function audio(): AudioContext | null {
   if (!enabled) return null;
@@ -65,7 +76,7 @@ function audio(): AudioContext | null {
       return null;
     }
     master = ctx.createGain();
-    master.gain.value = VOLUME;
+    master.gain.value = gain();
     master.connect(ctx.destination);
   }
   if (ctx.state === 'suspended') void ctx.resume().catch(() => {});
