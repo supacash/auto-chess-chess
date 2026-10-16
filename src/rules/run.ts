@@ -23,7 +23,7 @@ export const DAILY_ROUND_STEP = 2;
 /** How many times a daily battle pays interest (a run pays it every round). */
 export const DAILY_INTEREST_TIMES = 1;
 /** Flat gold on top of a daily battle's income (tuned with the simulator: SIMULATION.md §26). */
-export const DAILY_BATTLE_BONUS = 2;
+export const DAILY_BATTLE_BONUS = 1;
 
 /** What makes a run the day's challenge: its date (which seeds it) and theme. */
 export interface DailyRun {
