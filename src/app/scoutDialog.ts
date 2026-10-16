@@ -59,7 +59,10 @@ export class ScoutDialog {
     }
 
     $('#scout-body').innerHTML = sections.join('');
-    if (!this.dialog.open) this.dialog.showModal();
+    if (!this.dialog.open) {
+      this.dialog.showModal();
+      this.dialog.scrollTop = 0; // opening focuses Close, at the bottom: start at the top
+    }
   }
 }
 

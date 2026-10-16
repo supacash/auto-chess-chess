@@ -323,6 +323,8 @@ export class MatchController {
     this.timer = 0;
     $('#match-timer').textContent = '';
     $('#timer-fill').style.width = '0%';
+    // No countdown outside the shop: an empty bar would read as time run out.
+    $('#match-hud .timer-bar').classList.add('idle');
     $('#fight-timer').hidden = true;
   }
 
@@ -882,6 +884,7 @@ export class MatchController {
     const share = `${(left / total) * 100}%`;
     $('#match-timer').textContent = seconds;
     $('#timer-fill').style.width = share;
+    $('#match-hud .timer-bar').classList.remove('idle');
     // The same countdown over the Ready button, which stays on screen while the shop scrolls.
     const bar = $('#fight-timer');
     // A tick for each of the last five seconds.

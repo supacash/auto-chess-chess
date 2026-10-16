@@ -48,6 +48,7 @@ import {
   PIECES,
   type PieceType,
 } from '../rules/pieces';
+import { dailyBattle } from '../rules/daily';
 import { armyCap, BENCH_SIZE, benchCount, MAX_HEIRS } from '../rules/placement';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
@@ -231,6 +232,15 @@ export class PlacementScreen {
     this.fightBtn.addEventListener('click', () => (this.mode.onReady ? this.mode.onReady() : onFight()));
     this.playBtn.addEventListener('click', onPlay);
     $('#last-replay').addEventListener('click', onReplay);
+    // The fight bar sticks to the bottom of the screen while the board and shop scroll under it. Only
+    // then does it get a backdrop (style.css), so the shop doesn't show through around the buttons.
+    // Stuck, it sits on the screen's bottom edge, so with that edge pulled up a pixel it's cut off.
+    // (Threshold 0 too: Chrome doesn't report a hidden bar showing up already cut off without it.)
+    const bar = $('#placement .fight-bar');
+    new IntersectionObserver(
+      ([entry]) => bar.classList.toggle('stuck', entry.isIntersecting && entry.intersectionRatio < 1),
+      { threshold: [0, 1], rootMargin: '0px 0px -1px 0px' },
+    ).observe(bar);
   }
 
   /** Switches what's being played (a run, or a match); takes effect on the next show(). */
@@ -401,14 +411,15 @@ export class PlacementScreen {
     this.board.clearSelection();
   }
 
-  /** The offer cards, and the selected offer's description and Buy button. */
   /** The tip currently showing (see game/tips.ts), or null. */
   private tip: TipId | null = null;
 
   /** Shows the most useful first-run tip that hasn't been dismissed on this device. */
   private renderTip(): void {
-    const { shop, round } = this.session.run;
-    this.tip = nextTip(shop, round, seenTips());
+    const { shop, round, daily } = this.session.run;
+    // The daily challenge starts at round 2, but its first battle is someone's first game as much as round 1 is.
+    const first = daily ? dailyBattle(round) === 1 : round === 1;
+    this.tip = nextTip(shop, round, seenTips(), first);
     $('#tip').hidden = this.tip === null;
     $('#tip-text').textContent = this.tip ? this.tipText(this.tip) : '';
     // The how-to-play tip already says to place the king: no need for the hint under the buttons too.
@@ -427,6 +438,7 @@ export class PlacementScreen {
     return TIPS[tip];
   }
 
+  /** The offer cards, and the selected offer's description and Buy button. */
   private renderOffers(): void {
     const { gold, pieces, offers = [] } = this.session.run.shop;
     if (this.selectedOffer !== null && this.selectedOffer >= offers.length) this.selectedOffer = null;

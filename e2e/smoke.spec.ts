@@ -156,6 +156,44 @@ test('the profile shows records from play, by tab', async ({ page }) => {
   await expect(page.locator('#menu')).toBeVisible();
 });
 
+test('game over sums up the run, and New run opens the New game window', async ({ page }) => {
+  await startRun(page);
+  await placeKing(page);
+  // The last life, against an army that mates a lone king in a few moves.
+  await page.evaluate(() => {
+    const save = JSON.parse(localStorage.getItem('acc.run.v1')!);
+    save.run.lives = 1;
+    save.ai.pieces = [
+      { id: 'ai-k', type: 'K', square: { file: 4, rank: 0 } },
+      { id: 'ai-q', type: 'Q', square: { file: 3, rank: 0 } },
+      { id: 'ai-r1', type: 'R', square: { file: 0, rank: 0 } },
+      { id: 'ai-r2', type: 'R', square: { file: 1, rank: 0 } },
+    ];
+    localStorage.setItem('acc.run.v1', JSON.stringify(save));
+  });
+  await page.reload();
+  await page.locator('#menu-resume').click();
+  await page.locator('#fight').click();
+  await page.locator('#skip').click();
+  await expect(page.locator('#result-title')).toHaveText('Game over', { timeout: 120_000 });
+  await expect(page.locator('#result-stats')).toContainText('Rounds won');
+  await page.locator('#next').click();
+  const dialog = page.locator('#new-run-dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.locator('#menu')).toBeVisible();
+  await expect(page.locator('#menu-resume')).toBeHidden(); // the run is over
+});
+
+test('an empty profile tab offers a way to go and play', async ({ page }) => {
+  await page.goto('./');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.locator('#menu-profile').click();
+  await page.locator('#profile-body').getByRole('button', { name: 'New game' }).click();
+  await expect(page.locator('#new-run-dialog')).toBeVisible();
+});
+
 test('the piece guide teaches every piece, from the menu and from a piece panel', async ({ page }) => {
   await page.goto('./');
   await expect(page.locator('#menu')).toBeVisible();

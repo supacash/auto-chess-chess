@@ -28,6 +28,9 @@ export class GauntletDialog {
         return `<section class="scout-section gauntlet-battle${battle === current ? ' current' : ''}"><h3>Battle ${battle} · ${escapeHtml(o.style.name)} · ${o.points} pts · ${o.board.files}×${o.board.ranks}${state ? ` · ${state}` : ''}</h3>${miniBoard(o.pieces, o.board, true, foe)}</section>`;
       })
       .join('');
-    if (!this.dialog.open) this.dialog.showModal();
+    if (!this.dialog.open) {
+      this.dialog.showModal();
+      this.dialog.scrollTop = 0; // opening focuses Close, at the bottom: start at the top
+    }
   }
 }

@@ -645,6 +645,34 @@ button:disabled {
   color: var(--muted);
 }
 
+/* Play it: your turn stands out (in check, in red), with a pulsing dot. */
+.battle-status[data-turn] {
+  font-weight: 800;
+  color: var(--teal);
+}
+
+.battle-status[data-turn="check"] {
+  color: var(--danger);
+}
+
+.battle-status[data-turn]::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  vertical-align: 1px;
+  background: currentColor;
+  border-radius: 50%;
+  animation: turn-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes turn-dot {
+  50% {
+    opacity: 0.25;
+  }
+}
+
 .board.battle .piece {
   cursor: default;
 }
@@ -1585,15 +1613,16 @@ dialog::backdrop {
   margin-bottom: 8px;
 }
 
-/* White's share in white from the left, Black's in black: the bar leans to whoever is winning. */
+/* White's share in white from the left, Black's in black: the bar leans to whoever is winning. The
+   frame keeps Black's share from blending into the page when Black is winning outright. */
 .eval-bar {
   position: relative;
   flex: 1;
   height: 16px;
   overflow: hidden;
-  background: #16121f;
+  background: #0b0812;
   border-radius: 999px;
-  box-shadow: inset 0 0 0 2px var(--deep);
+  box-shadow: 0 0 0 2px var(--raised);
 }
 
 /* Your share, drawn in your pieces' colour. */
@@ -1609,7 +1638,7 @@ dialog::backdrop {
   background: #f4f1fb;
 }
 .eval-bar.as-black .eval-fill {
-  background: #16121f;
+  background: #0b0812;
 }
 
 /* Centre tick marks equality. */
@@ -1730,6 +1759,11 @@ body.in-match #menu-button {
   overflow: hidden;
   background: var(--deep);
   border-radius: 999px;
+}
+
+/* Between shops (matchController.ts): kept for its space, so the health list doesn't jump. */
+.timer-bar.idle {
+  visibility: hidden;
 }
 
 #timer-fill {
@@ -2266,6 +2300,44 @@ button.icon-button[aria-pressed="false"] {
   opacity: 0.8;
 }
 
+/* Profile, Piece guide and Settings: three small tiles in a row under the ways to play. */
+.menu-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.menu-buttons .menu-row button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 8px 4px;
+  font-size: 0.85rem;
+  line-height: 1.15;
+  border-radius: 16px;
+}
+
+.menu-row svg {
+  color: var(--muted);
+}
+
+/* Shorter phones: a smaller logo, so Resume, the ways to play and the row all fit without scrolling. */
+@media (max-height: 760px) {
+  .menu {
+    padding-top: 24px;
+  }
+  .menu-logo {
+    width: 116px;
+    height: 116px;
+  }
+  .menu-badge {
+    margin-bottom: 24px;
+  }
+}
+
 /* ---- Play it: each side's pieces ---- */
 
 .side-pieces {
@@ -2344,15 +2416,6 @@ button.icon-button[aria-pressed="false"] {
 
 .settings {
   animation: fade-in 0.2s ease-out;
-}
-
-.screen-title {
-  margin: 8px 0 14px;
-  font-family: var(--display);
-  font-size: 1.8rem;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 /* One column of cards on phones, two side by side where the window is wide. */
@@ -2577,9 +2640,10 @@ input.switch:focus-visible {
   letter-spacing: 0.02em;
 }
 
+/* Up to four to a row on a phone; a card with fewer spreads them across. */
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
   gap: 6px;
 }
 
@@ -2687,9 +2751,21 @@ input.switch:focus-visible {
 }
 
 .profile-empty {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
   margin: 20px 0;
   color: var(--muted);
   text-align: center;
+}
+
+.profile-empty p {
+  margin: 0;
+}
+
+.profile-empty button {
+  flex: none;
+  min-width: 200px;
 }
 
 /* The placement screen's buttons (and the hint under them) stay pinned to the bottom of the screen
@@ -2700,7 +2776,23 @@ input.switch:focus-visible {
   z-index: 5;
   margin: 0 -16px;
   padding: 2px 16px calc(10px + env(safe-area-inset-bottom));
-  background: linear-gradient(to top, var(--bg) 70%, rgb(26 16 53 / 0));
+}
+
+/* Stuck over the shop as it scrolls underneath (placementScreen.ts marks it): a solid backdrop, fading
+   out above, so the offers don't show through around the buttons. */
+#placement .fight-bar.stuck {
+  background: var(--bg);
+}
+
+#placement .fight-bar.stuck::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 20px;
+  background: linear-gradient(to top, var(--bg), rgb(26 16 53 / 0));
+  pointer-events: none;
 }
 
 #placement .fight-bar .actions {
@@ -2867,8 +2959,11 @@ button.tip-close:active:not(:disabled) {
   opacity: 0.8;
 }
 
-.run-summary circle.loss {
-  fill: var(--danger);
+.run-summary path.loss {
+  stroke: var(--danger);
+  stroke-width: 7;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .summary-legend,
@@ -3089,6 +3184,7 @@ button.tip-close:active:not(:disabled) {
     0 5px 0 var(--gold-shadow),
     0 12px 32px rgb(0 0 0 / 0.4);
   transform: translateX(-50%);
+  cursor: pointer;
 }
 
 /* Installed on a phone, the status bar (and any camera cutout) sits over the page: keep the notice
@@ -3569,6 +3665,21 @@ button.guide-link:active:not(:disabled) {
   .menu-logo {
     width: 56px;
     height: 56px;
+  }
+
+  /* Profile and Settings read better as one comfortable column than stretched across the window. */
+  .profile,
+  .settings {
+    justify-self: center;
+    width: min(100%, 720px);
+  }
+}
+
+/* Desktop windows and tablets held sideways have the height for the full-size logo. */
+@media (orientation: landscape) and (min-width: 1000px) and (min-height: 820px) {
+  .menu-logo {
+    width: 148px;
+    height: 148px;
   }
 }
 

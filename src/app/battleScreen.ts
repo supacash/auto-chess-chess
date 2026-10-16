@@ -467,6 +467,7 @@ export class BattleScreen {
     } finally {
       this.inManual = false;
       this.view.setInput(null);
+      delete this.status.dataset.turn;
     }
   }
 
@@ -480,7 +481,9 @@ export class BattleScreen {
     while (!result) {
       if (this.pauseRequested) throw new GamePaused();
       if (game.playerToMove) {
-        this.status.textContent = game.isCheck() ? 'Your move: you are in check!' : 'Your move';
+        const check = game.isCheck();
+        this.status.textContent = check ? 'Your move: you are in check!' : 'Your move';
+        this.status.dataset.turn = check ? 'check' : 'yours';
         this.undoBtn.disabled = !game.canUndo();
         this.resignBtn.disabled = false;
         const action = await this.waitForPlayer(game);
@@ -498,6 +501,7 @@ export class BattleScreen {
         }
       } else {
         this.status.textContent = 'Opponent is thinking…';
+        delete this.status.dataset.turn;
         this.undoBtn.disabled = true;
         this.resignBtn.disabled = true;
         draw(await game.opponentMove(engine));
@@ -719,8 +723,10 @@ export class BattleScreen {
           : `${verb} ${REASON_TEXT[reason]}. Material ${material.w}–${material.b} after ${moves} move${moves === 1 ? '' : 's'}.`;
     sfx(outcome.won || winner === 'w' ? 'win' : winner === 'b' ? 'lose' : 'draw');
     const r = outcome.record;
+    // Draws only once there are some, and the label says so.
     const record = `${r.w}–${r.l}${r.d ? `–${r.d}` : ''}`;
-    const bestTile = outcome.newBest ? tile('New!', 'Best', 'tone-gold') : tile(String(best), 'Best');
+    const recordLabel = r.d ? 'W–L–D' : 'W–L';
+    const bestTile = tile(String(best), outcome.newBest ? 'New best!' : 'Best', outcome.newBest ? 'tone-gold' : '');
     const day = outcome.daily;
     if (day) {
       $('#result-title').textContent = day.w === DAILY_BATTLES ? '🏆 Gauntlet cleared!' : 'Daily challenge done';
@@ -728,7 +734,7 @@ export class BattleScreen {
         `${summary} ${day.w}/${DAILY_BATTLES} won · ${day.gold} gold left. A new challenge comes at midnight UTC.`;
       this.showStats(
         tile(String(day.score), 'Score', 'tone-gold') +
-          tile(record, 'W–L–D', 'tone-teal') +
+          tile(record, recordLabel, 'tone-teal') +
           tile(`🔥 ${outcome.dailyStreak ?? 1}`, 'Day streak', 'tone-hearts'),
       );
       $('#next').textContent = 'Menu';
@@ -740,7 +746,7 @@ export class BattleScreen {
       this.showStats(
         tile(`+${outcome.income}g`, 'Gold', 'tone-gold') +
           tile(`${outcome.playedRound / DAILY_ROUND_STEP}/${DAILY_BATTLES}`, 'Battle', 'tone-hearts') +
-          tile(record, 'W–L–D', 'tone-teal'),
+          tile(record, recordLabel, 'tone-teal'),
       );
       $('#next').textContent = 'Next battle';
       if (winner === 'w') throwConfetti($('#confetti'), 26);
@@ -748,7 +754,7 @@ export class BattleScreen {
       $('#result-title').textContent = '🏆 Run complete!';
       $('#result-detail').textContent = `${summary} You got through all ${FINAL_ROUND} rounds.`;
       this.showStats(
-        tile(String(outcome.score), 'Rounds won', 'tone-gold') + tile(record, 'W–L–D', 'tone-teal') + bestTile,
+        tile(String(outcome.score), 'Rounds won', 'tone-gold') + tile(record, recordLabel, 'tone-teal') + bestTile,
       );
       $('#next').textContent = 'New game';
       const prestige = $<HTMLButtonElement>('#prestige');
@@ -759,7 +765,7 @@ export class BattleScreen {
       $('#result-title').textContent = 'Game over';
       $('#result-detail').textContent = summary;
       this.showStats(
-        tile(String(outcome.score), 'Rounds won', 'tone-gold') + tile(record, 'W–L–D', 'tone-teal') + bestTile,
+        tile(String(outcome.score), 'Rounds won', 'tone-gold') + tile(record, recordLabel, 'tone-teal') + bestTile,
       );
       $('#next').textContent = 'New run';
     } else {
@@ -770,7 +776,9 @@ export class BattleScreen {
         winner === 'b'
           ? tile(`${HEART} ${lives}`, '−1 life', 'tone-loss')
           : tile(`${HEART} ${lives}`, 'Lives', 'tone-hearts');
-      this.showStats(tile(`+${outcome.income}g`, 'Gold', 'tone-gold') + livesTile + tile(record, 'W–L–D', 'tone-teal'));
+      this.showStats(
+        tile(`+${outcome.income}g`, 'Gold', 'tone-gold') + livesTile + tile(record, recordLabel, 'tone-teal'),
+      );
       $('#next').textContent = 'Next round';
       if (winner === 'w') throwConfetti($('#confetti'), 26);
     }
@@ -838,14 +846,14 @@ function tile(value: string, label: string, tone = ''): string {
 function runSummary(history: RoundLog[]): string {
   if (history.length === 0) return '';
   const top = Math.max(1, ...history.flatMap((h) => [h.you, h.them]));
-  const x = (i: number) => (history.length === 1 ? 50 : (i / (history.length - 1)) * 100);
-  const y = (v: number) => 38 - (v / top) * 34;
+  // Inset from the edges so the first and last rounds' marks aren't cut in half.
+  const x = (i: number) => (history.length === 1 ? 50 : 4 + (i / (history.length - 1)) * 92);
+  const y = (v: number) => 36 - (v / top) * 32;
   const line = (pick: (h: RoundLog) => number) =>
     history.map((h, i) => `${x(i).toFixed(1)},${y(pick(h)).toFixed(1)}`).join(' ');
+  // Losses as dots: a zero-length stroke with round caps stays round although the chart stretches.
   const losses = history
-    .map((h, i) =>
-      h.winner === 'b' ? `<circle cx="${x(i).toFixed(1)}" cy="${y(h.you).toFixed(1)}" r="1.6" class="loss" />` : '',
-    )
+    .map((h, i) => (h.winner === 'b' ? `<path d="M${x(i).toFixed(1)} ${y(h.you).toFixed(1)}h0" class="loss" />` : ''))
     .join('');
   const peak = Math.max(...history.map((h) => h.you));
   return `<svg viewBox="0 0 100 40" preserveAspectRatio="none" role="img" aria-label="Army points by round: you and your opponents">

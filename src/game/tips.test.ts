@@ -20,6 +20,13 @@ describe('nextTip', () => {
     expect(nextTip(army, 4, new Set<TipId>(['start']))).toBe('merge');
   });
 
+  it('starts with how to play in a first battle that isn’t round 1 (the daily challenge’s)', () => {
+    const knightPawns = [1, 2, 3].map(() => makePiece('P', null, 'N'));
+    const army = shop({ pieces: [makePiece('K'), ...knightPawns], gold: 12 });
+    expect(nextTip(army, 2, none)).toBe('merge');
+    expect(nextTip(army, 2, none, true)).toBe('start');
+  });
+
   it('counts a Rook recipe as a ready set: two rook-pawns and a Bishop, Knight or Man', () => {
     const rookPawns = [1, 2].map(() => makePiece('P', null, 'R'));
     const seen = new Set<TipId>(['start']);
