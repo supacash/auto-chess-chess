@@ -3,13 +3,13 @@ import { $ } from './dom';
 import { settings, updateSettings } from './settings';
 import { setSoundOn, sfx, soundOn, volumeChanged } from './sound';
 
-/** The Settings screen, from the main menu: sound, battle speed, reduced motion, piece explanations, tips and About. */
+/** The Settings screen, from the main menu: sound, battle speed, reduced motion, tutorials, tips and About. */
 export class SettingsScreen {
   private readonly section = $('#settings');
   private readonly sound = $<HTMLInputElement>('#set-sound');
   private readonly volume = $<HTMLInputElement>('#set-volume');
   private readonly motion = $<HTMLInputElement>('#set-motion');
-  private readonly pieceInfo = $<HTMLInputElement>('#set-piece-info');
+  private readonly tutorials = $<HTMLInputElement>('#set-tutorials');
 
   constructor(onBack: () => void) {
     this.sound.addEventListener('change', () => {
@@ -35,8 +35,8 @@ export class SettingsScreen {
       updateSettings({ reduceMotion: this.motion.checked });
       this.render();
     });
-    this.pieceInfo.addEventListener('change', () => {
-      updateSettings({ pieceInfo: this.pieceInfo.checked });
+    this.tutorials.addEventListener('change', () => {
+      updateSettings({ tutorials: this.tutorials.checked });
       this.render();
     });
     $('#set-tips').addEventListener('click', () => {
@@ -71,6 +71,6 @@ export class SettingsScreen {
       btn.setAttribute('aria-checked', String(active));
     }
     this.motion.checked = s.reduceMotion;
-    this.pieceInfo.checked = s.pieceInfo;
+    this.tutorials.checked = s.tutorials;
   }
 }

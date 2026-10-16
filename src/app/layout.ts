@@ -203,8 +203,8 @@ export function renderLayout(root: HTMLElement): void {
           <input type="checkbox" role="switch" id="set-motion" class="switch" />
         </label>
         <label class="setting-row">
-          <span>Piece explanations<small>How a piece moves and what it's for, when you tap it in the shop.</small></span>
-          <input type="checkbox" role="switch" id="set-piece-info" class="switch" />
+          <span>Tutorials<small>Tips in the shop, and how a piece moves when you tap it.</small></span>
+          <input type="checkbox" role="switch" id="set-tutorials" class="switch" />
         </label>
         <div class="setting-row">
           <span>Tips<small id="set-tips-note">Show the first-game tips again.</small></span>

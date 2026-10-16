@@ -419,7 +419,7 @@ export class PlacementScreen {
     const { shop, round, daily } = this.session.run;
     // The daily challenge starts at round 2, but its first battle is someone's first game as much as round 1 is.
     const first = daily ? dailyBattle(round) === 1 : round === 1;
-    this.tip = nextTip(shop, round, seenTips(), first);
+    this.tip = playerSettings().tutorials ? nextTip(shop, round, seenTips(), first) : null;
     $('#tip').hidden = this.tip === null;
     $('#tip-text').textContent = this.tip ? this.tipText(this.tip) : '';
     // The how-to-play tip already says to place the king: no need for the hint under the buttons too.
@@ -591,11 +591,11 @@ export class PlacementScreen {
 
 /** "3 pts. Jumps in an L shape." (the King and Heir aren't worth points in battle). */
 /**
- * A shop panel's head: the piece's move diagram, name and explanation, and Close. With piece explanations
- * off (Settings), just the name.
+ * A shop panel's head: the piece's move diagram, name and explanation, and Close. With tutorials off
+ * (Settings), just the name.
  */
 function panelHead(diagram: string, name: string, explanation: string): string {
-  const text = playerSettings().pieceInfo
+  const text = playerSettings().tutorials
     ? `${diagram}<p><strong>${name}</strong> · ${explanation}</p>`
     : `<p><strong>${name}</strong></p>`;
   return `<div class="panel-head">${text}${CLOSE_BUTTON}</div>`;

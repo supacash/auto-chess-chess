@@ -10,11 +10,11 @@ describe('parseSettings', () => {
   });
 
   it('keeps valid settings', () => {
-    expect(parseSettings({ volume: 80, speed: 4, reduceMotion: true, pieceInfo: false })).toEqual({
+    expect(parseSettings({ volume: 80, speed: 4, reduceMotion: true, tutorials: false })).toEqual({
       volume: 80,
       speed: 4,
       reduceMotion: true,
-      pieceInfo: false,
+      tutorials: false,
     });
   });
 
