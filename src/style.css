@@ -528,8 +528,8 @@ button.teal:not(.primary):active:not(:disabled) {
 dialog button:not(.primary):not(.teal):not(.link-button):not(.prestige-button),
 .result button:not(.primary):not(.revive-button):not(.prestige-button),
 .lobby button:not(.primary),
-.piece-actions button:not(.primary):not(.fuse):not(.panel-close),
-.offer-detail button:not(.primary):not(.fuse):not(.panel-close) {
+.piece-actions button:not(.primary):not(.fuse):not(.panel-close):not(.guide-link),
+.offer-detail button:not(.primary):not(.fuse):not(.panel-close):not(.guide-link) {
   background: var(--raised);
 }
 
@@ -3252,6 +3252,219 @@ body.reduce-motion #message.pop {
   margin: 6px 0 0;
   font-size: 0.75rem;
   color: var(--muted);
+}
+
+/* ---- piece guide (guideScreen.ts) ---- */
+
+/* Over whatever is on screen (the menu, or the shop it was opened from), scrolling on its own. */
+.guide {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: radial-gradient(120% 60% at 50% 0%, #241749 0%, var(--bg) 60%) fixed;
+  animation: fade-in 0.2s ease-out;
+}
+
+body.guide-open {
+  overflow: hidden;
+}
+
+.guide-inner {
+  max-width: calc(var(--column) + 32px);
+  margin: 0 auto;
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+
+.guide .tabs {
+  position: sticky;
+  top: 8px;
+  z-index: 2;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.35);
+}
+
+.guide .actions {
+  margin-top: 16px;
+}
+
+/* The diagram's marks, as in the diagrams themselves. */
+.guide-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--deep);
+  border-radius: 12px;
+}
+
+.guide-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-legend .md {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.guide-note {
+  margin: 0;
+}
+
+.guide-entry {
+  scroll-margin-top: 64px;
+}
+
+.guide-entry.flash {
+  animation: guide-flash 1.2s ease-out;
+}
+
+@keyframes guide-flash {
+  0%,
+  30% {
+    box-shadow:
+      0 0 0 3px var(--gold),
+      var(--lift);
+  }
+}
+
+.guide-entry-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.guide-entry .move-diagram {
+  width: 98px;
+  height: 98px;
+}
+
+.guide-entry-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.guide-entry h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0 0 4px;
+}
+
+.guide-entry h3 .inline-piece {
+  width: 1.6em;
+  height: 1.6em;
+  vertical-align: 0;
+}
+
+.guide-value,
+.guide-tag {
+  padding: 1px 7px;
+  font-family: "Nunito Variable", system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  border-radius: 999px;
+}
+
+.guide-value {
+  color: var(--ink);
+  background: var(--gold);
+}
+
+.guide-tag {
+  color: var(--ink);
+  background: var(--teal);
+}
+
+.guide-ways .guide-tag {
+  font-size: 0.65rem;
+  vertical-align: 0.1em;
+}
+
+.guide-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.guide-get {
+  margin: 10px 0 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.guide-ways {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.guide-ways li {
+  padding: 5px 8px;
+  background: var(--deep);
+  border-radius: 10px;
+}
+
+.guide-ways .inline-affinity {
+  margin-right: 0.2em;
+}
+
+/* "How it moves" in a piece panel: a small link to the guide's entry. */
+button.guide-link {
+  display: inline;
+  flex: none;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  font-weight: 800;
+  color: var(--gold);
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+button.guide-link:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Wide screens (desktop, landscape phones and tablets): two cards to a row. */
+@media (min-width: 720px) {
+  .guide-inner {
+    max-width: 920px;
+  }
+  .guide .profile-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .guide-note {
+    grid-column: 1 / -1;
+  }
+  .guide-legend {
+    grid-template-columns: repeat(4, auto);
+    justify-content: start;
+  }
 }
 
 /* Landscape phones (and touch tablets held sideways), and wide desktop windows: two columns. The

@@ -156,6 +156,42 @@ test('the profile shows records from play, by tab', async ({ page }) => {
   await expect(page.locator('#menu')).toBeVisible();
 });
 
+test('the piece guide teaches every piece, from the menu and from a piece panel', async ({ page }) => {
+  await page.goto('./');
+  await expect(page.locator('#menu')).toBeVisible();
+  await page.locator('#menu-guide').click();
+  const guide = page.locator('#guide');
+  await expect(guide).toBeVisible();
+  // The Knight, with its move diagram (eight knight jumps), value and how to get it.
+  const knight = guide.locator('[data-piece="N"]');
+  await expect(knight.locator('.move-diagram')).toHaveAttribute('aria-label', 'How the Knight moves');
+  await expect(knight.locator('.md-any')).toHaveCount(8);
+  await expect(knight).toContainText('3 pts');
+  await expect(knight).toContainText('3 Knight-pawns');
+  await guide.locator('#guide-tabs [data-group="fusions"]').click();
+  await expect(guide.locator('[data-piece="J"]')).toContainText('3 Queens');
+  await expect(guide.locator('[data-piece="A"]')).toContainText('Fuse');
+  await expect(guide.locator('[data-piece="G"]')).toHaveCount(0);
+  await page.locator('#guide-back').click();
+  await expect(guide).toBeHidden();
+  await expect(page.locator('#menu')).toBeVisible();
+
+  // "How it moves" in a piece's panel opens the guide on that piece, and Back returns to the shop.
+  await startRun(page);
+  await page
+    .locator('.bench .piece')
+    .filter({ has: page.getByAltText('Pawn', { exact: true }) })
+    .first()
+    .click();
+  await page.locator('#piece-actions .guide-link').click();
+  await expect(guide).toBeVisible();
+  await expect(guide.locator('#guide-tabs [data-group="pawns"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(guide.locator('[data-piece="P"]')).toBeInViewport();
+  await page.locator('#guide-back').click();
+  await expect(guide).toBeHidden();
+  await expect(page.locator('#placement')).toBeVisible();
+});
+
 test('a refused placement flashes its square, and a merged piece is not left selected', async ({ page }) => {
   await startRun(page);
   const pawn = () =>
