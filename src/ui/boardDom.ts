@@ -3,8 +3,9 @@ import type { Color } from '../chess/fen';
 import { type Affinity, PIECE_NAME, type PieceType } from '../rules/pieces';
 
 // Piece art: the Chessnut set by Alexis Luengas (Apache 2.0, see src/assets/pieces/README.md),
-// bundled by Vite with hashed file names. Keys look like "../assets/pieces/wK.svg".
-const ART = import.meta.glob<string>('../assets/pieces/*.svg', { eager: true, query: '?url', import: 'default' });
+// bundled by Vite as data URLs, all of them: a piece that first shows up mid-battle (a pawn promoted
+// to a Queen) would otherwise be blank until its file loads. Keys look like "../assets/pieces/wK.svg".
+const ART = import.meta.glob<string>('../assets/pieces/*.svg', { eager: true, query: '?inline', import: 'default' });
 
 /**
  * Colours passed in here are sides in the game's FEN: 'w' is always the player, 'b' the opponent.

@@ -7,6 +7,11 @@ const config: CapacitorConfig = {
   appName: 'Pawned Up',
   webDir: 'dist',
   android: { backgroundColor: '#1a1035' },
+  plugins: {
+    // The game is always dark: light status bar icons, whatever the phone's own theme (by default
+    // they follow it, and come out dark grey on the violet in light mode). The page is edge to edge.
+    SystemBars: { style: 'DARK', initialViewportFitValueHint: 'cover' },
+  },
 };
 
 export default config;
