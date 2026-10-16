@@ -10,19 +10,30 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { DRAWINGS } from './make-pieces.mjs';
-import { join as joinParts, part, render } from './pieces/draw.mjs';
+import { line, part, render } from './pieces/draw.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-// The Knight wearing the Heir's crown, white with dark lines.
-const crowned = joinParts(part(DRAWINGS.N, 0.86, 9, 12), part(DRAWINGS.J, 0.36, 26, 7));
-const knight = render(crowned, { fill: '#fff', line: '#111', detail: '#111' });
+// The Knight wearing the Heir's crown, white with dark lines. The crown sits behind his ear: drawn
+// after the mane and before the head, without the band's line (the head covers that part).
+const knight = part(DRAWINGS.N, 0.86, 9, 12);
+const crown = part(
+  { shapes: DRAWINGS.J.shapes, details: [line('M38 44C40 52 40 60 39.5 66'), line('M62 44C60 52 60 60 60.5 66')] },
+  0.36,
+  26,
+  7,
+);
+const crowned = {
+  shapes: [knight.shapes[0], ...crown.shapes, ...knight.shapes.slice(1)],
+  details: [...crown.details, ...knight.details],
+};
+const art = render(crowned, { fill: '#fff', line: '#111', detail: '#111' });
 
 // 512×512, full-bleed background so it also works as a maskable icon (content in the middle 80%).
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
 <rect width="512" height="512" fill="#1a1035"/>
 <g transform="rotate(8 256 256)"><rect x="106" y="122" width="300" height="300" rx="78" fill="#1f8c7e"/><rect x="106" y="106" width="300" height="300" rx="78" fill="#33c3b0"/></g>
 <g transform="rotate(-5 256 256)"><rect x="106" y="122" width="300" height="300" rx="78" fill="#c9502f"/><rect x="106" y="106" width="300" height="300" rx="78" fill="#ff7a59"/></g>
-<g transform="translate(112 100) scale(2.88)">${knight}</g>
+<g transform="translate(112 100) scale(2.88)">${art}</g>
 </svg>
 `;
 writeFileSync(join(root, 'public', 'icon.svg'), svg);
