@@ -716,7 +716,7 @@ export class BattleScreen {
         ? `${verb} on points, ${material.w}–${material.b}, at the ${plyLimit(spec) / 2}-move limit.`
         : reason === 'insufficient' && winner !== 'draw'
           ? `${verb} on points, ${material.w}–${material.b}: neither side could checkmate any more.`
-          : `${verb} ${REASON_TEXT[reason]}. Material ${material.w}–${material.b} after ${moves} moves.`;
+          : `${verb} ${REASON_TEXT[reason]}. Material ${material.w}–${material.b} after ${moves} move${moves === 1 ? '' : 's'}.`;
     sfx(outcome.won || winner === 'w' ? 'win' : winner === 'b' ? 'lose' : 'draw');
     const r = outcome.record;
     const record = `${r.w}–${r.l}${r.d ? `–${r.d}` : ''}`;

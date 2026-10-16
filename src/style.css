@@ -3093,13 +3093,18 @@ button.tip-close:active:not(:disabled) {
   color: var(--muted);
 }
 
-/* Landscape phones (and touch tablets held sideways): two columns. The board and bench sit on the
-   left and stay in view while the shop, opponent and battle controls scroll on the right, with the
-   fight bar pinned to the bottom of the screen there. The board is sized by svh (the screen with the
-   browser's bars showing), so it doesn't resize as the address bar slides away. */
+/* Landscape phones (and touch tablets held sideways), and wide desktop windows: two columns. The
+   board and bench sit on the left and stay in view while the shop, opponent and battle controls
+   scroll on the right, with the fight bar pinned to the bottom of the screen there. The board is
+   sized by svh (the screen with the browser's bars showing), so it doesn't resize as the address
+   bar slides away. */
 @media (orientation: landscape) and (max-height: 600px),
-  (orientation: landscape) and (pointer: coarse) and (max-height: 900px) {
+  (orientation: landscape) and (pointer: coarse) and (max-height: 900px),
+  (orientation: landscape) and (min-width: 1000px) {
   :root {
+    /* A bigger board where the screen is tall enough (tablets, desktop); phones are held back by
+       their height. */
+    --column: min(88vw, 560px);
     /* Leaves room for the bench under the board, even on short screens. */
     --board: min(var(--column), max(160px, 100svh - 100px));
   }
