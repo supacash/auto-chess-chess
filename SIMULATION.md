@@ -528,16 +528,29 @@ More duels, same command as §23 with 300 games (±6) and seed 3:
 
 **Battle 1 swings hard:** at 11–12 points *Twin Knights* and *The Little Zoo* lost 75–86%; at 13 (four pawns, or a second Man) they won 70–92%. Both are now at 12.
 
-**Now**, same seed (13) for hand-made and drafted armies; battles 1–5:
+**First pass**, same seed (13) for hand-made and drafted armies; battles 1–5:
 
 | Suite | Hand-made | Drafted |
 |---|---|---|
 | Growing Normal, fairy (300) | 71 / 69 / 69 / 64 / 75% (70%) | 53 / 61 / 54 / 59 / 67% (59%) |
 | Classic Normal, standard (200) | 50 / 60 / 61 / 45 / 56% (54%) | 51 / 67 / 43 / 43 / 56% (52%) |
 
-- **Classic matches** after trimming *Bishop Battery*, *The Classic Set* and *The Iron Crown* (a queen to a rook, a rook to a bishop) and setting *Skirmishers* and *Rook Rollers* between their too-easy and too-hard versions.
-- **Growing is still about 11 points too easy.** By army (hand-made, Growing seed 13): *The Pawn Wall* 67%, *Twin Knights* 75%, *The Little Zoo* 71%, *Rook Guard* 72%, *The Light Brigade* 74%, *Cannon Fort* 63%, *The Bishops' Council* 76%, *Heavy Metal* 62%, *The Dragon Court* 70%, *The Classic Set* 64%, *The Fortress Wall* 70%, *The Chancellor's Guard* 57%, *The Royal Army* 90%, *Queen's Gambit* 71%, *The Grand Menagerie* 62% (each ±9).
-- With half of fitting battles hand-made (`DAILY_POOL_SHARE`), a Growing day comes out about 5 points easier than with drafted armies only.
+- **Classic matched** after trimming *Bishop Battery*, *The Classic Set* and *The Iron Crown* (a queen to a rook, a rook to a bishop) and setting *Skirmishers* and *Rook Rollers* between their too-easy and too-hard versions.
+- **Growing was about 11 points too easy.**
+
+**Second pass (Growing).** `--pool-battle N` uses hand-made armies only in battle N and stops after it, so the battles before it go exactly as with drafted armies (`--daily --battles N` on the same seed is the baseline) and battle N reads on its own. In isolation battles 4 and 5 were fine (55% against 59%, 63% against 67%; *The Royal Army*'s 90% came from easy earlier battles); battles 1–3 were 18, 5 and 9 points too easy.
+- **Battle 1 is about points, not layout.** Seven candidates at once (seed 21, 1,400 games, drafted 49%): 10 points 79%, 11 points 53–64%, 13 points 32–35%, 14 points 13–44%. The drafter's battle 1 armies are a full pawn row behind one strong piece (a Rook, Chancellor, Archbishop or Wildebeest). Now: *The Pawn Wall* (N, R, 5 pawns, 13), *Twin Knights* (11), *The Little Zoo* (Ferz, Camel, Man, Berolina pawns; 11) and a new *Lone Chancellor* (14).
+- **Battles 1–3 use fairy pieces freely:** their boards only come up on fairy days, and standard armies there lost to the drafter's fusion pieces even at the top of their budget (*Heavy Metal* with two Queens: 73% at 40 points). *Heavy Metal* is now Cannon, Archbishop, Queen and Chancellor; *The Bishops' Council* has two Dragon Horses. *Cannon Fort* trimmed to 22, *Rook Guard* raised to 25.
+
+**Now**, Growing Normal, fairy, 300 gauntlets; battles 1–5:
+
+| Seed | Hand-made | Drafted | Wins / 5 |
+|---|---|---|---|
+| 21 | 50 / 53 / 60 / 55 / 63% (56%) | 47 / 58 / 56 / 56 / 66% (57%) | 2.80 / 2.83 |
+| 23 | 48 / 55 / 60 / 59 / 61% (57%) | 42 / 61 / 58 / 57 / 69% (57%) | 2.83 / 2.87 |
+
+- Every army between 30% and 74% over the two seeds (±11 each): hardest *The Pawn Wall* (30–38%), easiest *The Royal Army* (64–74%) and *The Bishops' Council* (66–71%).
+- Classic's armies didn't change in this pass.
 
 ## Problems found
 

@@ -91,6 +91,8 @@ const { values: opts } = parseArgs({
     'daily-interest': { type: 'string' },
     'daily-bonus': { type: 'string' },
     pool: { type: 'boolean', default: false },
+    'pool-battle': { type: 'string' },
+    battles: { type: 'string' },
   },
 });
 
@@ -104,10 +106,17 @@ const DAILY_INTEREST = opts['daily-interest'] ? Number(opts['daily-interest']) :
 /** Flat gold on top of each daily battle's income. */
 const DAILY_BONUS = opts['daily-bonus'] ? Number(opts['daily-bonus']) : DAILY_BATTLE_BONUS;
 /** `--daily --pool`: the AI fields a hand-made army (dailyPool.ts) whenever one was built for the battle and board. */
-const POOL = opts.pool === true;
+/**
+ * `--battles N` (with `--daily`) plays only the first N battles. `--pool-battle N`: hand-made armies only in battle N, drafted ones before it, and stop after it. The
+ * earlier battles then go exactly as in `--daily` on the same seed, so battle N compares directly.
+ */
+const POOL_BATTLE = opts['pool-battle'] ? Number(opts['pool-battle']) : null;
+const POOL = opts.pool === true || POOL_BATTLE !== null;
 if (POOL && !DAILY) throw new Error('--pool needs --daily');
 const ROUND_LIST = DAILY
-  ? Array.from({ length: DAILY_BATTLES }, (_, i) => dailyRound(i + 1))
+  ? Array.from({ length: POOL_BATTLE ?? (opts.battles ? Number(opts.battles) : DAILY_BATTLES) }, (_, i) =>
+      dailyRound(i + 1),
+    )
   : Array.from({ length: Number(opts.rounds) }, (_, i) => i + 1);
 const ROUNDS = ROUND_LIST.length;
 const RUNS = Number(opts.games);
@@ -288,14 +297,15 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     let aiArmyStyle = aiStyle;
     let poolStart: ReturnType<typeof startPosition> | null = null;
     let poolId: string | undefined;
-    const hand = POOL
-      ? DAILY_POOL.filter(
-          (a) =>
-            a.battle === ROUND_LIST.indexOf(round) + 1 &&
-            poolBoard(a) === spec &&
-            (AI_FAIRY || a.rows.join('').match(/^[KQRBNP.]+$/)),
-        )
-      : [];
+    const hand =
+      POOL && (POOL_BATTLE === null || ROUND_LIST.indexOf(round) + 1 === POOL_BATTLE)
+        ? DAILY_POOL.filter(
+            (a) =>
+              a.battle === ROUND_LIST.indexOf(round) + 1 &&
+              poolBoard(a) === spec &&
+              (AI_FAIRY || a.rows.join('').match(/^[KQRBNP.]+$/)),
+          )
+        : [];
     if (hand.length > 0) {
       const army = hand[randomInt(rng, hand.length)];
       poolId = army.id;

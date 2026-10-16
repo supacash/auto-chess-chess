@@ -22,9 +22,10 @@ export interface PoolArmy {
 
 export const DAILY_POOL: PoolArmy[] = [
   // Battle 1: 5×5, about 12 points (Classic 8×8: about 11).
-  { id: 'pawn-wall', name: 'The Pawn Wall', battle: 1, style: 'fortress', rows: ['N.K.B', 'PPPPP'] },
-  { id: 'twin-knights', name: 'Twin Knights', battle: 1, style: 'cavalry', rows: ['NBK.N', '.PPP.'] },
-  { id: 'little-zoo', name: 'The Little Zoo', battle: 1, style: 'menagerie', rows: ['FWKFM', 'EPLPE'] },
+  { id: 'pawn-wall', name: 'The Pawn Wall', battle: 1, style: 'fortress', rows: ['N.K.R', 'PPPPP'] },
+  { id: 'twin-knights', name: 'Twin Knights', battle: 1, style: 'cavalry', rows: ['N.K.N', 'PPPPP'] },
+  { id: 'lone-chancellor', name: 'The Lone Chancellor', battle: 1, style: 'heavy', rows: ['.WK.C', 'EEPEE'] },
+  { id: 'little-zoo', name: 'The Little Zoo', battle: 1, style: 'menagerie', rows: ['FLK.M', 'EEPEE'] },
   {
     id: 'skirmishers',
     name: 'Skirmishers',
@@ -33,9 +34,9 @@ export const DAILY_POOL: PoolArmy[] = [
     rows: ['...K....', '.N....N.', '.PPPPP..'],
   },
   // Battle 2: 6×6, about 23 points (Classic: about 22).
-  { id: 'rook-guard', name: 'Rook Guard', battle: 2, style: 'heavy', rows: ['R.KQ.R', 'PPPPP.'] },
+  { id: 'rook-guard', name: 'Rook Guard', battle: 2, style: 'heavy', rows: ['R.KQ.R', 'PPPPPP'] },
   { id: 'light-brigade', name: 'The Light Brigade', battle: 2, style: 'cavalry', rows: ['BNK.NB', 'PNPPNP'] },
-  { id: 'cannon-fort', name: 'Cannon Fort', battle: 2, style: 'fortress', rows: ['XMKWFX', 'PMPPMP'] },
+  { id: 'cannon-fort', name: 'Cannon Fort', battle: 2, style: 'fortress', rows: ['XMKLFX', 'PMPPMP'] },
   {
     id: 'rook-rollers',
     name: 'Rook Rollers',
@@ -44,8 +45,8 @@ export const DAILY_POOL: PoolArmy[] = [
     rows: ['R..K...R', '...Q....', '.PPPP...'],
   },
   // Battle 3: 7×7, about 38 points (Classic: about 37).
-  { id: 'bishops-council', name: 'The Bishops’ Council', battle: 3, style: 'balanced', rows: ['RNBKBNR', 'PPPQPPP'] },
-  { id: 'heavy-metal', name: 'Heavy Metal', battle: 3, style: 'heavy', rows: ['RBQK.QR', 'PPPPPP.'] },
+  { id: 'bishops-council', name: 'The Bishops’ Council', battle: 3, style: 'balanced', rows: ['RHBKBHR', 'PPPRPPP'] },
+  { id: 'heavy-metal', name: 'Heavy Metal', battle: 3, style: 'heavy', rows: ['XAQK.CR', 'PPPEPPP'] },
   { id: 'dragon-court', name: 'The Dragon Court', battle: 3, style: 'menagerie', rows: ['DA.K.HU', 'EPMPMPE'] },
   {
     id: 'bishop-battery',
