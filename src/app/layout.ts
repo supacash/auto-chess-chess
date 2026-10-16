@@ -3,6 +3,7 @@ import { DIFFICULTIES, SIDES } from '../rules/difficulty';
 import { START_HP } from '../multi/match';
 import { REROLL_COST } from '../rules/economy';
 import { MODES } from '../rules/mode';
+import { guideTabs } from './guideScreen';
 import { SPEEDS, VOLUME_MAX, VOLUME_MIN, VOLUME_STEP } from './settings';
 
 /** The credits' engine line (Settings, About). A `fairy` build ships Fairy-Stockfish, which is GPLv3: credit it and link its source. */
@@ -41,6 +42,7 @@ export function renderLayout(root: HTMLElement): void {
       </button>
       <button type="button" id="menu-multiplayer">Multiplayer</button>
       <button type="button" id="menu-profile">Profile</button>
+      <button type="button" id="menu-guide">Piece guide</button>
       <button type="button" id="menu-settings">Settings</button>
     </div>
     <button type="button" id="menu-replay" class="link-button" hidden>Review your last battle</button>
@@ -130,6 +132,30 @@ export function renderLayout(root: HTMLElement): void {
     <div id="profile-body" class="profile-body"></div>
     <div class="actions">
       <button type="button" id="profile-back" class="primary">Back to menu</button>
+    </div>
+  </section>
+
+  <!-- The Piece guide (guideScreen.ts): over whatever is on screen, from the menu or a piece panel. -->
+  <section id="guide" class="guide" hidden aria-labelledby="guide-title">
+    <div class="guide-inner">
+      <div class="profile-head">
+        <img class="profile-logo" src="${import.meta.env.BASE_URL}logo.svg" alt="" width="52" height="52" />
+        <div>
+          <h2 class="profile-name" id="guide-title">Piece guide</h2>
+          <p class="dialog-text muted">Every piece you can meet: how it moves, what it's worth and how to get it.</p>
+        </div>
+      </div>
+      <div class="tabs" id="guide-tabs" role="tablist">${guideTabs()}</div>
+      <ul class="guide-legend" aria-label="Diagram marks">
+        <li><span class="md light md-any"></span>Moves or captures</li>
+        <li><span class="md light md-move"></span>Moves only</li>
+        <li><span class="md light md-capture"></span>Captures only</li>
+        <li><span class="md light md-hop"></span>Lands by hopping</li>
+      </ul>
+      <div id="guide-body" class="profile-body"></div>
+      <div class="actions">
+        <button type="button" id="guide-back" class="primary">Back</button>
+      </div>
     </div>
   </section>
 

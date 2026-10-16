@@ -28,6 +28,7 @@ import { LobbyScreen } from './app/lobbyScreen';
 import { MatchController } from './app/matchController';
 import { PrestigeDialog } from './app/prestigeDialog';
 import { ProfileScreen } from './app/profileScreen';
+import { GuideScreen } from './app/guideScreen';
 import { RecordBook } from './app/recordBook';
 import { Session } from './app/session';
 import { loadRules } from './chess/loadRules';
@@ -131,6 +132,11 @@ $('#menu-profile').addEventListener('click', () => {
   $('#menu').hidden = true;
   profile.show();
 });
+const guide = new GuideScreen();
+$('#menu-guide').addEventListener('click', () => guide.open());
+// "How it moves" in a piece panel opens the guide on that piece; it closes when the shop does (a match's timer).
+placement.onGuide = (type) => guide.open(type);
+placement.onHide = () => guide.close();
 const settingsScreen = new SettingsScreen(() => showMenu());
 $('#menu-settings').addEventListener('click', () => {
   $('#menu').hidden = true;

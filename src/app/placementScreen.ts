@@ -92,6 +92,10 @@ export class PlacementScreen {
   onAchievements: ((ids: AchievementId[]) => void) | null = null;
   /** Called with pieces for a career collection (fairy pieces fielded, fusions made). */
   onCollect: ((kind: keyof Collections, types: PieceType[]) => void) | null = null;
+  /** Opens the Piece guide on a piece ("How it moves" in a piece panel). */
+  onGuide: ((type: PieceType) => void) | null = null;
+  /** Called when the screen is hidden (the guide closes with it). */
+  onHide: (() => void) | null = null;
   /** Rerolls this round (Shopaholic), and the round they're for. */
   private rerolls = { round: 0, count: 0 };
 
@@ -129,6 +133,15 @@ export class PlacementScreen {
       this.setMessage('');
       this.piecesChanged(pieces);
     });
+    // "How it moves" in any of the piece panels opens the Piece guide on that piece.
+    for (const id of ['#piece-actions', '#offer-detail', '#opponent-info']) {
+      $(id).addEventListener('click', (e) => {
+        const link = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-guide]');
+        if (!link) return;
+        e.stopImmediatePropagation();
+        this.onGuide?.(link.dataset.guide as PieceType);
+      });
+    }
     $('#piece-actions').addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
       if (!btn) return;
@@ -261,6 +274,7 @@ export class PlacementScreen {
 
   hide(): void {
     this.section.hidden = true;
+    this.onHide?.();
   }
 
   /** Redraws just the shop (offers left in the shared pool changed). */
@@ -379,7 +393,7 @@ export class PlacementScreen {
       el.classList.toggle('active', el.dataset.foe === type);
     }
     if (!type) return;
-    info.innerHTML = `<span class="panel-head">${moveDiagram(type, 'b')}<span><strong>${PIECE_NAME[type]}</strong> · ${about(type)}</span></span>`;
+    info.innerHTML = `<span class="panel-head">${moveDiagram(type, 'b')}<span><strong>${PIECE_NAME[type]}</strong> · ${about(type)} ${guideLink(type)}</span></span>`;
   }
 
   private deselectPiece(): void {
@@ -449,7 +463,7 @@ export class PlacementScreen {
     const disabled = gold < price || full || soldOut ? 'disabled' : '';
     const text = isAffinityOffer(offer) ? affinityText(offer[1] as Affinity, pieces) : about(offer);
     detail.innerHTML =
-      `<div class="panel-head">${offerDiagram(offer)}<p><strong>${offerName(offer)}</strong> · ${text}</p>${CLOSE_BUTTON}</div>` +
+      `<div class="panel-head">${offerDiagram(offer)}<p><strong>${offerName(offer)}</strong> · ${text} ${guideLink(isAffinityOffer(offer) ? 'P' : offer)}</p>${CLOSE_BUTTON}</div>` +
       `<button type="button" class="primary" data-buy ${disabled}>${soldOut ? 'Sold out' : full ? 'Bench full' : gold < price ? `Need ${price}g` : `Buy · ${price}g`}</button>`;
   }
 
@@ -538,7 +552,7 @@ export class PlacementScreen {
         }`;
     const icon = moveDiagram(piece.type, 'w', piece.affinity);
     actions.innerHTML =
-      `<div class="panel-head">${icon}<p class="piece-info"><strong>${pieceName(piece)}</strong> · ${info}</p>${CLOSE_BUTTON}</div>` +
+      `<div class="panel-head">${icon}<p class="piece-info"><strong>${pieceName(piece)}</strong> · ${info} ${guideLink(piece.type)}</p>${CLOSE_BUTTON}</div>` +
       `<div class="panel-buttons">${fusions}${rooks}${pawnFusions}${upgrades}${sell}</div>`;
   }
 
@@ -583,6 +597,11 @@ function act(main: string, note: string): string {
 function aName(type: PieceType): string {
   const name = PIECE_NAME[type];
   return `${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}`;
+}
+
+/** Opens the Piece guide on `type`'s entry. */
+function guideLink(type: PieceType): string {
+  return `<button type="button" class="guide-link" data-guide="${type}">How it moves</button>`;
 }
 
 /** Closes the sheet over the fight buttons (deselects the offer or piece). */
