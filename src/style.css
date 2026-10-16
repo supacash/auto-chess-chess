@@ -2235,6 +2235,20 @@ button.icon-button[aria-pressed="false"] {
   box-shadow: 0 5px 0 var(--shade);
 }
 
+/* The daily challenge: gold, like a reward waiting; greyed once today's is done. */
+.menu-buttons button.daily {
+  color: var(--ink);
+  background: var(--gold);
+  --shade: var(--gold-shadow);
+  box-shadow: 0 5px 0 var(--shade);
+}
+
+.menu-buttons button.daily.done {
+  color: var(--muted);
+  background: var(--raised);
+  box-shadow: none;
+}
+
 .menu-buttons button small {
   display: block;
   margin-top: 2px;
@@ -3182,4 +3196,15 @@ button.tip-close:active:not(:disabled) {
     width: 56px;
     height: 56px;
   }
+}
+
+/* Daily challenge: the link to the whole gauntlet, and the battle that's up now. */
+.gauntlet-open {
+  display: block;
+  margin: -4px auto 6px;
+  font-size: 0.85rem;
+}
+
+.gauntlet-battle.current h3 {
+  color: var(--gold);
 }

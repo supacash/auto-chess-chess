@@ -1,5 +1,5 @@
 import { type BoardSpec, plyLimit } from '../chess/boardSpec';
-import { FINAL_ROUND, bestStreak, type RoundLog } from '../rules/run';
+import { DAILY_BATTLES, DAILY_ROUND_STEP, FINAL_ROUND, bestStreak, type RoundLog } from '../rules/run';
 import type { Color } from '../chess/fen';
 import { Game, type Move } from '../chess/rules';
 import { mirrorFen, mirrorSquare, parsePlacement, royalCaptured } from '../chess/fen';
@@ -721,7 +721,30 @@ export class BattleScreen {
     const r = outcome.record;
     const record = `${r.w}–${r.l}${r.d ? `–${r.d}` : ''}`;
     const bestTile = outcome.newBest ? tile('New!', 'Best', 'tone-gold') : tile(String(best), 'Best');
-    if (outcome.won) {
+    const day = outcome.daily;
+    if (day) {
+      $('#result-title').textContent = day.w === DAILY_BATTLES ? '🏆 Gauntlet cleared!' : 'Daily challenge done';
+      $('#result-detail').textContent =
+        `${summary} ${day.w}/${DAILY_BATTLES} won · ${day.gold} gold left. A new challenge comes at midnight UTC.`;
+      this.showStats(
+        tile(String(day.score), 'Score', 'tone-gold') +
+          tile(record, 'W–L–D', 'tone-teal') +
+          tile(`🔥 ${outcome.dailyStreak ?? 1}`, 'Day streak', 'tone-hearts'),
+      );
+      $('#next').textContent = 'Menu';
+      if (day.w === DAILY_BATTLES) throwConfetti($('#confetti'), 60);
+    } else if (outcome.isDaily && !outcome.over) {
+      const title = winner === 'w' ? 'Victory' : winner === 'b' ? 'Defeat' : 'Draw';
+      $('#result-title').textContent = wonOnPoints(result) || reason === 'move-limit' ? `${title} on points` : title;
+      $('#result-detail').textContent = summary;
+      this.showStats(
+        tile(`+${outcome.income}g`, 'Gold', 'tone-gold') +
+          tile(`${outcome.playedRound / DAILY_ROUND_STEP}/${DAILY_BATTLES}`, 'Battle', 'tone-hearts') +
+          tile(record, 'W–L–D', 'tone-teal'),
+      );
+      $('#next').textContent = 'Next battle';
+      if (winner === 'w') throwConfetti($('#confetti'), 26);
+    } else if (outcome.won) {
       $('#result-title').textContent = '🏆 Run complete!';
       $('#result-detail').textContent = `${summary} You got through all ${FINAL_ROUND} rounds.`;
       this.showStats(

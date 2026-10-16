@@ -36,7 +36,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
   - **Dynasty** (fairy): a second Heir, and each Heir crowned pays 9 gold back. The first prestige of a fairy run always offers it.
   - **Bazaar** (fairy): fusion pieces show up in the shop, priced at what their parts cost.
   The header shows ★N; the Profile shows the highest prestige. Single player only.
-- **Main menu** (the landing screen, and *Menu* in the header): *Resume game* (shown while a run or a Play it game is in progress, with its round and lives), *New game*, *Multiplayer*, and *Review your last battle*. A battle interrupted by a reload is reported here.
+- **Main menu** (the landing screen, and *Menu* in the header): *Resume game* (shown while a run or a Play it game is in progress, with its round and lives), *New game*, *Daily challenge* (see Daily challenge), *Multiplayer*, and *Review your last battle*. A battle interrupted by a reload is reported here.
 - **New run window** (opens from *New game*) sets the run's settings, which are fixed for the whole run:
   - **Board (game mode):** *Growing board* (default; 5×5 growing to 9×9, see Board sizes) or *Classic* (8×8 throughout).
   - **Difficulty:** how fast the AI's budget grows: Easy 5.35×round, Normal 5.5×round (default), Hard 6×round, times the ramp. Easy about matches a typical player (the simulator's stand-in matched it point for point over 25 rounds); Normal sits a little above; Hard is the real test. 5.75 / 6.25 suited a strong player but walled the stand-in (Normal 14% wins). The simulator's stand-in builds worse than people, so its win rates (SIMULATION.md §16) understate the difficulty.
@@ -211,12 +211,28 @@ Live, TFT-style matches for 4 players. Everything that decides a match is determ
 - **Rejoining:** each device saves its side of an online match (room, shop, gold, streak). After a reload, or after leaving, the menu offers *Rejoin match* while the match is on and the player is still in it (saves older than 6 hours aren't offered). A match started on another version of the game (RULES_VERSION) can't be rejoined: this phone would compute its battles differently. A player who missed rounds gets base income for each one (their last army fought them) and their streak starts over; one who rejoins mid-battle plays their battle, or waits if they had already finished it.
 - **Quick play:** any rules (Classic or Growing board, standard or Fairy pieces, with or without Blitz). It takes a seat in an open quick play room with the same rules, fullest first, or makes one. A quick room has no code to share and no host button: it starts by itself once 4 people are in, or 30 seconds after the last person joined, with bots in the empty seats (anyone in the room may start it when it's due). Rooms nobody joined in the last 40 seconds aren't joined (they've started, or were abandoned). If two people make rooms at the same moment, someone still alone in the newer room moves to the older one.
 
+## Daily challenge
+A short daily gauntlet, the same for every player: five battles against armies fixed for the day, with a day streak. The puzzle is spending your gold to beat armies you can see coming.
+- **The five armies:** for now drafted and placed by the AI drafter from the day's seed (the UTC date plus RULES_VERSION, so a rules update starts a fresh challenge instead of quietly changing today's). All five are shown in full, pieces and squares, from the start: placement shows the current one (as with Reveal) and *Today's gauntlet* lists all five on their home rows, with the results so far. (A battle that would start with both kings in check re-places the army from the day's seed, so its squares can differ from the preview.)
+- **Steeper than a run:** the battles use the Normal budgets of rounds 2, 4, 6, 8 and 10, on the Growing boards for those rounds (5×5, 6×6, 7×7, 8×8, 9×9), so five battles cover a whole run's arc. You start with King + 3 pawns and the mode's starting gold +6 (about what round 1 of a run pays), and each battle pays two rounds' income (2 × (5, +2 a win, +1 a draw)) plus interest once. These are starting values: tuning them with the simulator so a good player can win all five is still to do.
+- **Same shops for everyone:** each battle's shop, and each reroll, comes from its own stream of the day's seed, as does each battle's seed, so your choices never change what later battles bring.
+- **Every battle is played** (no lives). **Score:** 100 per win, 50 per draw, plus the gold left after the fifth battle (shown as "4/5 won · 12 gold left").
+- **Weekday themes** (UTC): Mon *Classic* (8×8 every battle, standard pieces) · Tue *Growing* (the default, fairy pieces on) · Wed *Menagerie* (every opponent a Menagerie army) · Thu *Black* (you play Black) · Fri *Fortress* (every opponent a Fortress) · Sat *Hard* (Hard budgets) · Sun *Play yourself* (you move your own pieces).
+- **One attempt a day.** The daily is saved separately from normal runs (its own save, `acc.daily.v1`) and resumed like one; leaving mid-battle counts as a loss, as in a run. No prestige, no extra-life ad. A daily started before midnight can still be finished afterwards, and counts for the day it was started; today's opens once it's done. Its battles count toward the Fun stats and battle achievements, not toward the Single tab's per-mode records or run achievements.
+- **Streak:** finishing the day's gauntlet (any score) keeps it; missing a UTC day resets it. Best streak is kept.
+- **Reset:** UTC midnight, so everyone's day is the same day (needed for leaderboards later).
+- **Menu:** a *Daily challenge* entry under New game, with today's theme and status (the theme / "Resume · battle 3/5" / "Done today · 412 points"; greyed out once done) and the streak (🔥 4).
+- **Header:** "Daily 2/5", the theme in place of the lives, and the score so far ("Score 200 + gold").
+- **Profile:** a *Daily* tab: current and best streak, days played, best and average score, and the last 14 days.
+- **Records:** every finished day (date, theme, score, record, gold left), one per date; streaks are worked out from them, and syncing merges the days from both devices.
+- **Later:** a hand-made pool of armies for the day's seed to pick from, in place of the drafter; online leaderboards (they need the backend: one score per player per day, checked against the rules version).
+
 ## Roadmap
-Done: reproducible seeded battles, RULES_VERSION, army snapshots, replays, browser smoke tests in CI, game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as.
+Done: reproducible seeded battles, RULES_VERSION, army snapshots, replays, browser smoke tests in CI, game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as, the daily challenge.
 
 Next candidates (not yet decided):
 1. **Multiplayer:** balance runs for 4-player matches (see Multiplayer).
-2. **Daily challenges:** one seed for everyone (battles are already seeded and reproducible).
+2. **Daily challenge follow-ups:** tune its gold with the simulator; a hand-made army pool; online leaderboards.
 3. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
 4. **Bigger boards** past 8×8, with a longer move limit.
 

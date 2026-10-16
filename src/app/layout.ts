@@ -38,6 +38,9 @@ export function renderLayout(root: HTMLElement): void {
         Rejoin match<small id="menu-rejoin-detail"></small>
       </button>
       <button type="button" id="menu-new" class="teal">New game</button>
+      <button type="button" id="menu-daily" class="daily">
+        Daily challenge<small id="menu-daily-detail"></small>
+      </button>
       <button type="button" id="menu-multiplayer">Multiplayer</button>
       <button type="button" id="menu-profile">Profile</button>
     </div>
@@ -69,6 +72,7 @@ export function renderLayout(root: HTMLElement): void {
         <button type="button" id="tip-close" class="tip-close" aria-label="Dismiss tip">×</button>
       </div>
       <p class="opponent" id="opponent"></p>
+      <button type="button" id="gauntlet-open" class="link-button gauntlet-open" hidden>Today’s gauntlet: all 5 armies</button>
       <p class="opponent-info" id="opponent-info" role="status" hidden></p>
     </div>
     <div id="board-root"></div>
@@ -118,6 +122,7 @@ export function renderLayout(root: HTMLElement): void {
     </div>
     <div class="tabs" id="profile-tabs" role="tablist">
       <button type="button" role="tab" data-tab="single">Single</button>
+      <button type="button" role="tab" data-tab="daily">Daily</button>
       <button type="button" role="tab" data-tab="multi">Multiplayer</button>
       <button type="button" role="tab" data-tab="history">History</button>
       <button type="button" role="tab" data-tab="fun">Fun</button>
@@ -245,6 +250,15 @@ export function renderLayout(root: HTMLElement): void {
       <h2 id="scout-title"></h2>
       <p class="dialog-text muted" id="scout-status"></p>
       <div id="scout-body"></div>
+      <button type="submit" value="close" class="primary">Close</button>
+    </form>
+  </dialog>
+
+  <dialog id="gauntlet-dialog" aria-labelledby="gauntlet-title">
+    <form method="dialog" class="new-run-form scout">
+      <h2 id="gauntlet-title">Today’s gauntlet</h2>
+      <p class="dialog-text muted" id="gauntlet-status"></p>
+      <div id="gauntlet-body"></div>
       <button type="submit" value="close" class="primary">Close</button>
     </form>
   </dialog>

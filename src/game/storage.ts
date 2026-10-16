@@ -5,7 +5,7 @@ import { isModeId, type ModeId } from '../rules/mode';
 import { isOffer, type Offer, OFFER_COUNT, type Shop } from '../rules/economy';
 import { isAffinity, isPieceType, type Piece } from '../rules/pieces';
 import { isPerkId } from '../rules/prestige';
-import type { RoundLog, Run } from '../rules/run';
+import type { DailyRun, RoundLog, Run } from '../rules/run';
 import { TIPS, type TipId } from './tips';
 import type { ManualState } from './manualBattle';
 import { type BattleRecord, parseRecord } from './record';
@@ -25,6 +25,12 @@ const REPLAY_KEY = 'acc.replay.v1';
 const BEST_KEY = 'acc.best.v1';
 /** The online match in progress (see SavedMatch). */
 const MATCH_KEY = 'acc.match.v1';
+/** The daily challenge in progress, kept apart from the normal run (see daily.ts). */
+const DAILY_KEY = 'acc.daily.v1';
+
+/** Which save: the normal run, or the daily challenge. */
+export type SaveSlot = 'run' | 'daily';
+const slotKey = (slot: SaveSlot) => (slot === 'daily' ? DAILY_KEY : RUN_KEY);
 
 /** Current save format. Bump it and add a MIGRATIONS step whenever SavedGame changes shape. */
 export const SAVE_VERSION = 3;
@@ -43,18 +49,18 @@ export interface SavedGame {
 // Storage can be missing or throw (private mode, blocked site data), so every access is guarded
 // and the game works without it.
 
-export function loadGame(): SavedGame | null {
+export function loadGame(slot: SaveSlot = 'run'): SavedGame | null {
   try {
-    const raw = localStorage.getItem(RUN_KEY);
+    const raw = localStorage.getItem(slotKey(slot));
     return raw ? parseSave(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
 }
 
-export function saveGame(game: SavedGame): void {
+export function saveGame(game: SavedGame, slot: SaveSlot = 'run'): void {
   try {
-    localStorage.setItem(RUN_KEY, JSON.stringify(game));
+    localStorage.setItem(slotKey(slot), JSON.stringify(game));
   } catch {
     // ignore
   }
@@ -176,9 +182,9 @@ export function dismissTip(id: TipId): void {
   }
 }
 
-export function clearGame(): void {
+export function clearGame(slot: SaveSlot = 'run'): void {
   try {
-    localStorage.removeItem(RUN_KEY);
+    localStorage.removeItem(slotKey(slot));
   } catch {
     // ignore
   }
@@ -301,6 +307,7 @@ export function parseSave(raw: unknown): SavedGame | null {
       perks: Array.isArray(run.perks) ? run.perks.filter(isPerkId) : [],
       ...parseFreeRerolls(run),
       ...parseHistory(run.history),
+      ...parseDaily(run.daily),
     },
     ai: { styleId: ai.styleId, pieces: aiPieces },
     ...(data.battleInProgress === true ? { battleInProgress: true } : {}),
@@ -331,6 +338,13 @@ function parseHistory(data: unknown): { history?: RoundLog[] } {
     .slice(-60)
     .map((h) => ({ you: h.you, them: h.them, winner: h.winner }));
   return { history };
+}
+
+/** The daily challenge's date and theme (daily.ts), when the save is one. */
+function parseDaily(data: unknown): { daily?: DailyRun } {
+  if (!isObject(data) || typeof data.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.date)) return {};
+  if (typeof data.theme !== 'string') return {};
+  return { daily: { date: data.date, theme: data.theme, rerolls: isCount(data.rerolls, 0) ? data.rerolls : 0 } };
 }
 
 const UCI_MOVE = /^[a-z]\d+[a-z]\d+[a-z]?$/;

@@ -238,6 +238,7 @@ export class PlacementScreen {
     this.fightBtn.textContent = match ? 'Ready' : 'Auto fight';
     this.section.hidden = false;
     $('#last-replay').hidden = !this.session.lastReplay;
+    $('#gauntlet-open').hidden = match || !this.session.run.daily;
     const spec = this.session.board;
     const grew = this.shownBoard !== null && this.shownBoard !== spec.variant;
     this.shownBoard = spec.variant;

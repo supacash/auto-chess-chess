@@ -1,5 +1,6 @@
 import { difficulty } from '../rules/difficulty';
-import { FINAL_ROUND, maxLives, runScore } from '../rules/run';
+import { dailyBattle, dailyScore, themeById } from '../rules/daily';
+import { DAILY_BATTLES, FINAL_ROUND, maxLives, runScore } from '../rules/run';
 import { $ } from './dom';
 import type { Session } from './session';
 
@@ -10,6 +11,17 @@ const HEART = '♥︎';
 export function renderHeader(session: Session, round = session.run.round, color = session.run.color): void {
   const { lives, record, settings } = session.run;
   const spec = session.boardOf(round);
+  if (session.run.daily) {
+    // The daily challenge: battle n of 5 and its theme instead of lives; the score so far (gold left counts at the end).
+    $('#round').textContent = `Daily ${dailyBattle(round)}/${DAILY_BATTLES}`;
+    const livesEl = $('#lives');
+    livesEl.textContent = themeById(session.run.daily.theme).name;
+    livesEl.setAttribute('aria-label', `Theme: ${livesEl.textContent}`);
+    $('#board-size').textContent = `${spec.files}×${spec.ranks} · ${color === 'w' ? 'White' : 'Black'}`;
+    $('#record').textContent = `${record.w}W ${record.l}L ${record.d}D`;
+    $('#best').textContent = `Score ${dailyScore(record, 0)} + gold`;
+    return;
+  }
   const star = session.run.prestige > 0 ? ` ★${session.run.prestige}` : '';
   $('#round').textContent = `Round ${round}/${FINAL_ROUND}${star}`;
   const most = maxLives(session.run.perks);

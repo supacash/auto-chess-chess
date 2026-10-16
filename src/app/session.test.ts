@@ -58,7 +58,7 @@ describe('Session', () => {
     const again = new Session(seededRng(2));
     expect(again.restore().firstVisit).toBe(false);
     expect(again.run).toEqual(s.run);
-    expect(again.aiPieces).toEqual(s.aiPieces);
+    expect(army(again.aiPieces)).toEqual(army(s.aiPieces));
   });
 
   it('builds a legal start position and advances the round after a battle', () => {
@@ -185,5 +185,91 @@ describe('Session', () => {
     const outcome = s.finishBattle(result('b'));
     expect(outcome).toMatchObject({ over: true, won: true, playedRound: FINAL_ROUND, score: 20 });
     expect(isRunOver(s.run)).toBe(true);
+  });
+});
+
+/** An army's pieces and squares (piece ids differ from draft to draft). */
+const army = (pieces: readonly { type: string; square: unknown }[]) => pieces.map((p) => [p.type, p.square]);
+
+describe('Session: daily challenge', () => {
+  const at = (iso: string) => () => Date.parse(iso);
+
+  /** Today's daily, started, with the king placed; `device` false keeps this device's storage (another player's otherwise). */
+  function daily(seed: number, now = at('2026-10-16T09:00:00Z'), device = true): Session {
+    if (device) (globalThis as { localStorage?: unknown }).localStorage = new MemoryStorage();
+    const s = new Session(seededRng(seed), 'daily', now);
+    s.restore();
+    expect(s.startDaily(false)).toBe(true);
+    s.setPieces(s.run.shop.pieces.map((p) => (p.type === 'K' ? { ...p, square: { file: 2, rank: 0 } } : p)));
+    return s;
+  }
+
+  it('gives everyone the same first opponent, shop, rerolls and battle seed on a date, whatever their Rng', () => {
+    const a = daily(1);
+    const b = daily(999, at('2026-10-16T23:00:00Z'));
+    expect(army(b.aiPieces)).toEqual(army(a.aiPieces));
+    expect(b.aiStyle.id).toBe(a.aiStyle.id);
+    expect(b.run.shop.offers).toEqual(a.run.shop.offers);
+    expect(b.run.shop.gold).toBe(a.run.shop.gold);
+    expect(b.newSeed()).toBe(a.newSeed());
+    const ra = a.rerollOffers();
+    const rb = b.rerollOffers();
+    expect(ra.ok && rb.ok && rb.shop.offers).toEqual(ra.ok && ra.shop.offers);
+    // A different day is a different challenge.
+    const c = daily(1, at('2026-10-17T09:00:00Z'));
+    expect(army(c.aiPieces)).not.toEqual(army(a.aiPieces));
+  });
+
+  it('brings the same next opponent and shop whatever the player did before', () => {
+    const a = daily(1);
+    const b = daily(2);
+    if (b.run.shop.gold >= 2) {
+      const rerolled = b.rerollOffers(); // b rerolls before fighting; a doesn't
+      if (rerolled.ok) b.setShop(rerolled.shop);
+    }
+    a.finishBattle(result('w'));
+    b.finishBattle(result('b'));
+    expect(b.run.round).toBe(4);
+    expect(army(b.aiPieces)).toEqual(army(a.aiPieces));
+    expect(b.run.shop.offers).toEqual(a.run.shop.offers);
+    expect(b.board.files).toBe(6);
+  });
+
+  it('plays five battles with no lives lost, then records the day and keeps the normal run apart', () => {
+    const normal = ready();
+    normal.persist();
+    const s = daily(1, undefined, false);
+    let outcome = s.finishBattle(result('b'));
+    for (let i = 0; i < 3; i++) outcome = s.finishBattle(result('w'));
+    expect(outcome.isDaily).toBe(true);
+    expect(outcome.over).toBe(false);
+    expect(s.run.lives).toBe(3);
+    outcome = s.finishBattle(result('draw'));
+    expect(outcome.over).toBe(true);
+    expect(outcome.daily).toMatchObject({ date: '2026-10-16', w: 3, l: 1, d: 1, theme: 'fortress' });
+    expect(outcome.daily?.score).toBe(350 + s.run.shop.gold);
+    // Nothing left to resume, and one attempt a day.
+    const again = new Session(seededRng(1), 'daily', at('2026-10-16T10:00:00Z'));
+    again.restore();
+    expect(again.saved).toBe(false);
+    expect(again.startDaily(true)).toBe(false);
+    // The normal run is untouched.
+    const reloaded = new Session(seededRng(1));
+    reloaded.restore();
+    expect(reloaded.run.daily).toBeUndefined();
+    expect(reloaded.run.round).toBe(normal.run.round);
+  });
+
+  it('resumes a daily in progress from its own save', () => {
+    const s = daily(1);
+    s.finishBattle(result('w'));
+    const reloaded = new Session(seededRng(5), 'daily', at('2026-10-16T12:00:00Z'));
+    reloaded.restore();
+    expect(reloaded.saved).toBe(true);
+    expect(reloaded.run.daily?.date).toBe('2026-10-16');
+    expect(reloaded.run.round).toBe(4);
+    expect(army(reloaded.aiPieces)).toEqual(army(s.aiPieces));
+    expect(reloaded.startDaily(false)).toBe(false); // it's resumed, not restarted
+    expect(new Session(seededRng(1)).restore().firstVisit).toBe(true);
   });
 });

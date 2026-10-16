@@ -13,6 +13,23 @@ export const START_LIVES = 3;
  */
 export const FINAL_ROUND = 25;
 
+/** Battles in a daily challenge (see daily.ts). */
+export const DAILY_BATTLES = 5;
+/**
+ * A daily challenge's battles are every other round of a run (2, 4, 6, 8, 10: their budgets, boards
+ * and shops), so five battles cover a whole run's arc.
+ */
+export const DAILY_ROUND_STEP = 2;
+
+/** What makes a run the day's challenge: its date (which seeds it) and theme. */
+export interface DailyRun {
+  /** The UTC day, "2026-10-16". */
+  date: string;
+  theme: string;
+  /** Rerolls so far this battle: each one takes its own stream of the day's seed. */
+  rerolls: number;
+}
+
 /** Everything that persists across rounds of one run. */
 export interface Run {
   round: number;
@@ -34,6 +51,8 @@ export interface Run {
   history?: RoundLog[];
   /** True once the run has been revived (an extra life for a rewarded ad); it can't be again. */
   revived?: boolean;
+  /** Set when this is a daily challenge (daily.ts): no lives, five battles, its own save and records. */
+  daily?: DailyRun;
 }
 
 /** A battle in the run's history: the armies' points and how it went. */
@@ -105,7 +124,8 @@ export function applyResult(run: Run, winner: Winner): Run {
   if (winner === 'w') record.w++;
   else if (winner === 'b') record.l++;
   else record.d++;
-  const lives = winner === 'b' ? run.lives - 1 : run.lives;
+  // The daily challenge has no lives: every battle is played.
+  const lives = winner === 'b' && !run.daily ? run.lives - 1 : run.lives;
   return {
     ...run,
     record,
@@ -113,17 +133,20 @@ export function applyResult(run: Run, winner: Winner): Run {
     shop: { ...run.shop, gold: run.shop.gold + battleIncome(run, winner) },
     // Decided here, when a battle ends: a run saved past the final round (from before runs ended)
     // wins with its next battle rather than ending the moment it loads.
-    won: lives > 0 && record.w + record.l + record.d >= FINAL_ROUND,
+    won: !run.daily && lives > 0 && record.w + record.l + record.d >= FINAL_ROUND,
   };
 }
 
 /** Gold a battle pays: round income, Tithe, and interest on the gold saved before it (Banker's terms). */
 export function battleIncome(run: Run, winner: Winner): number {
+  // A daily battle stands for two rounds of a run, so it pays two rounds' income (interest once).
+  if (run.daily) return DAILY_ROUND_STEP * roundIncome(winner) + perkInterest(run.shop.gold, []);
   return roundIncome(winner) + extraIncome(run.perks) + perkInterest(run.shop.gold, run.perks);
 }
 
 /** Moves on to the next round, picking the player's colour for it. */
 export function nextRound(run: Run, rng: Rng = Math.random): Run {
+  if (run.daily) return { ...run, round: run.round + DAILY_ROUND_STEP, daily: { ...run.daily, rerolls: 0 } };
   return { ...run, round: run.round + 1, color: rollColor(run.settings.side, rng) };
 }
 
@@ -139,12 +162,13 @@ export function isRunWon(run: Run): boolean {
 
 /** True when the run has ended: out of lives, or won. */
 export function isRunOver(run: Run): boolean {
+  if (run.daily) return roundsPlayed(run) >= DAILY_BATTLES;
   return run.lives <= 0 || isRunWon(run);
 }
 
 /** True when a run lost on lives can be revived once with an extra life (a rewarded ad). */
 export function canRevive(run: Run): boolean {
-  return run.lives <= 0 && !isRunWon(run) && !run.revived;
+  return !run.daily && run.lives <= 0 && !isRunWon(run) && !run.revived;
 }
 
 /** Revives a run lost on lives: one life back, once per run. The round advances separately. */

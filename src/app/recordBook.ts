@@ -10,8 +10,10 @@ import {
   recordMatchEnd,
   recordRunEnd,
   recordAchievements,
+  recordDailyEnd,
   runKey,
 } from '../game/records';
+import type { DailyDay } from '../rules/daily';
 import { DIFFICULTIES, difficulty, type RunSettings } from '../rules/difficulty';
 import { gameMode, MODES } from '../rules/mode';
 import type { PieceType } from '../rules/pieces';
@@ -77,6 +79,16 @@ export class RecordBook {
 
   matchEnd(online: boolean, blitz: boolean, place: number): void {
     this.update(recordMatchEnd(this.records, matchKey(online, blitz), matchLabel(online, blitz), place, Date.now()));
+  }
+
+  /** A finished daily challenge. */
+  dailyEnd(day: DailyDay): void {
+    this.update(recordDailyEnd(this.records, day));
+  }
+
+  /** The recorded result of the daily challenge for `date`, if it was played. */
+  dailyOf(date: string): DailyDay | undefined {
+    return this.records.daily.find((d) => d.date === date);
   }
 
   bought(type: PieceType): void {
