@@ -10,23 +10,24 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { DRAWINGS } from './make-pieces.mjs';
-import { line, part, render } from './pieces/draw.mjs';
+import { part, render } from './pieces/draw.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-// The Knight wearing the Heir's crown, white with dark lines. The crown sits behind his ear: drawn
-// after the mane and before the head, without the band's line (the head covers that part).
+// The Knight wearing the Heir's crown, white with dark lines. The crown sits between his ear and his
+// mane, behind the ear: drawn in a layer of its own (with the mane) under the head, so the ear's
+// outline and lines stay in front. Its band is left out (the head would hide it).
+const PAINT = { fill: '#fff', line: '#111', detail: '#111' };
 const knight = part(DRAWINGS.N, 0.86, 9, 12);
+const CROWN = { cx: 62, base: 28, s: 0.36 };
 const crown = part(
-  { shapes: DRAWINGS.J.shapes, details: [line('M38 44C40 52 40 60 39.5 66'), line('M62 44C60 52 60 60 60.5 66')] },
-  0.36,
-  26,
-  7,
+  { shapes: DRAWINGS.J.shapes.slice(0, 2), details: DRAWINGS.J.details.slice(0, 2) },
+  CROWN.s,
+  CROWN.cx - 50 * CROWN.s,
+  CROWN.base - 74 * CROWN.s,
 );
-const crowned = {
-  shapes: [knight.shapes[0], ...crown.shapes, ...knight.shapes.slice(1)],
-  details: [...crown.details, ...knight.details],
-};
-const art = render(crowned, { fill: '#fff', line: '#111', detail: '#111' });
+const art =
+  render({ shapes: [knight.shapes[0], ...crown.shapes], details: crown.details }, PAINT) +
+  render({ shapes: knight.shapes.slice(1), details: knight.details }, PAINT);
 
 // 512×512, full-bleed background so it also works as a maskable icon (content in the middle 80%).
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
