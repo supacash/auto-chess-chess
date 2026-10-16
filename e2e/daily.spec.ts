@@ -12,8 +12,10 @@ test('the daily challenge: a gauntlet of five, its own save, then done for the d
   await daily.click();
 
   await expect(page.locator('#round')).toHaveText('Daily 1/5');
-  await expect(page.locator('#opponent')).toContainText('Fortress');
+  // On this date battle 1 is a hand-made Fortress army.
+  await expect(page.locator('#opponent')).toContainText('The Pawn Wall');
   await page.locator('#gauntlet-open').click();
+  await expect(page.locator('#gauntlet-status')).toContainText('Fortress');
   await expect(page.locator('#gauntlet-dialog .gauntlet-battle')).toHaveCount(5);
   await expect(page.locator('#gauntlet-dialog .gauntlet-battle').last()).toContainText('9×9');
   await page.locator('#gauntlet-dialog').getByRole('button', { name: 'Close' }).click();
