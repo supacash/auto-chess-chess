@@ -94,6 +94,8 @@ export class Session implements PlacementSession {
   best = 0;
   aiPieces: Piece[] = [];
   aiStyle: AiStyle = AI_STYLES[0];
+  /** The opponent's name when it isn't its style's (a hand-made daily army). */
+  aiName: string | null = null;
   /** The game the player is playing themselves this round, if one is in progress. */
   manual: ManualState | null = null;
   /** The last finished battle, for Review (kept across reloads). */
@@ -127,7 +129,7 @@ export class Session implements PlacementSession {
 
   /** The opponent shown during placement: the AI's style and army. */
   opponent(): { name: string; pieces: Piece[] } {
-    return { name: this.aiStyle.name, pieces: this.aiPieces };
+    return { name: this.aiName ?? this.aiStyle.name, pieces: this.aiPieces };
   }
 
   /** The board a round is played on (in Growing mode it grows every few rounds). */
@@ -182,6 +184,8 @@ export class Session implements PlacementSession {
     this.saved = true;
     this.aiStyle = style;
     this.aiPieces = saved.ai.pieces;
+    const { daily } = saved.run;
+    this.aiName = daily ? dailyOpponent(daily.date, RULES_VERSION, dailyBattle(saved.run.round)).name : null;
     this.manual = saved.manual ?? null;
     if (!this.run.shop.offers) {
       this.run = {
@@ -276,12 +280,14 @@ export class Session implements PlacementSession {
     if (daily) {
       const opponent = dailyOpponent(daily.date, RULES_VERSION, dailyBattle(this.run.round));
       this.aiStyle = opponent.style;
+      this.aiName = opponent.name;
       this.aiPieces = opponent.pieces;
       return;
     }
     const spec = this.board;
     const { settings } = this.run;
     const mode = gameMode(settings.mode);
+    this.aiName = null;
     this.aiStyle = pickStyle(this.rng, settings.fairy);
     const budget = budgetForSide(
       aiBudget(

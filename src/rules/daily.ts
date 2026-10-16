@@ -2,8 +2,9 @@ import type { BoardSpec } from '../chess/boardSpec';
 import { AI_STYLES, type AiStyle, aiBudget, budgetForSide, draftAiArmy, pickStyle, placeAiArmy } from './aiArmy';
 import { DEFAULT_SETTINGS, difficulty, type RunSettings } from './difficulty';
 import { gameMode } from './mode';
-import { armyPoints, type Piece } from './pieces';
-import { type Rng, seededRng } from './rng';
+import { DAILY_POOL, type PoolArmy, poolBoard, poolPieces } from './dailyPool';
+import { armyPoints, PIECES, type Piece } from './pieces';
+import { randomInt, type Rng, seededRng } from './rng';
 import { DAILY_BATTLES, DAILY_ROUND_STEP, newRun, type Run } from './run';
 
 // The daily challenge: a five-battle gauntlet, the same for everyone on a UTC day. Everything that
@@ -110,6 +111,10 @@ export function newDailyRun(date: string): Run {
 
 /** A daily opponent: its style and army, placed. */
 export interface DailyOpponent {
+  /** The army's name: a hand-made army's own, or the drafter's style. */
+  name: string;
+  /** Set when the army comes from the hand-made pool (dailyPool.ts). */
+  poolId?: string;
   style: AiStyle;
   pieces: Piece[];
   points: number;
@@ -129,8 +134,60 @@ export function dailyOpponent(date: string, version: number, battle: number): Da
     aiBudget(round, rng, difficulty(settings.difficulty).perRound, mode.roundOneDiscount, mode.aiBonus),
     settings.side !== 'black',
   );
+  // A hand-made army when one fits, from its own stream so the drafter's armies stay as they were.
+  const pool = dailyRng(date, version, battle, 'pool');
+  const fits = poolFor(date, battle);
+  if (fits.length > 0 && pool() < DAILY_POOL_SHARE) {
+    const army = fits[randomInt(pool, fits.length)];
+    const armyStyle = AI_STYLES.find((s) => s.id === army.style) ?? style;
+    const pieces = poolPieces(army, pool() < 0.5);
+    return {
+      name: army.name,
+      poolId: army.id,
+      style: armyStyle,
+      pieces,
+      points: armyPoints(pieces.map((p) => p.type)),
+      board,
+    };
+  }
   const pieces = placeAiArmy(draftAiArmy(budget, style, rng, board, settings.fairy, round), style, rng, board);
-  return { style, pieces, points: armyPoints(pieces.map((p) => p.type)), board };
+  return { name: style.name, style, pieces, points: armyPoints(pieces.map((p) => p.type)), board };
+}
+
+/**
+ * How often a battle gets a hand-made army when one fits (the drafter makes the rest). Half while the
+ * pool is small, so a week's days don't repeat the same few armies; raise it as the pool grows.
+ */
+export const DAILY_POOL_SHARE = 0.5;
+
+/**
+ * The hand-made armies that fit a day's battle: written for its board, no fairy pieces on a standard
+ * day, the day's style on a Fortress or Menagerie day, and points within 1 of the drafter's budget range
+ * for that battle on that day (its ±1, Hard and playing Black included).
+ */
+export function poolFor(date: string, battle: number): PoolArmy[] {
+  const { settings, style } = dailyTheme(date);
+  const round = dailyRound(battle);
+  const mode = gameMode(settings.mode);
+  const board = mode.board(round);
+  const budget = (roll: number) =>
+    budgetForSide(
+      aiBudget(round, () => roll, difficulty(settings.difficulty).perRound, mode.roundOneDiscount, mode.aiBonus),
+      settings.side !== 'black',
+    );
+  const low = budget(0) - 1;
+  const high = budget(0.99) + 1;
+  return DAILY_POOL.filter((army) => {
+    const pieces = poolPieces(army);
+    const points = armyPoints(pieces.map((p) => p.type));
+    return (
+      poolBoard(army) === board &&
+      (settings.fairy || pieces.every((p) => PIECES[p.type].group === 'standard')) &&
+      (!style || army.style === style) &&
+      points >= low &&
+      points <= high
+    );
+  });
 }
 
 /** 100 a win, 50 a draw, plus the gold left after the last battle. */

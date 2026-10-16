@@ -520,6 +520,25 @@ More duels, same command as §23 with 300 games (±6) and seed 3:
 - **A mistake on the way:** a first pass also let the stand-in reroll 12 times a shop instead of 6 (one shop per two rounds), picked +2 a battle, and found the first battle hard (41%). The cap doesn't matter at +6 starting gold but does at +12, where it buys partial sets it can't finish. Every row above is with the normal cap.
 - The stand-in spends almost all its gold in both modes (under 1 gold left going into a battle: the report's "Gold unspent" line).
 
+### 27. The daily challenge's hand-made armies (shop player, `--daily --pool`)
+
+`--pool` makes the AI field a hand-made army (src/rules/dailyPool.ts) in every battle that has one for its board, and adds a table by army. Compare with `--daily` alone on the same seed: battles in a gauntlet aren't independent (losing early leaves the stand-in less gold later), so only battle 1 can be read on its own, and rows from different seeds can differ by 10 points or more.
+
+**First armies were much too easy** (Growing, seed 11): the stand-in won 74% a battle against 64% for drafted armies; 90% against *Rook Guard*, 91% against *The Royal Army*. Queen-heavy armies with few pawns, and gaps in the pawn line, did worst.
+
+**Battle 1 swings hard:** at 11–12 points *Twin Knights* and *The Little Zoo* lost 75–86%; at 13 (four pawns, or a second Man) they won 70–92%. Both are now at 12.
+
+**Now**, same seed (13) for hand-made and drafted armies; battles 1–5:
+
+| Suite | Hand-made | Drafted |
+|---|---|---|
+| Growing Normal, fairy (300) | 71 / 69 / 69 / 64 / 75% (70%) | 53 / 61 / 54 / 59 / 67% (59%) |
+| Classic Normal, standard (200) | 50 / 60 / 61 / 45 / 56% (54%) | 51 / 67 / 43 / 43 / 56% (52%) |
+
+- **Classic matches** after trimming *Bishop Battery*, *The Classic Set* and *The Iron Crown* (a queen to a rook, a rook to a bishop) and setting *Skirmishers* and *Rook Rollers* between their too-easy and too-hard versions.
+- **Growing is still about 11 points too easy.** By army (hand-made, Growing seed 13): *The Pawn Wall* 67%, *Twin Knights* 75%, *The Little Zoo* 71%, *Rook Guard* 72%, *The Light Brigade* 74%, *Cannon Fort* 63%, *The Bishops' Council* 76%, *Heavy Metal* 62%, *The Dragon Court* 70%, *The Classic Set* 64%, *The Fortress Wall* 70%, *The Chancellor's Guard* 57%, *The Royal Army* 90%, *Queen's Gambit* 71%, *The Grand Menagerie* 62% (each ±9).
+- With half of fitting battles hand-made (`DAILY_POOL_SHARE`), a Growing day comes out about 5 points easier than with drafted armies only.
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.

@@ -216,7 +216,9 @@ Live, TFT-style matches for 4 players. Everything that decides a match is determ
 
 ## Daily challenge
 A short daily gauntlet, the same for every player: five battles against armies fixed for the day, with a day streak. The puzzle is spending your gold to beat armies you can see coming.
-- **The five armies:** for now drafted and placed by the AI drafter from the day's seed (the UTC date plus RULES_VERSION, so a rules update starts a fresh challenge instead of quietly changing today's). All five are shown in full, pieces and squares, from the start: placement shows the current one (as with Reveal) and *Today's gauntlet* lists all five on their home rows, with the results so far. (A battle that would start with both kings in check re-places the army from the day's seed, so its squares can differ from the preview.)
+- **The five armies:** from the day's seed (the UTC date plus RULES_VERSION, so a rules update starts a fresh challenge instead of quietly changing today's): a hand-made army or one from the AI drafter.
+  - **Hand-made armies** (`src/rules/dailyPool.ts`, 19 to start): each has a name (shown as the opponent's: "The Pawn Wall", "Queen's Gambit"), the battle it was built for, a style tag and its exact layout. A battle picks one, half the time for now (`DAILY_POOL_SHARE`; to rise as the pool grows), from the armies that fit the day: written for that battle's board, no fairy pieces on a standard day, the day's style on a Fortress or Menagerie day, and points within 1 of the drafter's budget range for that battle on that day (Hard and playing Black included). It may be mirrored left to right. Nothing fits → the drafter. The pool covers every battle of Growing, Classic, Black and Play yourself days; Menagerie, Fortress and Hard days get a few.
+  - **Balance** (SIMULATION.md §27, against the simulator's stand-in): the Classic armies play like drafted ones (54% a battle against 52%). The Growing ones are still about 11 points easier than drafted armies (70% against 59%), most of all in battles 1–3 and *The Royal Army*; the next pass should toughen them. Small armies swing hard on a point or a piece: one pawn more or a second Man took battle 1 armies from too easy to much too hard. All five are shown in full, pieces and squares, from the start: placement shows the current one (as with Reveal) and *Today's gauntlet* lists all five on their home rows, with the results so far. (A battle that would start with both kings in check re-places the army from the day's seed, so its squares can differ from the preview.)
 - **Steeper than a run:** the battles use the Normal budgets of rounds 2, 4, 6, 8 and 10, on the Growing boards for those rounds (5×5, 6×6, 7×7, 8×8, 9×9), so five battles cover a whole run's arc. You start with King + 3 pawns and the mode's starting gold +12 (16 on Growing), and each battle pays two rounds' income (2 × (5, +2 a win, +1 a draw)), +1 gold, and interest once. Tuned with the simulator (SIMULATION.md §26) so its stand-in wins as often as in a run's rounds 2–10, battle by battle (64% a battle on Growing, against 66%; 3.2 wins a gauntlet, 29% of gauntlets cleared). The first army is the normal one: the first battle is if anything a little easier than round 2 of a run (59% against 51%).
 - **Same shops for everyone:** each battle's shop, and each reroll, comes from its own stream of the day's seed, as does each battle's seed, so your choices never change what later battles bring.
 - **Every battle is played** (no lives). **Score:** 100 per win, 50 per draw, plus the gold left after the fifth battle (shown as "4/5 won · 12 gold left").
@@ -228,14 +230,14 @@ A short daily gauntlet, the same for every player: five battles against armies f
 - **Header:** "Daily 2/5", the theme in place of the lives, and the score so far ("Score 200 + gold").
 - **Profile:** a *Daily* tab: current and best streak, days played, best and average score, and the last 14 days.
 - **Records:** every finished day (date, theme, score, record, gold left), one per date; streaks are worked out from them, and syncing merges the days from both devices.
-- **Later:** a hand-made pool of armies for the day's seed to pick from, in place of the drafter; online leaderboards (they need the backend: one score per player per day, checked against the rules version).
+- **Later:** more hand-made armies (then a higher pool share); online leaderboards (they need the backend: one score per player per day, checked against the rules version).
 
 ## Roadmap
 Done: reproducible seeded battles, RULES_VERSION, army snapshots, replays, browser smoke tests in CI, game modes, versioned saves, module structure, formatting/linting in CI, SVG pieces, fairy pieces with shop offers and fusion, Play as, the daily challenge.
 
 Next candidates (not yet decided):
 1. **Multiplayer:** balance runs for 4-player matches (see Multiplayer).
-2. **Daily challenge follow-ups:** a hand-made army pool; online leaderboards.
+2. **Daily challenge follow-ups:** grow the hand-made army pool; online leaderboards.
 3. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
 4. **Bigger boards** past 8×8, with a longer move limit.
 

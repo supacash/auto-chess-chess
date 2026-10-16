@@ -25,7 +25,7 @@ export class GauntletDialog {
         const battle = i + 1;
         const log = played[i];
         const state = log ? RESULT_MARK[log.winner] : battle === current ? '▶ Up now' : '';
-        return `<section class="scout-section gauntlet-battle${battle === current ? ' current' : ''}"><h3>Battle ${battle} · ${escapeHtml(o.style.name)} · ${o.points} pts · ${o.board.files}×${o.board.ranks}${state ? ` · ${state}` : ''}</h3>${miniBoard(o.pieces, o.board, true, foe)}</section>`;
+        return `<section class="scout-section gauntlet-battle${battle === current ? ' current' : ''}"><h3>Battle ${battle} · ${escapeHtml(o.name)} · ${o.points} pts · ${o.board.files}×${o.board.ranks}${state ? ` · ${state}` : ''}</h3>${miniBoard(o.pieces, o.board, true, foe)}</section>`;
       })
       .join('');
     if (!this.dialog.open) this.dialog.showModal();

@@ -273,3 +273,26 @@ describe('Session: daily challenge', () => {
     expect(new Session(seededRng(1)).restore().firstVisit).toBe(true);
   });
 });
+
+describe('Session: daily hand-made armies', () => {
+  it('names the opponent after its hand-made army, also after a reload', async () => {
+    const { dailyOpponent } = await import('../rules/daily');
+    const { RULES_VERSION } = await import('../game/version');
+    // Find a day whose first battle is a hand-made army.
+    let date = '';
+    for (let d = 1; d <= 60 && !date; d++) {
+      const day = new Date(Date.UTC(2026, 10, d)).toISOString().slice(0, 10);
+      if (dailyOpponent(day, RULES_VERSION, 1).poolId) date = day;
+    }
+    expect(date).not.toBe('');
+    const expected = dailyOpponent(date, RULES_VERSION, 1);
+    const now = () => Date.parse(`${date}T09:00:00Z`);
+    const s = new Session(seededRng(1), 'daily', now);
+    s.restore();
+    s.startDaily(false);
+    expect(s.opponent().name).toBe(expected.name);
+    const reloaded = new Session(seededRng(2), 'daily', now);
+    reloaded.restore();
+    expect(reloaded.opponent().name).toBe(expected.name);
+  });
+});

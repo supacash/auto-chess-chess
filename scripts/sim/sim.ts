@@ -30,7 +30,7 @@ import { gameMode } from '../../src/rules/mode';
 import { difficulty, isDifficultyId } from '../../src/rules/difficulty';
 import { type BattleLimits, type BattleResult, material } from '../../src/rules/battle';
 import { offerPiece, rollOffers, roundIncome, startingShop } from '../../src/rules/economy';
-import { type Piece, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
+import { armyPoints, type Piece, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
 import {
   extraIncome,
   freeRerolls,
@@ -49,6 +49,8 @@ import {
   maxLives,
 } from '../../src/rules/run';
 import { DAILY_EXTRA_GOLD, dailyRound, dailyScore } from '../../src/rules/daily';
+import { DAILY_POOL, poolBoard, poolPieces } from '../../src/rules/dailyPool';
+import { startPosition } from '../../src/rules/position';
 import { randomInt, seededRng } from '../../src/rules/rng';
 import { formatMargin, meanMargin } from './stats';
 import { loadRulesForNode } from '../../src/chess/testRules';
@@ -88,6 +90,7 @@ const { values: opts } = parseArgs({
     'daily-income': { type: 'string' },
     'daily-interest': { type: 'string' },
     'daily-bonus': { type: 'string' },
+    pool: { type: 'boolean', default: false },
   },
 });
 
@@ -100,6 +103,9 @@ const DAILY_INCOME = opts['daily-income'] ? Number(opts['daily-income']) : DAILY
 const DAILY_INTEREST = opts['daily-interest'] ? Number(opts['daily-interest']) : DAILY_INTEREST_TIMES;
 /** Flat gold on top of each daily battle's income. */
 const DAILY_BONUS = opts['daily-bonus'] ? Number(opts['daily-bonus']) : DAILY_BATTLE_BONUS;
+/** `--daily --pool`: the AI fields a hand-made army (dailyPool.ts) whenever one was built for the battle and board. */
+const POOL = opts.pool === true;
+if (POOL && !DAILY) throw new Error('--pool needs --daily');
 const ROUND_LIST = DAILY
   ? Array.from({ length: DAILY_BATTLES }, (_, i) => dailyRound(i + 1))
   : Array.from({ length: Number(opts.rounds) }, (_, i) => i + 1);
@@ -196,6 +202,8 @@ interface GameRecord {
   peakLeader: 'w' | 'b' | null;
   /** Gold the shop player left unspent going into the battle. */
   goldUnspent: number;
+  /** The hand-made army the AI fielded (`--pool`), if any. */
+  poolId?: string;
 }
 
 /** A battle Stockfish could not play out (see EngineFailure); it is left out of W/D/L. */
@@ -240,7 +248,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     const spec = boardFor(round);
     const aiStyle = AI_STYLE === 'random' ? pickStyle(rng, AI_FAIRY) : AI_STYLES.find((s) => s.id === AI_STYLE)!;
     const first = playerFirst(rng);
-    const aiPoints = AI_BUDGET
+    let aiPoints = AI_BUDGET
       ? Math.max(1, AI_BUDGET[0] + AI_BUDGET[1] * round + randomInt(rng, 3) - 1)
       : budgetForSide(aiBudget(round, rng, PER_ROUND, MODE.roundOneDiscount, MODE.aiBonus), first, BLACK);
     if (PLAYER_POINTS === 'ai') playerPoints = aiPoints;
@@ -276,10 +284,30 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       }
       shop = { ...shop, pieces: unplaced };
     }
-    const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec, AI_FAIRY, round);
+    let aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec, AI_FAIRY, round);
+    let aiArmyStyle = aiStyle;
+    let poolStart: ReturnType<typeof startPosition> | null = null;
+    let poolId: string | undefined;
+    const hand = POOL
+      ? DAILY_POOL.filter(
+          (a) =>
+            a.battle === ROUND_LIST.indexOf(round) + 1 &&
+            poolBoard(a) === spec &&
+            (AI_FAIRY || a.rows.join('').match(/^[KQRBNP.]+$/)),
+        )
+      : [];
+    if (hand.length > 0) {
+      const army = hand[randomInt(rng, hand.length)];
+      poolId = army.id;
+      const pieces = poolPieces(army, rng() < 0.5);
+      aiTypes = pieces.map((p) => p.type);
+      aiPoints = armyPoints(aiTypes);
+      aiArmyStyle = AI_STYLES.find((s) => s.id === army.style) ?? aiStyle;
+      poolStart = startPosition(player, pieces, first, spec);
+    }
 
     // As in the game: the AI re-places (falling back to other layouts) until both kings aren't in check.
-    const { start } = placeForBattle(player, aiTypes, aiStyle, rng, spec, first);
+    const start = poolStart?.ok ? poolStart : placeForBattle(player, aiTypes, aiArmyStyle, rng, spec, first).start;
 
     let peakLead = 0;
     let peakLeader: 'w' | 'b' | null = null;
@@ -315,7 +343,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
 
     records.push({
       round,
-      aiStyle: aiStyle.name,
+      aiStyle: aiArmyStyle.name,
       playerStyle: runStyle.name,
       playerPoints: player.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0),
       aiPoints,
@@ -323,6 +351,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       peakLead,
       peakLeader,
       goldUnspent: shop.gold,
+      poolId,
     });
     playerPoints += (DAILY ? DAILY_INCOME : 1) * roundIncome(result.winner);
     // As in the game: income plus interest on the gold saved (see run.battleIncome).
@@ -478,6 +507,18 @@ function report(records: RunRecord[]): string {
       [...byRound.entries()].sort(([a], [b]) => a - b).map(([r, b]) => [`round ${r}`, b]),
     ),
     table('By AI style', [...byStyle.entries()]),
+    ...(POOL
+      ? [
+          table(
+            'By hand-made army',
+            DAILY_POOL.flatMap((a) => {
+              const b = emptyBucket();
+              for (const g of games) if (g.poolId === a.id) add(b, g);
+              return b.n ? [[`${a.battle} ${a.id}`, b] as [string, Bucket]] : [];
+            }),
+          ),
+        ]
+      : []),
     table('By player stand-in style', [...byPlayerStyle.entries()]),
     table('Total', [['all', total]]),
     `\nGold unspent going into battle: ${unspent.join(', ')}`,
