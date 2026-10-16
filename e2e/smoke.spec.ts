@@ -210,3 +210,34 @@ test('a refused placement flashes its square, and a merged piece is not left sel
   await expect(page.locator('.bench .piece').filter({ has: page.getByAltText('Knight') })).toHaveCount(1);
   await expect(page.locator('.piece.selected')).toHaveCount(0);
 });
+
+test('Settings: sound off stays in step with the menu speaker and is kept; About links the privacy policy', async ({
+  page,
+}) => {
+  await page.goto('./');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#menu-settings').click();
+  await expect(page.locator('#settings')).toBeVisible();
+  const sound = page.getByRole('switch', { name: 'Sound effects' });
+  await expect(sound).toBeChecked();
+  await sound.click();
+  await expect(sound).not.toBeChecked();
+  await expect(page.locator('#set-volume')).toBeDisabled();
+  // A default speed for battles, and the privacy policy in About.
+  await page.locator('#set-speed [data-speed="4"]').click();
+  await expect(page.locator('#set-speed [data-speed="4"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('link', { name: 'Privacy policy' })).toHaveAttribute('href', /privacy\.html$/);
+  await page.locator('#settings-back').click();
+  await expect(page.locator('#menu')).toBeVisible();
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed', 'false');
+
+  await page.reload();
+  await expect(page.locator('#sound-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#menu-settings').click();
+  await expect(sound).not.toBeChecked();
+  await expect(page.locator('#set-speed [data-speed="4"]')).toHaveAttribute('aria-checked', 'true');
+  const response = await page.request.get('privacy.html');
+  expect(response.ok()).toBe(true);
+});

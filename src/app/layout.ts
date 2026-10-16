@@ -4,18 +4,16 @@ import { START_HP } from '../multi/match';
 import { REROLL_COST } from '../rules/economy';
 import { MODES } from '../rules/mode';
 import { guideTabs } from './guideScreen';
+import { SPEEDS, VOLUME_MAX, VOLUME_MIN, VOLUME_STEP } from './settings';
 
-/** Playback speeds offered during a battle. */
-export const SPEEDS = [1, 2, 4];
-
-/** Renders the page shell: header, placement and battle screens, the New run window and credits. */
-/** The credits' engine line. A `fairy` build ships Fairy-Stockfish, which is GPLv3: credit it and link its source. */
+/** The credits' engine line (Settings, About). A `fairy` build ships Fairy-Stockfish, which is GPLv3: credit it and link its source. */
 const ENGINE_CREDIT = USE_FAIRY
   ? `Chess engine: <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener">Fairy-Stockfish</a>
     via <a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener">fairy-stockfish.wasm</a>,
     licensed under the <a href="fairy/GPL-3.0.txt" target="_blank" rel="noopener">GPLv3</a> (source at that link).`
   : 'Chess engine: our own, written for the game.';
 
+/** Renders the page shell: header, menu, Settings, placement and battle screens, and the dialogs. */
 export function renderLayout(root: HTMLElement): void {
   root.innerHTML = `
   <header>
@@ -42,6 +40,7 @@ export function renderLayout(root: HTMLElement): void {
       <button type="button" id="menu-multiplayer">Multiplayer</button>
       <button type="button" id="menu-profile">Profile</button>
       <button type="button" id="menu-guide">Piece guide</button>
+      <button type="button" id="menu-settings">Settings</button>
     </div>
     <button type="button" id="menu-replay" class="link-button" hidden>Review your last battle</button>
   </section>
@@ -152,6 +151,50 @@ export function renderLayout(root: HTMLElement): void {
       <div class="actions">
         <button type="button" id="guide-back" class="primary">Back</button>
       </div>
+    </div>
+  </section>
+
+  <section id="settings" class="settings" hidden aria-labelledby="settings-title">
+    <h2 class="screen-title" id="settings-title">Settings</h2>
+    <div class="settings-body">
+      <div class="record-card settings-card">
+        <h3>Sound</h3>
+        <label class="setting-row">
+          <span>Sound effects</span>
+          <input type="checkbox" role="switch" id="set-sound" class="switch" />
+        </label>
+        <label class="setting-row setting-slider">
+          <span>Effects volume <output id="set-volume-value" for="set-volume"></output></span>
+          <input type="range" id="set-volume" min="${VOLUME_MIN}" max="${VOLUME_MAX}" step="${VOLUME_STEP}" />
+        </label>
+      </div>
+      <div class="record-card settings-card">
+        <h3>Battles</h3>
+        <div class="setting-row">
+          <span id="set-speed-label">Start battles at</span>
+          <div class="speeds" id="set-speed" role="radiogroup" aria-labelledby="set-speed-label">
+            ${SPEEDS.map((s) => `<button type="button" class="speed" role="radio" data-speed="${s}">${s}×</button>`).join('')}
+          </div>
+        </div>
+        <label class="setting-row">
+          <span>Reduce motion<small>Fewer animations. Always on when your device asks for it.</small></span>
+          <input type="checkbox" role="switch" id="set-motion" class="switch" />
+        </label>
+        <div class="setting-row">
+          <span>Tips<small id="set-tips-note">Show the first-game tips again.</small></span>
+          <button type="button" id="set-tips">Show again</button>
+        </div>
+      </div>
+      <div class="record-card settings-card about">
+        <h3>About</h3>
+        <p>${ENGINE_CREDIT}</p>
+        <p>Pieces: Chessnut by Alexis Luengas (<a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache 2.0</a>).</p>
+        <p>Game code: <a href="https://github.com/supacash/auto-chess-chess" target="_blank" rel="noopener">MIT</a>.</p>
+        <p><a href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener" id="privacy-link">Privacy policy</a></p>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" id="settings-back" class="primary">Back to menu</button>
     </div>
   </section>
 
@@ -325,11 +368,5 @@ export function renderLayout(root: HTMLElement): void {
         <button type="submit" value="start" class="primary">Start game</button>
       </div>
     </form>
-  </dialog>
-
-  <footer class="credits">
-    ${ENGINE_CREDIT}
-    Pieces: Chessnut by Alexis Luengas (<a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache 2.0</a>).
-    Game code: <a href="https://github.com/supacash/auto-chess-chess" target="_blank" rel="noopener">MIT</a>.
-  </footer>`;
+  </dialog>`;
 }

@@ -1,3 +1,5 @@
+import { reduceMotion } from './settings';
+
 /** The confetti's colours: the game's coral, teal, yellow, pink and lilac. */
 const COLORS = ['#ff7a59', '#33c3b0', '#ffc93c', '#ff5e8a', '#e9e0fc'];
 
@@ -6,7 +8,7 @@ const COLORS = ['#ff7a59', '#33c3b0', '#ffc93c', '#ff5e8a', '#e9e0fc'];
  * away again. Purely decorative: the CSS animation does the moving, and with reduced motion there's none.
  */
 export function throwConfetti(layer: HTMLElement, count: number, rng: () => number = Math.random): void {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (reduceMotion()) return;
   const bits = Array.from({ length: count }, () => {
     const bit = document.createElement('i');
     // A fan pointing up: straight up ±70°, at different speeds.
