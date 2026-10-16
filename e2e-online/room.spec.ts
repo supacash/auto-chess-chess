@@ -60,7 +60,7 @@ test('two players create and join a room, play a round together, and move on to 
     await expect(page.locator('#match-players .player')).toHaveCount(4);
     await expect(page.locator('#match-players small', { hasText: 'bot' })).toHaveCount(2);
     await expect(page.locator('#match-round')).toContainText(`Round 1 · Shop · 4 left · Room ${code}`);
-    await expect(page.locator('#opponent')).toContainText('Next opponent');
+    await expect(page.locator('#opponent')).toContainText('Up next');
   }
 
   // The host readies first and waits; the guest's Ready closes the shop for both.

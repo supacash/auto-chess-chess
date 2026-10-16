@@ -3,18 +3,16 @@ import { DIFFICULTIES, SIDES } from '../rules/difficulty';
 import { START_HP } from '../multi/match';
 import { REROLL_COST } from '../rules/economy';
 import { MODES } from '../rules/mode';
+import { SPEEDS, VOLUME_MAX, VOLUME_MIN, VOLUME_STEP } from './settings';
 
-/** Playback speeds offered during a battle. */
-export const SPEEDS = [1, 2, 4];
-
-/** Renders the page shell: header, placement and battle screens, the New run window and credits. */
-/** The credits' engine line. A `fairy` build ships Fairy-Stockfish, which is GPLv3: credit it and link its source. */
+/** The credits' engine line (Settings, About). A `fairy` build ships Fairy-Stockfish, which is GPLv3: credit it and link its source. */
 const ENGINE_CREDIT = USE_FAIRY
   ? `Chess engine: <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener">Fairy-Stockfish</a>
     via <a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener">fairy-stockfish.wasm</a>,
     licensed under the <a href="fairy/GPL-3.0.txt" target="_blank" rel="noopener">GPLv3</a> (source at that link).`
   : 'Chess engine: our own, written for the game.';
 
+/** Renders the page shell: header, menu, Settings, placement and battle screens, and the dialogs. */
 export function renderLayout(root: HTMLElement): void {
   root.innerHTML = `
   <header>
@@ -25,6 +23,7 @@ export function renderLayout(root: HTMLElement): void {
   </header>
   <section id="menu" class="menu" hidden>
     <div class="menu-drift" id="menu-drift" aria-hidden="true"></div>
+    <button type="button" id="sound-toggle" class="icon-button menu-corner" aria-pressed="true"></button>
     <img class="menu-logo" src="${import.meta.env.BASE_URL}logo.svg" alt="" width="148" height="148" />
     <h2 class="menu-title">Pawned Up</h2>
     <p class="menu-badge">Chess Auto Battler</p>
@@ -39,6 +38,7 @@ export function renderLayout(root: HTMLElement): void {
       <button type="button" id="menu-new" class="teal">New game</button>
       <button type="button" id="menu-multiplayer">Multiplayer</button>
       <button type="button" id="menu-profile">Profile</button>
+      <button type="button" id="menu-settings">Settings</button>
     </div>
     <button type="button" id="menu-replay" class="link-button" hidden>Review your last battle</button>
   </section>
@@ -53,11 +53,11 @@ export function renderLayout(root: HTMLElement): void {
     <div class="timer-bar"><div id="timer-fill"></div></div>
     <ol id="match-players" class="match-players"></ol>
   </section>
+  <!-- The run's line, beside Menu: round and lives, then the board, side, record and best. -->
   <div class="run-bar">
     <span id="round"></span>
     <span class="lives" id="lives"></span>
-    <span id="record"></span>
-    <span id="best"></span>
+    <span class="run-meta"><span id="board-size"></span><span id="record"></span><span id="best"></span></span>
   </div>
 
   <section id="placement">
@@ -67,7 +67,6 @@ export function renderLayout(root: HTMLElement): void {
         <span class="tip-icon" aria-hidden="true">💡</span><span id="tip-text"></span>
         <button type="button" id="tip-close" class="tip-close" aria-label="Dismiss tip">×</button>
       </div>
-      <p class="notice" id="notice" role="status" hidden></p>
       <p class="opponent" id="opponent"></p>
       <p class="opponent-info" id="opponent-info" role="status" hidden></p>
     </div>
@@ -80,11 +79,18 @@ export function renderLayout(root: HTMLElement): void {
           <button id="reroll" type="button">Reroll · ${REROLL_COST}g</button>
         </div>
         <div class="offers" id="offers"></div>
-        <div class="offer-detail" id="offer-detail" hidden></div>
-        <div class="piece-actions" id="piece-actions"></div>
+        <!-- The selected offer, how it moves and Buy. -->
+        <div class="offer-detail panel" id="offer-detail" hidden></div>
+        <!-- A selected piece's merges, upgrades and Sell take the offers' place until it's put down. -->
+        <div class="piece-actions panel" id="piece-actions" hidden></div>
       </div>
-      <p id="message" role="status" aria-live="polite"></p>
+      <!-- Pinned to the bottom of the screen: what went wrong (or the time left in a match), then the fight buttons. -->
       <div class="fight-bar">
+        <p id="message" role="status" aria-live="polite"></p>
+        <!-- In a match: the shop's time left, in reach wherever the screen is scrolled. -->
+        <div class="fight-timer" id="fight-timer" hidden>
+          <span class="fight-timer-bar"><span id="fight-timer-fill"></span></span><span id="fight-timer-text"></span>
+        </div>
         <div class="actions">
           <button id="clear" type="button">Clear</button>
           <button id="play" type="button" disabled>Play it</button>
@@ -122,6 +128,50 @@ export function renderLayout(root: HTMLElement): void {
     </div>
   </section>
 
+  <section id="settings" class="settings" hidden aria-labelledby="settings-title">
+    <h2 class="screen-title" id="settings-title">Settings</h2>
+    <div class="settings-body">
+      <div class="record-card settings-card">
+        <h3>Sound</h3>
+        <label class="setting-row">
+          <span>Sound effects</span>
+          <input type="checkbox" role="switch" id="set-sound" class="switch" />
+        </label>
+        <label class="setting-row setting-slider">
+          <span>Effects volume <output id="set-volume-value" for="set-volume"></output></span>
+          <input type="range" id="set-volume" min="${VOLUME_MIN}" max="${VOLUME_MAX}" step="${VOLUME_STEP}" />
+        </label>
+      </div>
+      <div class="record-card settings-card">
+        <h3>Battles</h3>
+        <div class="setting-row">
+          <span id="set-speed-label">Start battles at</span>
+          <div class="speeds" id="set-speed" role="radiogroup" aria-labelledby="set-speed-label">
+            ${SPEEDS.map((s) => `<button type="button" class="speed" role="radio" data-speed="${s}">${s}×</button>`).join('')}
+          </div>
+        </div>
+        <label class="setting-row">
+          <span>Reduce motion<small>Fewer animations. Always on when your device asks for it.</small></span>
+          <input type="checkbox" role="switch" id="set-motion" class="switch" />
+        </label>
+        <div class="setting-row">
+          <span>Tips<small id="set-tips-note">Show the first-game tips again.</small></span>
+          <button type="button" id="set-tips">Show again</button>
+        </div>
+      </div>
+      <div class="record-card settings-card about">
+        <h3>About</h3>
+        <p>${ENGINE_CREDIT}</p>
+        <p>Pieces: Chessnut by Alexis Luengas (<a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache 2.0</a>).</p>
+        <p>Game code: <a href="https://github.com/supacash/auto-chess-chess" target="_blank" rel="noopener">MIT</a>.</p>
+        <p><a href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener" id="privacy-link">Privacy policy</a></p>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" id="settings-back" class="primary">Back to menu</button>
+    </div>
+  </section>
+
   <section id="lobby" class="lobby" hidden>
     <p class="lobby-label" id="lobby-label">Room code</p>
     <p class="lobby-code" id="lobby-code"></p>
@@ -151,8 +201,10 @@ export function renderLayout(root: HTMLElement): void {
     <div class="screen-side">
       <div class="side-pieces" id="side-you" hidden></div>
       <div class="actions" id="playback">
-        ${SPEEDS.map((s) => `<button type="button" class="speed" data-speed="${s}">${s}×</button>`).join('')}
-        <button type="button" id="skip">Skip</button>
+        <div class="speeds" role="group" aria-label="Playback speed">
+          ${SPEEDS.map((s) => `<button type="button" class="speed" data-speed="${s}">${s}×</button>`).join('')}
+        </div>
+        <button type="button" id="skip">Skip ⏭</button>
       </div>
       <div class="promo" id="promo" hidden></div>
       <div class="actions" id="manual" hidden>
@@ -173,8 +225,10 @@ export function renderLayout(root: HTMLElement): void {
         <button type="button" id="replay-done" class="primary" hidden>Done</button>
       </div>
       <div class="result" id="result" hidden>
+        <div class="confetti" id="confetti" aria-hidden="true"></div>
         <h2 id="result-title"></h2>
         <p id="result-detail"></p>
+        <div class="result-stats" id="result-stats" hidden></div>
         <p class="result-awards" id="result-awards" hidden></p>
         <div class="run-summary" id="run-summary" hidden></div>
         <div class="actions result-actions">
@@ -204,11 +258,13 @@ export function renderLayout(root: HTMLElement): void {
           game with the same rules; empty seats get bots after 30 seconds.
         </p>
       </details>
-      <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 20-second shop</label>
       <fieldset class="room-rules">
         <legend>Rules</legend>
-        <label class="check"><input type="checkbox" id="mp-growing" /> Growing board: 5×5 up to 9×9</label>
-        <label class="check"><input type="checkbox" id="mp-fairy" /> Fairy pieces and fusion</label>
+        <div class="room-rules-box">
+          <label class="check"><input type="checkbox" id="mp-growing" /> Growing board: 5×5 up to 9×9</label>
+          <label class="check"><input type="checkbox" id="mp-fairy" /> Fairy pieces and fusion</label>
+          <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 20-second shop</label>
+        </div>
       </fieldset>
       <button type="submit" value="quick" class="primary big-choice">
         Quick play<small>Play with anyone looking for a game</small>
@@ -286,11 +342,5 @@ export function renderLayout(root: HTMLElement): void {
         <button type="submit" value="start" class="primary">Start game</button>
       </div>
     </form>
-  </dialog>
-
-  <footer class="credits">
-    ${ENGINE_CREDIT}
-    Pieces: Chessnut by Alexis Luengas (<a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache 2.0</a>).
-    Game code: <a href="https://github.com/supacash/auto-chess-chess" target="_blank" rel="noopener">MIT</a>.
-  </footer>`;
+  </dialog>`;
 }

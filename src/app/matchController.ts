@@ -24,6 +24,7 @@ import { $, escapeHtml, sleep } from './dom';
 import { PerkDialog } from './perkDialog';
 import type { PlacementScreen } from './placementScreen';
 import { ScoutDialog } from './scoutDialog';
+import { sfx } from './sound';
 import type { RecordBook } from './recordBook';
 
 /** How long the other phones wait before moving the room along themselves (see MatchController.tick). */
@@ -322,6 +323,7 @@ export class MatchController {
     this.timer = 0;
     $('#match-timer').textContent = '';
     $('#timer-fill').style.width = '0%';
+    $('#fight-timer').hidden = true;
   }
 
   /** Online: moves the room along when it's time (any player may; the transactions make it happen once). */
@@ -414,6 +416,10 @@ export class MatchController {
       const background = this.computeInBackground(others, stale);
       const myResult = mine ? await this.playMine(engine, mine) : null;
       if (stale()) return;
+      if (myResult) {
+        const mySide = myResult.pairing.white === m.myId ? 'w' : 'b';
+        sfx(myResult.winner === 'draw' ? 'draw' : myResult.winner === mySide ? 'win' : 'lose');
+      }
       if (o) {
         if (myResult) void this.report(myResult);
         this.showRoundCard(myResult, false);
@@ -620,6 +626,7 @@ export class MatchController {
         this.deps.records.matchEnd(this.online !== null && withPeople, m.settings.blitz, place);
         const winner = m.players.find((p) => p.place === 1);
         this.deps.records.unlock(matchAchievements(place, m.myLosses, winner ? winner.hp : 0));
+        sfx(place === 1 ? 'win' : 'lose');
         if (this.online) clearMatch();
         if (this.online) void this.online.client.markDone(this.online.code, this.online.fought).catch(console.warn);
       }
@@ -867,9 +874,24 @@ export class MatchController {
     this.timer = window.setInterval(() => this.tick(), 1000);
   }
 
+  /** The whole second the shop's countdown last ticked on (see renderTimer). */
+  private lastTick = 0;
+
   private renderTimer(total: number, left = total): void {
-    $('#match-timer').textContent = `${Math.ceil(left)}s`;
-    $('#timer-fill').style.width = `${(left / total) * 100}%`;
+    const seconds = `${Math.ceil(left)}s`;
+    const share = `${(left / total) * 100}%`;
+    $('#match-timer').textContent = seconds;
+    $('#timer-fill').style.width = share;
+    // The same countdown over the Ready button, which stays on screen while the shop scrolls.
+    const bar = $('#fight-timer');
+    // A tick for each of the last five seconds.
+    const whole = Math.ceil(left);
+    if (whole <= 5 && whole > 0 && whole !== this.lastTick) sfx('tick');
+    this.lastTick = whole;
+    bar.hidden = false;
+    bar.classList.toggle('urgent', left <= 10);
+    $('#fight-timer-text').textContent = seconds;
+    $('#fight-timer-fill').style.width = share;
   }
 
   /** The players' health list and round, shown above the board during a match. */

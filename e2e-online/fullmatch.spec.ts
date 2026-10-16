@@ -152,6 +152,14 @@ async function state(page: Page): Promise<string> {
   ].join(' | ');
 }
 
+/**
+ * The result card's title as written. Its CSS sets it in capitals, which innerText would return
+ * ("YOU FINISHED 4TH"), so read the text itself.
+ */
+async function title(page: Page): Promise<string> {
+  return ((await page.locator('#result-title').textContent()) ?? '').trim();
+}
+
 /** Pool counts shown on a client's offers, by kind. */
 async function poolView(p: Player): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
@@ -295,10 +303,8 @@ test('four people play a whole online match to the end', async ({ browser }) => 
       // room has applied it, so a winner or knockout shows up after Continue).
       const outcome = async (page: Page): Promise<string> => {
         if (await page.locator('#placement').isVisible()) return 'shop';
-        const title = (await page.locator('#result').isVisible())
-          ? await page.locator('#result-title').innerText()
-          : '';
-        return /You win the match|You finished/.test(title) ? 'final' : 'waiting';
+        const shown = (await page.locator('#result').isVisible()) ? await title(page) : '';
+        return /You win the match|You finished/.test(shown) ? 'final' : 'waiting';
       };
       await Promise.all(
         active.map(async (p) => {
@@ -314,16 +320,16 @@ test('four people play a whole online match to the end', async ({ browser }) => 
       );
       for (const p of active) {
         if ((await outcome(p.page)) !== 'final') continue;
-        const title = await p.page.locator('#result-title').innerText();
+        const shown = await title(p.page);
         p.out = true;
-        if (/You win the match/.test(title)) {
+        if (/You win the match/.test(shown)) {
           winnerSeen = p.name;
-          note(`  ${p.name}: ${title}`);
+          note(`  ${p.name}: ${shown}`);
           continue;
         }
         const keep = p.page.locator('#card-extras button', { hasText: 'Keep watching' });
         const canKeep = await keep.isVisible();
-        note(`  ${p.name}: ${title}${canKeep ? ' (keeps watching)' : ''}`);
+        note(`  ${p.name}: ${shown}${canKeep ? ' (keeps watching)' : ''}`);
         if (canKeep) await keep.click();
       }
       if (players.every((p) => p.out)) break;
@@ -341,10 +347,10 @@ test('four people play a whole online match to the end', async ({ browser }) => 
   expect(winnerSeen, 'someone won').not.toBe('');
   for (const p of players.filter((x) => x.name !== winnerSeen)) {
     await expect(p.page.locator('#result-title')).toContainText(/won the match|You finished/, { timeout: 240_000 });
-    note(`${p.name} sees: ${await p.page.locator('#result-title').innerText()}`);
+    note(`${p.name} sees: ${await title(p.page)}`);
   }
   const spectators = players.filter((x) => x.name !== winnerSeen);
-  const titles = await Promise.all(spectators.map((p) => p.page.locator('#result-title').innerText()));
+  const titles = await Promise.all(spectators.map((p) => title(p.page)));
   const winnerNames = titles.filter((t) => /won the match/.test(t));
   for (const t of winnerNames) expect(t, 'spectators agree on the winner').toBe(winnerNames[0]);
 

@@ -34,3 +34,11 @@ describe('nextTip', () => {
     expect(nextTip(shop({ gold: 2 }), 3, new Set<TipId>(['start', 'affinity', 'opponent']))).toBeNull();
   });
 });
+
+describe('the tap tip', () => {
+  it('explains tapping a piece once there is one besides the King', () => {
+    const seen = new Set<TipId>(['start']);
+    expect(nextTip(shop({ pieces: [makePiece('K'), makePiece('N')] }), 1, seen)).toBe('tap');
+    expect(nextTip(shop({ pieces: [makePiece('K'), makePiece('N')] }), 1, new Set<TipId>(['start', 'tap']))).toBeNull();
+  });
+});

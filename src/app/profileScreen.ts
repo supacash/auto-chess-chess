@@ -1,5 +1,12 @@
 import { averagePlace, averageScore, favouritePiece, matchKey, type Records, runKey } from '../game/records';
-import { ACHIEVEMENT_GROUPS, ACHIEVEMENTS, achievementGroup, FUSION_RESULTS, SHOP_FAIRY } from '../game/achievements';
+import {
+  ACHIEVEMENT_GROUPS,
+  ACHIEVEMENT_ICONS,
+  ACHIEVEMENTS,
+  achievementGroup,
+  FUSION_RESULTS,
+  SHOP_FAIRY,
+} from '../game/achievements';
 import { FINAL_ROUND } from '../rules/run';
 import { ordinal } from '../multi/names';
 import { DIFFICULTIES } from '../rules/difficulty';
@@ -186,7 +193,7 @@ function achievementsTab(r: Records): string {
   const item = (a: (typeof ACHIEVEMENTS)[number]) => {
     const at = r.achievements[a.id];
     if (at === undefined && a.secret) {
-      return '<li class="achievement locked"><span class="achievement-name">???</span><span class="achievement-text">A secret, for later.</span></li>';
+      return '<li class="achievement locked"><span class="badge" aria-hidden="true">?</span><span class="achievement-body"><span class="achievement-name">???</span><span class="achievement-text">A secret, for later.</span></span></li>';
     }
     const when =
       at === undefined
@@ -194,8 +201,8 @@ function achievementsTab(r: Records): string {
           ? `<span class="achievement-date">${progress[a.id]}</span>`
           : ''
         : `<span class="achievement-date">${new Date(at).toLocaleDateString()}</span>`;
-    const name = `${at === undefined ? '' : '🏆 '}${escapeHtml(a.name)}`;
-    return `<li class="achievement ${at === undefined ? 'locked' : 'unlocked'}"><span class="achievement-name">${name}</span><span class="achievement-text">${escapeHtml(a.description)}</span>${when}</li>`;
+    const badge = `<span class="badge" aria-hidden="true">${ACHIEVEMENT_ICONS[a.id]}</span>`;
+    return `<li class="achievement ${at === undefined ? 'locked' : 'unlocked'}">${badge}<span class="achievement-body"><span class="achievement-name">${escapeHtml(a.name)}</span><span class="achievement-text">${escapeHtml(a.description)}</span>${when}</span></li>`;
   };
   // By group, unlocked ones first within each.
   const groups = ACHIEVEMENT_GROUPS.map((g) => {
@@ -205,5 +212,6 @@ function achievementsTab(r: Records): string {
     const done = list.filter((a) => r.achievements[a.id] !== undefined).length;
     return `<h3 class="achievement-group">${g.name} <small>${done}/${list.filter((a) => !a.secret || r.achievements[a.id] !== undefined).length}</small></h3><ul class="achievements">${list.map(item).join('')}</ul>`;
   }).join('');
-  return `<p class="achievement-count">Achievements: ${got} of ${open.length} unlocked</p>${groups}`;
+  const share = open.length ? Math.round((got / open.length) * 100) : 0;
+  return `<div class="achievement-count"><span><strong>${got}</strong> of ${open.length} unlocked</span><span class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${open.length}" aria-valuenow="${got}" aria-label="Achievements unlocked"><span style="width:${share}%"></span></span></div>${groups}`;
 }

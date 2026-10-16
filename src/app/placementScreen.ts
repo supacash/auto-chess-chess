@@ -7,7 +7,7 @@ import {
   shopAchievements,
 } from '../game/achievements';
 import { dismissTip, seenTips } from '../game/storage';
-import { nextTip, TIPS, type TipId } from '../game/tips';
+import { interestTip, MATCH_TIPS, nextTip, PLAY_IT_START_TIP, TIPS, type TipId } from '../game/tips';
 import {
   buyOffer,
   canMakeHeir,
@@ -51,8 +51,12 @@ import {
 import { armyCap, BENCH_SIZE, benchCount, MAX_HEIRS } from '../rules/placement';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
-import { $, escapeHtml } from './dom';
+import { moveDiagram } from '../ui/moveDiagram';
+import { reduceMotion } from './settings';
+import { $, escapeHtml, pts } from './dom';
 import type { PlacementSession } from './placementSession';
+import { type Sfx, sfx } from './sound';
+import { showToast } from './toast';
 
 /** King first, then most to least valuable. */
 const pieceOrder = (a: PieceType, b: PieceType) =>
@@ -100,13 +104,22 @@ export class PlacementScreen {
   ) {
     this.mode = { header };
     this.board = new PlacementBoard($('#board-root'), session.run.shop.pieces, {
-      onChange: (pieces) => this.piecesChanged(pieces),
-      onMessage: (text) => this.setMessage(text),
+      onChange: (pieces) => {
+        sfx('place');
+        this.piecesChanged(pieces);
+      },
+      onMessage: (text) => {
+        if (text) sfx('error');
+        this.setMessage(text);
+      },
       onFoeTap: (type) => this.toggleFoeInfo(type),
       onSelect: (id) => {
         this.selected = id;
         if (id) this.selectedOffer = null;
         this.renderShop();
+        if (id) sfx('select');
+        // On a short screen the piece's choices may start below the fight buttons: bring them up.
+        if (id) $('#piece-actions').scrollIntoView({ block: 'nearest', behavior: smoothScroll() });
       },
     });
 
@@ -119,20 +132,24 @@ export class PlacementScreen {
     $('#piece-actions').addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
       if (!btn) return;
+      if (btn.hasAttribute('data-close')) {
+        this.deselectPiece();
+        return;
+      }
       const shop = this.session.run.shop;
       if (!this.selected) return;
       const before = this.session.run.shop;
       if (btn.dataset.upgrade) {
         const to = btn.dataset.upgrade as PieceType;
-        this.applyShop(upgradePiece(shop, this.selected, to), to);
+        this.applyShop(upgradePiece(shop, this.selected, to), to, 'merge');
       } else if (btn.dataset.fuse && btn.dataset.result) {
         const to = btn.dataset.result as PieceType;
         const fused = fusePieces(shop, this.selected, btn.dataset.fuse, to, this.session.run.settings.fairy);
-        this.applyShop(fused, to);
+        this.applyShop(fused, to, 'merge');
         if (fused.ok) this.onCollect?.('fused', [to]);
       } else if (btn.dataset.rookKeep && btn.dataset.rookUse) {
         const made = makeRook(shop, btn.dataset.rookKeep, btn.dataset.rookUse.split(','));
-        this.applyShop(made, 'R');
+        this.applyShop(made, 'R', 'merge');
         if (made.ok) this.onAchievements?.(mergeAchievements('R', made.shop.pieces));
       } else if (btn.dataset.mergeSet) {
         const to = btn.dataset.mergeSet as PieceType;
@@ -141,10 +158,10 @@ export class PlacementScreen {
           fuseDefaultSet(shop, this.selected, to, this.session.run.settings.fairy, this.maxHeirs()),
           bonus,
         );
-        this.applyShop(merged, to);
+        this.applyShop(merged, to, 'merge');
         if (merged.ok) this.onAchievements?.(mergeAchievements(to, merged.shop.pieces));
         if (merged.ok && bonus > 0) this.setMessage(`Dynasty: +${bonus} gold for the crowning.`);
-      } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected));
+      } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected), undefined, 'sell');
       // The result of a merge, fusion or upgrade isn't left selected: the next tap would move it.
       if (this.session.run.shop !== before) this.board.clearSelection();
     });
@@ -160,8 +177,15 @@ export class PlacementScreen {
       this.selectedOffer = this.selectedOffer === index ? null : index;
       if (this.selectedOffer !== null) this.deselectPiece();
       this.renderShop();
+      if (this.selectedOffer !== null)
+        $('#offer-detail').scrollIntoView({ block: 'nearest', behavior: smoothScroll() });
     });
     $('#offer-detail').addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('button[data-close]')) {
+        this.selectedOffer = null;
+        this.renderShop();
+        return;
+      }
       if (!(e.target as HTMLElement).closest('button[data-buy]') || this.selectedOffer === null) return;
       const index = this.selectedOffer;
       this.selectedOffer = null;
@@ -172,7 +196,7 @@ export class PlacementScreen {
       }
       const lastOne = offer !== undefined && this.session.offerLeft?.(offer) === 1;
       const bought = buyOffer(this.session.run.shop, index);
-      this.applyShop(bought, offer && (isAffinityOffer(offer) ? 'P' : offer));
+      this.applyShop(bought, offer && (isAffinityOffer(offer) ? 'P' : offer), 'buy');
       if (bought.ok && lastOne) this.onAchievements?.(['poolShark']);
     });
     $('#tip-close').addEventListener('click', () => {
@@ -189,7 +213,7 @@ export class PlacementScreen {
         const round = this.session.run.round;
         this.rerolls = { round, count: this.rerolls.round === round ? this.rerolls.count + 1 : 1 };
       }
-      this.applyShop(rerolled);
+      this.applyShop(rerolled, undefined, 'reroll');
     });
     this.fightBtn.addEventListener('click', () => (this.mode.onReady ? this.mode.onReady() : onFight()));
     this.playBtn.addEventListener('click', onPlay);
@@ -219,13 +243,12 @@ export class PlacementScreen {
     const grew = this.shownBoard !== null && this.shownBoard !== spec.variant;
     this.shownBoard = spec.variant;
     this.setMessage('');
-    const notice = $('#notice');
-    notice.hidden = !grew;
-    notice.textContent = grew ? `The board grew to ${spec.files}×${spec.ranks}: more room for your army!` : '';
+    if (grew) sfx('grow');
+    if (grew) showToast(`The board grew to ${spec.files}×${spec.ranks}!`, 'More room for your army.', 'teal');
 
     this.session.fitPiecesToBoard();
     setPlayerColor(this.session.run.color);
-    this.board.setSpec(spec);
+    this.board.setSpec(spec, grew);
     this.board.setPieces(this.session.run.shop.pieces);
     const opponent = this.session.opponent();
     const reveal = this.session.revealOpponent?.() ?? this.session.run.settings.reveal;
@@ -310,10 +333,11 @@ export class PlacementScreen {
       this.renderFoeInfo();
       return;
     }
-    const label = this.mode.onReady ? 'Next opponent' : 'Opponent';
-    const name = escapeHtml(opponent.name);
+    // "VS" the round's opponent; in a match, who's up next (their army so far).
+    const label = this.mode.onReady ? 'Up next' : 'VS';
+    const head = `<span class="opp-label">${label}</span> <strong class="opp-name">${escapeHtml(opponent.name)}</strong>`;
     if (opponent.pieces.length === 0) {
-      $('#opponent').innerHTML = `${label} · <strong>${name}</strong>: nothing placed yet`;
+      $('#opponent').innerHTML = `${head} <span class="foe-points">nothing placed yet</span>`;
       this.renderFoeInfo();
       return;
     }
@@ -323,13 +347,13 @@ export class PlacementScreen {
     const counts = new Map<PieceType, number>();
     for (const t of types) counts.set(t, (counts.get(t) ?? 0) + 1);
     $('#opponent').innerHTML =
-      `${label} · <strong>${name}</strong>: ` +
+      `${head} <span class="foe-points">${pts(points)}</span> ` +
       `<span class="glyphs">${[...counts]
         .map(
           ([t, n]) =>
             `<button type="button" class="foe" data-foe="${t}" aria-label="${n} ${PIECE_NAME[t]}${n > 1 ? 's' : ''}: what does it do?">${inlinePiece(t, 'b')}${n > 1 ? `<span class="foe-count">×${n}</span>` : ''}</button>`,
         )
-        .join('')}</span> <span class="foe-points">· ${points} pts</span>`;
+        .join('')}</span>`;
     this.renderFoeInfo();
   }
 
@@ -354,7 +378,7 @@ export class PlacementScreen {
       el.classList.toggle('active', el.dataset.foe === type);
     }
     if (!type) return;
-    info.innerHTML = `${inlinePiece(type, 'b')} <strong>${PIECE_NAME[type]}</strong> · ${PIECE_VALUE[type]} pts. ${PIECES[type].description}`;
+    info.innerHTML = `<span class="panel-head">${moveDiagram(type, 'b')}<span><strong>${PIECE_NAME[type]}</strong> · ${about(type)}</span></span>`;
   }
 
   private deselectPiece(): void {
@@ -371,7 +395,21 @@ export class PlacementScreen {
     const { shop, round } = this.session.run;
     this.tip = nextTip(shop, round, seenTips());
     $('#tip').hidden = this.tip === null;
-    $('#tip-text').textContent = this.tip ? TIPS[this.tip] : '';
+    $('#tip-text').textContent = this.tip ? this.tipText(this.tip) : '';
+    // The how-to-play tip already says to place the king: no need for the hint under the buttons too.
+    if (this.tip === 'start') $('#fight-hint').hidden = true;
+  }
+
+  /** A tip's words here: the run's own interest terms, and how to play in a Play it run or a match. */
+  private tipText(tip: TipId): string {
+    if (tip === 'interest') {
+      const { step, max } = this.session.interestTerms?.() ?? { step: INTEREST_STEP, max: MAX_INTEREST };
+      return interestTip(step, max);
+    }
+    // A match is won on health, not lives, and its button reads Ready.
+    if (this.mode.onReady) return MATCH_TIPS[tip] ?? TIPS[tip];
+    if (tip === 'start' && this.session.run.settings.manual) return PLAY_IT_START_TIP;
+    return TIPS[tip];
   }
 
   private renderOffers(): void {
@@ -395,7 +433,7 @@ export class PlacementScreen {
               .join(' ');
             const stock =
               left === null ? '' : `<span class="offer-left">${left === 0 ? 'sold out' : `${left} left`}</span>`;
-            return `<button type="button" class="${cls}" data-offer="${i}" aria-pressed="${i === this.selectedOffer}">${offerIcon(o)}<span class="offer-name">${offerName(o)}</span><span class="offer-price">${price}g</span>${stock}</button>`;
+            return `<button type="button" class="${cls}" data-offer="${i}" data-tier="${priceTier(price)}" aria-pressed="${i === this.selectedOffer}" aria-label="${offerName(o)}, ${price} gold${left === 0 ? ', sold out' : ''}"><span class="offer-art">${offerIcon(o)}<span class="offer-price">${price}g</span></span><span class="offer-name">${offerName(o)}</span>${stock}</button>`;
           })
           .join('')
       : '<span class="hint">Sold out. Reroll for more.</span>';
@@ -408,10 +446,10 @@ export class PlacementScreen {
     const full = benchCount(pieces) >= BENCH_SIZE;
     const soldOut = this.session.offerLeft?.(offer) === 0;
     const disabled = gold < price || full || soldOut ? 'disabled' : '';
-    const about = isAffinityOffer(offer)
-      ? affinityText(offer[1] as Affinity, pieces)
-      : `${PIECE_VALUE[offer]} pts. ${PIECES[offer].description}`;
-    detail.innerHTML = `<p><strong>${offerName(offer)}</strong> · ${about}</p><button type="button" class="primary" data-buy ${disabled}>${soldOut ? 'Sold out' : full ? 'Bench full' : `Buy · ${price}g`}</button>`;
+    const text = isAffinityOffer(offer) ? affinityText(offer[1] as Affinity, pieces) : about(offer);
+    detail.innerHTML =
+      `<div class="panel-head">${offerDiagram(offer)}<p><strong>${offerName(offer)}</strong> · ${text}</p>${CLOSE_BUTTON}</div>` +
+      `<button type="button" class="primary" data-buy ${disabled}>${soldOut ? 'Sold out' : full ? 'Bench full' : gold < price ? `Need ${price}g` : `Buy · ${price}g`}</button>`;
   }
 
   /** Gold, the buy button, offers, and upgrade/fuse/sell buttons for the selected piece. */
@@ -436,26 +474,30 @@ export class PlacementScreen {
 
     const actions = $('#piece-actions');
     const piece = pieces.find((p) => p.id === this.selected);
+    // A selected piece's choices take the offers' place (they never cover the board it's going to).
+    actions.hidden = !piece;
+    $('#offers').hidden = Boolean(piece);
     if (!piece) {
-      actions.innerHTML = `<span class="hint">Tap a piece to merge, upgrade or sell it.</span>`;
+      actions.innerHTML = '';
       return;
     }
+    // Each button: what it makes (or does) on top, and what it takes underneath.
     const upgrades = (piece.affinity ? [] : UPGRADES[piece.type])
       .map((to) => {
         const cost = upgradeCost(piece.type, to);
         const disabled = gold < cost ? 'disabled' : '';
-        return `<button type="button" data-upgrade="${to}" ${disabled}>${inlinePiece(to)} ${PIECE_NAME[to]} · ${cost}g</button>`;
+        return `<button type="button" data-upgrade="${to}" ${disabled} aria-label="Upgrade to ${aName(to)} for ${cost} gold">${act(`${inlinePiece(to)} ${PIECE_NAME[to]}`, `Upgrade · ${cost}g`)}</button>`;
       })
       .join('');
     const sell =
       piece.type === 'K' || piece.type === 'J'
         ? ''
-        : `<button type="button" class="sell" data-sell>Sell · +${sellValue(piece)}g</button>`;
+        : `<button type="button" class="sell" data-sell aria-label="Sell for ${sellValue(piece)} gold">${act('Sell', `+${sellValue(piece)}g`)}</button>`;
     // Merging is free: the selected piece becomes the result where it stands, and the partner is used up.
     const fusions = fusionOptions(this.session.run.shop, piece.id, this.session.run.settings.fairy)
       .map(({ partnerId, result }) => {
         const partner = pieces.find((p) => p.id === partnerId)!;
-        return `<button type="button" class="fuse" data-fuse="${partnerId}" data-result="${result}" title="Uses up a ${pieceName(partner)}">+ ${inlinePiece(partner.type)} → ${inlinePiece(result)} ${PIECE_NAME[result]}</button>`;
+        return `<button type="button" class="fuse" data-fuse="${partnerId}" data-result="${result}" title="Uses up a ${pieceName(partner)}" aria-label="Fuse with a ${pieceName(partner)} into ${aName(result)}">${act(`${inlinePiece(result)} ${PIECE_NAME[result]}`, `+ ${inlinePiece(partner.type)} ${pieceName(partner)}`)}</button>`;
       })
       .join('');
     // Three of a kind merge in one tap (the set is all the same kind, so there's nothing to pick):
@@ -467,7 +509,7 @@ export class PlacementScreen {
     const pawnFusions = setResults
       .map(
         (to) =>
-          `<button type="button" class="fuse" data-merge-set="${to}" title="Uses up ${SET_MERGE_SIZE} ${pieceName(piece).toLowerCase()}s">Merge ${SET_MERGE_SIZE} → ${inlinePiece(to)} ${to === 'J' ? 'Heir (a second king)' : PIECE_NAME[to]}</button>`,
+          `<button type="button" class="fuse" data-merge-set="${to}" title="Uses up ${SET_MERGE_SIZE} ${pieceName(piece).toLowerCase()}s" aria-label="Merge ${SET_MERGE_SIZE} into ${to === 'J' ? 'an Heir (a second king)' : aName(to)}">${act(`${inlinePiece(to)} ${PIECE_NAME[to]}`, to === 'J' ? `Merge ${SET_MERGE_SIZE}: a 2nd king` : `Merge ${SET_MERGE_SIZE}`)}</button>`,
       )
       .join('');
     // A Rook: two rook-pawns and a Bishop, Knight or Man. The player picks which piece goes: from a
@@ -478,22 +520,25 @@ export class PlacementScreen {
         const title = fromPawn
           ? `Uses up a ${PIECE_NAME[partner]} and another rook-pawn`
           : `Uses up this ${PIECE_NAME[partner]} and ${ROOK_PAWNS} rook-pawns`;
-        const parts = fromPawn ? inlinePiece(partner) : `${ROOK_PAWNS} ${inlinePiece('P', 'w', 'R')}`;
-        return `<button type="button" class="fuse" data-rook-keep="${keepId}" data-rook-use="${usedIds.join(',')}" title="${title}">+ ${parts} → ${inlinePiece('R')} Rook</button>`;
+        const parts = fromPawn
+          ? `+ ${inlinePiece(partner)} ${PIECE_NAME[partner]}`
+          : `+ ${ROOK_PAWNS} ${inlinePiece('P', 'w', 'R')} rook-pawns`;
+        return `<button type="button" class="fuse" data-rook-keep="${keepId}" data-rook-use="${usedIds.join(',')}" title="${title}" aria-label="Make a Rook: ${title.toLowerCase()}">${act(`${inlinePiece('R')} Rook`, parts)}</button>`;
       })
       .join('');
     const info = piece.affinity
       ? affinityText(piece.affinity, pieces)
-      : `${PIECE_VALUE[piece.type]} pts. ${PIECES[piece.type].description}${
+      : `${about(piece.type)}${
           isPawnLike(piece.type)
             ? ' Three of them merge into a Knight or Bishop.'
             : piece.type === 'Q' && canMakeHeir(shop, settings.fairy, heirs)
               ? ' Three Queens merge into an Heir: a second king, so one must be captured before the other can be mated.'
               : ''
         }`;
+    const icon = moveDiagram(piece.type, 'w', piece.affinity);
     actions.innerHTML =
-      `<p class="piece-info"><strong>${pieceName(piece)}</strong> · ${info}</p>` +
-      `${fusions}${rooks}${pawnFusions}${upgrades}${sell}`;
+      `<div class="panel-head">${icon}<p class="piece-info"><strong>${pieceName(piece)}</strong> · ${info}</p>${CLOSE_BUTTON}</div>` +
+      `<div class="panel-buttons">${fusions}${rooks}${pawnFusions}${upgrades}${sell}</div>`;
   }
 
   /** How many Heirs the army may have (a prestige perk can allow more). */
@@ -502,11 +547,13 @@ export class PlacementScreen {
   }
 
   /** Applies a shop action, or shows why it failed. */
-  private applyShop(result: ShopResult, gained?: PieceType): void {
+  private applyShop(result: ShopResult, gained?: PieceType, sound?: Sfx): void {
     if (!result.ok) {
+      sfx('error');
       this.setMessage(result.error);
       return;
     }
+    if (sound) sfx(sound);
     if (gained) this.onGained?.(gained);
     this.setMessage('');
     this.session.setShop(result.shop);
@@ -515,9 +562,44 @@ export class PlacementScreen {
   }
 }
 
+/** "3 pts. Jumps in an L shape." (the King and Heir aren't worth points in battle). */
+function about(type: PieceType): string {
+  const value = type === 'K' || type === 'J' ? '' : `${pts(PIECE_VALUE[type])}. `;
+  return `${value}${PIECES[type].description}`;
+}
+
+/** Smooth scrolling, unless the player asked for reduced motion. */
+function smoothScroll(): ScrollBehavior {
+  return reduceMotion() ? 'auto' : 'smooth';
+}
+
+/** A sheet button's two lines: what it makes or does, and (smaller) what it takes. */
+function act(main: string, note: string): string {
+  return `<span class="act">${main}</span><small class="act-note">${note}</small>`;
+}
+
+/** "a Knight", "an Archbishop". */
+function aName(type: PieceType): string {
+  const name = PIECE_NAME[type];
+  return `${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}`;
+}
+
+/** Closes the sheet over the fight buttons (deselects the offer or piece). */
+const CLOSE_BUTTON = '<button type="button" class="panel-close" data-close aria-label="Close">×</button>';
+
+/** An offer's price band, which colours its card like an auto-battler's cost tiers. */
+function priceTier(price: number): number {
+  return price <= 1 ? 1 : price <= 3 ? 2 : price <= 5 ? 3 : price <= 8 ? 4 : 5;
+}
+
 /** A merge that crowned an Heir, with the gold a perk pays for it (Dynasty). */
 function crownBonus(result: ShopResult, gold: number): ShopResult {
   return result.ok && gold > 0 ? { ok: true, shop: { ...result.shop, gold: result.shop.gold + gold } } : result;
+}
+
+/** How an offer moves: an affinity pawn moves as a pawn (with its badge in the middle). */
+function offerDiagram(offer: Offer): string {
+  return isAffinityOffer(offer) ? moveDiagram('P', 'w', offer[1] as Affinity) : moveDiagram(offer);
 }
 
 /** An offer's picture: the piece, or a pawn with its affinity badge. */

@@ -12,7 +12,10 @@ import type { Rng } from '../rules/rng';
 import { PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
 import { BattleView } from '../ui/battleView';
 import { displayColor, inlinePiece, setPlayerColor } from '../ui/boardDom';
-import { $, escapeHtml, sleep } from './dom';
+import { throwConfetti } from './confetti';
+import { reduceMotion, settings } from './settings';
+import { sfx } from './sound';
+import { $, escapeHtml, pts, sleep } from './dom';
 import type { BattleOutcome } from './session';
 
 /** Base playback time per move at 1× speed. */
@@ -95,7 +98,6 @@ export class BattleScreen {
   private readonly result = $('#result');
   private readonly playback = $('#playback');
   private readonly view = new BattleView($('#battle-root'));
-  private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   private readonly manual = $('#manual');
   private readonly promo = $('#promo');
   private readonly undoBtn = $<HTMLButtonElement>('#undo');
@@ -194,18 +196,21 @@ export class BattleScreen {
     const square = (s: string) => (flip ? mirrorSquare(s, spec.ranks) : s);
     const mine = flip ? 'b' : 'w';
     this.waiting = false;
-    this.speed = 1;
+    this.speed = settings().speed;
     this.skipping = false;
     this.renderPlaybackButtons();
     this.section.hidden = false;
     this.result.hidden = true;
     this.playback.hidden = false;
     this.manual.hidden = true;
-    this.showSides(false);
+    // Each side's pieces and points, above and below the board.
+    this.sideLabels = watching ? { w: 'White', b: 'Black' } : { w: 'You', b: 'Them' };
+    this.showSides(true);
     $('#eval').hidden = false;
 
     const limit = plyLimit(spec);
     this.view.render(show(fen), spec);
+    this.renderSides(show(fen), spec.files);
     // The bar's light side is White's: flip it when the player is Black.
     $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
     this.showEval(0);
@@ -228,6 +233,7 @@ export class BattleScreen {
     const evals: (number | null)[] = [];
     let worstDeficit = 0;
     let before = fen;
+    let files = spec.files;
     $('#battle-announce').hidden = true;
     const result = await runBattle(
       fen,
@@ -239,26 +245,31 @@ export class BattleScreen {
         evals.push(evalScore);
         const after = game.fen();
         this.announce(royalCaptureText(before, after, watching ? null : mine));
+        const captured = pieceCount(after) < pieceCount(before);
         before = after;
+        files = game.spec.files;
         const now = material(game.fen());
         worstDeficit = Math.max(worstDeficit, now[mine === 'w' ? 'b' : 'w'] - now[mine]);
         const ms = this.skipping ? 0 : MOVE_MS / this.speed;
         this.view.render(show(game.fen()), game.spec, {
           last: { from: square(move.from), to: square(move.to) },
-          animateMs: this.reduceMotion ? 0 : ms * 0.8,
+          animateMs: reduceMotion() ? 0 : ms * 0.8,
           check: game.isCheck(),
         });
         if (evalScore !== null) this.showEval(flip ? -evalScore : evalScore);
-        const mat = material(show(game.fen()));
-        this.status.textContent = this.skipping
-          ? 'Skipping…'
-          : `Move ${Math.ceil(plies / 2)}/${limit / 2} · Material ${mat.w}–${mat.b}`;
+        if (!this.skipping) {
+          this.renderSides(show(game.fen()), game.spec.files);
+          sfx(game.isCheck() ? 'check' : captured ? 'capture' : 'move');
+        }
+        this.status.textContent = this.skipping ? 'Skipping…' : `Move ${Math.ceil(plies / 2)}/${limit / 2}`;
         if (ms) await sleep(ms);
       },
       { plyLimit: limit },
       spec,
     );
 
+    // Skipping drew only the final position: catch the piece lists up with it.
+    this.renderSides(show(before), files);
     if (result.reason === 'checkmate' && result.winner !== 'draw') {
       this.showEval(checkmateEval(result.winner === mine ? 'w' : 'b'));
     }
@@ -294,6 +305,11 @@ export class BattleScreen {
     this.manual.hidden = true;
     this.playback.hidden = true;
     this.replayDone.hidden = false;
+    // The player is White in a recorded battle's positions.
+    this.sideLabels = { w: 'You', b: 'Them' };
+    this.showSides(true);
+    // The result card comes back after the review: don't throw its confetti twice.
+    $('#confetti').replaceChildren();
     const review = $('#review');
     review.hidden = false;
     // Evals by move (index i = after move i+1); a manual game's are worked out on demand.
@@ -348,9 +364,10 @@ export class BattleScreen {
       const f = frames[index];
       this.view.render(f.fen, spec, {
         ...(f.last ? { last: f.last } : {}),
-        animateMs: animate && !this.reduceMotion ? MOVE_MS * 0.4 : 0,
+        animateMs: animate && !reduceMotion() ? MOVE_MS * 0.4 : 0,
         check: f.check,
       });
+      this.renderSides(f.fen, spec.files);
       slider.value = String(index);
       const { result } = record;
       if (index === last && result.reason === 'checkmate' && result.winner !== 'draw')
@@ -427,10 +444,11 @@ export class BattleScreen {
     const draw = (last?: Move) => {
       // In a Play it game the player is White in the FEN.
       this.announce(royalCaptureText(before, game.fen, 'w'));
+      if (last) sfx(game.isCheck() ? 'check' : pieceCount(game.fen) < pieceCount(before) ? 'capture' : 'move');
       before = game.fen;
       this.view.render(game.fen, game.spec, {
         last,
-        animateMs: last && !this.reduceMotion ? 150 : 0,
+        animateMs: last && !reduceMotion() ? 150 : 0,
         check: game.isCheck(),
       });
       this.renderSides(game.fen, game.spec.files);
@@ -438,6 +456,7 @@ export class BattleScreen {
       this.manualWorstDeficit = Math.max(this.manualWorstDeficit, now.b - now.w);
     };
     this.manualWorstDeficit = 0;
+    this.sideLabels = { w: 'You', b: 'Them' };
     this.showSides(true);
     draw();
 
@@ -489,7 +508,6 @@ export class BattleScreen {
 
     this.manual.hidden = true;
     this.promo.hidden = true;
-    this.showSides(false);
     // The game's over: show the eval now.
     $('#eval').hidden = false;
     if (result.reason === 'checkmate' && result.winner !== 'draw') this.showEval(checkmateEval(result.winner));
@@ -502,6 +520,9 @@ export class BattleScreen {
     $('#side-them').hidden = !shown;
     $('#side-you').hidden = !shown;
   }
+
+  /** What the piece lists call each side: You and Them, or White and Black when watching a battle. */
+  private sideLabels: Record<Color, string> = { w: 'You', b: 'Them' };
 
   /**
    * Each side's remaining pieces, grouped by type (most valuable first) with a count, and its total
@@ -525,10 +546,10 @@ export class BattleScreen {
         .join('');
       const lead = mat[side] - mat[side === 'w' ? 'b' : 'w'];
       const leadText = lead > 0 ? ` <span class="side-lead">+${lead}</span>` : '';
-      return `<span class="side-label">${label}</span><span class="side-list">${pieces}</span><span class="side-points">${mat[side]} pts${leadText}</span>`;
+      return `<span class="side-label">${label}</span><span class="side-list">${pieces}</span><span class="side-points">${pts(mat[side])}${leadText}</span>`;
     };
-    $('#side-them').innerHTML = line('b', 'Opponent');
-    $('#side-you').innerHTML = line('w', 'You');
+    $('#side-them').innerHTML = line('b', this.sideLabels.b);
+    $('#side-you').innerHTML = line('w', this.sideLabels.w);
   }
 
   /** Waits for the player's move (picking a promotion if there's a choice), Undo or Resign. */
@@ -633,6 +654,8 @@ export class BattleScreen {
     this.status.textContent = 'Final position';
     $('#result-title').textContent = card.title;
     $('#result-detail').textContent = card.detail;
+    $('#confetti').replaceChildren();
+    this.showStats('');
     $('#replay').hidden = true;
     $('#prestige').hidden = true;
     $('#run-summary').hidden = true;
@@ -671,6 +694,8 @@ export class BattleScreen {
   showResult(result: BattleResult, outcome: BattleOutcome, spec: BoardSpec, lives: number, best: number): void {
     this.setCardExtras([]);
     this.showAwards([]);
+    // Last round's confetti would play again as the card comes back.
+    $('#confetti').replaceChildren();
     const { winner, reason, material } = result;
     $('#replay').hidden = false;
     $('#prestige').hidden = true;
@@ -691,36 +716,57 @@ export class BattleScreen {
         ? `${verb} on points, ${material.w}–${material.b}, at the ${plyLimit(spec) / 2}-move limit.`
         : reason === 'insufficient' && winner !== 'draw'
           ? `${verb} on points, ${material.w}–${material.b}: neither side could checkmate any more.`
-          : `${verb} ${REASON_TEXT[reason]}. Material ${material.w}–${material.b} after ${moves} moves.`;
+          : `${verb} ${REASON_TEXT[reason]}. Material ${material.w}–${material.b} after ${moves} move${moves === 1 ? '' : 's'}.`;
+    sfx(outcome.won || winner === 'w' ? 'win' : winner === 'b' ? 'lose' : 'draw');
+    const r = outcome.record;
+    const record = `${r.w}–${r.l}${r.d ? `–${r.d}` : ''}`;
+    const bestTile = outcome.newBest ? tile('New!', 'Best', 'tone-gold') : tile(String(best), 'Best');
     if (outcome.won) {
-      const r = outcome.record;
       $('#result-title').textContent = '🏆 Run complete!';
-      $('#result-detail').textContent =
-        `${summary} You got through all ${FINAL_ROUND} rounds: ${r.w} won, ${r.l} lost, ${r.d} drawn. ${outcome.newBest ? 'New best!' : `Best: ${best}.`}`;
+      $('#result-detail').textContent = `${summary} You got through all ${FINAL_ROUND} rounds.`;
+      this.showStats(
+        tile(String(outcome.score), 'Rounds won', 'tone-gold') + tile(record, 'W–L–D', 'tone-teal') + bestTile,
+      );
       $('#next').textContent = 'New game';
       const prestige = $<HTMLButtonElement>('#prestige');
       prestige.hidden = false;
       prestige.textContent = `Prestige ★${outcome.prestige + 1}: start over with a perk`;
+      throwConfetti($('#confetti'), 60);
     } else if (outcome.over) {
-      const rounds = `${outcome.score} round${outcome.score === 1 ? '' : 's'}`;
       $('#result-title').textContent = 'Game over';
-      $('#result-detail').textContent =
-        `${summary} You won ${rounds}. ${outcome.newBest ? 'New best!' : `Best: ${best}.`}`;
+      $('#result-detail').textContent = summary;
+      this.showStats(
+        tile(String(outcome.score), 'Rounds won', 'tone-gold') + tile(record, 'W–L–D', 'tone-teal') + bestTile,
+      );
       $('#next').textContent = 'New run';
     } else {
       const title = winner === 'w' ? 'Victory' : winner === 'b' ? 'Defeat' : 'Draw';
       $('#result-title').textContent = wonOnPoints(result) || reason === 'move-limit' ? `${title} on points` : title;
-      const lifeNote = winner === 'b' ? ` −1 life (${lives} left).` : '';
-      $('#result-detail').textContent = `${summary} +${outcome.income} gold.${lifeNote}`;
+      $('#result-detail').textContent = summary;
+      const livesTile =
+        winner === 'b'
+          ? tile(`${HEART} ${lives}`, '−1 life', 'tone-loss')
+          : tile(`${HEART} ${lives}`, 'Lives', 'tone-hearts');
+      this.showStats(tile(`+${outcome.income}g`, 'Gold', 'tone-gold') + livesTile + tile(record, 'W–L–D', 'tone-teal'));
       $('#next').textContent = 'Next round';
+      if (winner === 'w') throwConfetti($('#confetti'), 26);
     }
+  }
+
+  /** The result card's row of tiles (empty hides it). */
+  private showStats(html: string): void {
+    const el = $('#result-stats');
+    el.hidden = !html;
+    el.innerHTML = html;
   }
 
   /** Lists the achievements this battle unlocked on the result card (the notices are easy to miss). */
   showAwards(names: string[]): void {
     const el = $('#result-awards');
     el.hidden = names.length === 0;
-    el.textContent = names.length ? `🏆 New: ${names.join(', ')}` : '';
+    el.innerHTML = names.length
+      ? `<span class="award-icon" aria-hidden="true">🏆</span><span><small>${names.length > 1 ? 'New awards' : 'New award'}</small><strong>${names.map(escapeHtml).join(', ')}</strong></span>`
+      : '';
   }
 
   private resetResign(): void {
@@ -748,6 +794,18 @@ export class BattleScreen {
     bar.setAttribute('aria-valuenow', String(Math.round(share * 100)));
     bar.setAttribute('aria-valuetext', `${text} (${share >= 0.5 ? 'you' : 'opponent'} ahead)`);
   }
+}
+
+const HEART = '♥︎';
+
+/** How many pieces a FEN has on the board (one fewer after a capture). */
+function pieceCount(fen: string): number {
+  return fen.split(' ')[0].replace(/[^a-z]/gi, '').length;
+}
+
+/** One of the result card's tiles: a big value over a small label, coloured by `tone`. */
+function tile(value: string, label: string, tone = ''): string {
+  return `<div class="result-stat ${tone}"><strong>${escapeHtml(value)}</strong><small>${escapeHtml(label)}</small></div>`;
 }
 
 /**

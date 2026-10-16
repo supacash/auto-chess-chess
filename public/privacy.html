@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1035" />
+    <title>Privacy policy · Pawned Up</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg" />
+    <!-- DRAFT: not yet reviewed. Every [?] marks a question for the developer; see "Open questions" at the end. -->
+    <style>
+      :root {
+        --bg: #1a1035;
+        --panel: #2e2159;
+        --deep: #120a29;
+        --text: #ffffff;
+        --muted: #c9bfe6;
+        --faint: #9488bc;
+        --accent: #ff7a59;
+        --gold: #ffc93c;
+        --ink: #1a1035;
+        --radius: 16px;
+        color-scheme: dark;
+        font-family: "Nunito Variable", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-weight: 500;
+        color: var(--text);
+        background: var(--bg);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        background: radial-gradient(120% 60% at 50% 0%, #241749 0%, var(--bg) 60%) fixed;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+          max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        line-height: 1.6;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      header img {
+        flex: none;
+      }
+      h1,
+      h2 {
+        font-family: "Lilita One", "Nunito Variable", system-ui, sans-serif;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        line-height: 1.1;
+      }
+      h1 {
+        margin: 0;
+        font-size: 2rem;
+        text-transform: uppercase;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.3rem;
+        color: var(--gold);
+      }
+      section {
+        margin: 14px 0;
+        padding: 16px;
+        background: var(--panel);
+        border-radius: var(--radius);
+        box-shadow: 0 4px 0 var(--deep);
+      }
+      p,
+      ul {
+        margin: 0 0 10px;
+      }
+      p:last-child,
+      ul:last-child {
+        margin-bottom: 0;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li + li {
+        margin-top: 4px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        font-size: 0.75rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink);
+        background: var(--gold);
+        border-radius: 999px;
+      }
+      .draft {
+        border: 2px dashed var(--accent);
+      }
+      .draft h2 {
+        color: var(--accent);
+      }
+      .q {
+        font-weight: 800;
+        color: var(--accent);
+      }
+      a {
+        color: var(--text);
+      }
+      code {
+        font-size: 0.9em;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="logo.svg" alt="" width="48" height="48" />
+        <div>
+          <h1>Privacy policy</h1>
+          <span class="badge">Draft</span>
+        </div>
+      </header>
+      <p class="muted">
+        Pawned Up, the chess auto battler, on the web and in the Android app. Last updated: <span class="q">[?]</span>.
+        Developer: <span class="q">[? name]</span>. Contact: <span class="q">[? email]</span>.
+      </p>
+
+      <section>
+        <h2>The short version</h2>
+        <ul>
+          <li>No account, no email address and no real name needed to play.</li>
+          <li>Single-player games, records and settings stay on your device.</li>
+          <li>
+            Playing online sends your army, results and a randomly generated player name (like "Golden Knight 19") to
+            Google Firebase, under an anonymous ID.
+          </li>
+          <li>
+            The Android app can show a rewarded ad when you choose to watch one; Google's ad service then collects
+            device data as described below. The web version has no ads.
+          </li>
+          <li>The game has no analytics or tracking of its own.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Stored on your device</h2>
+        <p>
+          The game keeps these in your browser's or app's local storage. They never leave your device unless you play
+          online (see the next section).
+        </p>
+        <ul>
+          <li>The game in progress, including the opponent drafted for the next round.</li>
+          <li>Your records and achievements, best scores, and your last battle (for Review).</li>
+          <li>The online match you're in, so you can rejoin it (its room code and round).</li>
+          <li>Your generated player name.</li>
+          <li>Your settings: sound on or off, effects volume, battle speed, reduced motion, and which tips you've dismissed.</li>
+        </ul>
+        <p>
+          Clearing the site's data in your browser, or the app's storage in Android settings, deletes all of it. Settings →
+          <em>Show again</em> clears just the dismissed tips.
+        </p>
+      </section>
+
+      <section>
+        <h2>Online matches</h2>
+        <p>
+          Multiplayer uses <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Google Firebase</a>
+          (Firebase Authentication and Cloud Firestore). Nothing is sent to Firebase until you create, join or rejoin an online game (Quick play, Create room, Join room or Rejoin match). Play vs bots stays on your device.
+        </p>
+        <ul>
+          <li>
+            <strong>Anonymous sign-in.</strong> The game signs in to Firebase anonymously: Firebase gives your device a
+            random user ID. No name, email or phone number is asked for. Firebase keeps the sign-in on your device.
+          </li>
+          <li>
+            <strong>Rooms.</strong> A room stores its code, its rules and game version, and for each player: the user ID,
+            generated player name, the army placed each round, perks picked, readiness, and battle results. Anyone signed in
+            to the game can read a room (to join it by code); a player's army stays hidden until that round's shop has
+            closed.
+          </li>
+          <li>
+            <strong>Clock.</strong> To agree on round timers, the game writes the server's time to a small record under
+            your user ID.
+          </li>
+          <li>
+            Firebase's servers, like any web service, receive your device's IP address and basic connection details when
+            the game talks to them. Google processes this data under its
+            <a href="https://firebase.google.com/terms/data-processing-terms" target="_blank" rel="noopener">data processing terms</a>.
+            The database is hosted in the United States (Firestore location <code>nam5</code>).
+          </li>
+          <li>
+            How long room data is kept: <span class="q">[?]</span> At the moment, a room is deleted only when its host
+            leaves it empty in the lobby; finished rooms are not deleted.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Google sign-in (not yet live)</h2>
+        <p>
+          A future version may let you sign in with Google to keep your records across devices. It is not switched on yet.
+          <span class="q">[? Update this section before it ships: which data the account keeps (records, name), where,
+          and how to delete it.]</span> It would ask Google for your basic profile and email address
+          (<code>openid email profile</code>).
+        </p>
+      </section>
+
+      <section>
+        <h2>Ads in the Android app</h2>
+        <p>
+          The Android app can show <strong>rewarded ads</strong>, only when you choose to watch one (for example, for an
+          extra life). They're served by
+          <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener">Google AdMob</a>.
+          The web version shows no ads.
+        </p>
+        <ul>
+          <li>
+            The Google Mobile Ads SDK collects data such as your device's advertising ID, IP address, and information about
+            the device and the ads you see, to show and measure ads and prevent fraud. See
+            <a href="https://support.google.com/admob/answer/6128543" target="_blank" rel="noopener">how Google uses this data</a>.
+          </li>
+          <li>
+            Where the law requires it (for example in the EEA and the UK), the app asks for your consent with Google's
+            consent form before ads load.
+          </li>
+          <li>
+            You can reset or delete your advertising ID, or opt out of personalised ads, in your Android device's settings
+            (Settings → Google → Ads, or Settings → Privacy → Ads).
+          </li>
+          <li>Whether ads are personalised: <span class="q">[?]</span></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Hosting</h2>
+        <p>
+          The web version is hosted on <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">GitHub Pages</a>,
+          which receives your IP address when your browser loads the game. Fonts and pieces are served from the same site,
+          not from third parties.
+        </p>
+      </section>
+
+      <section>
+        <h2>Children</h2>
+        <p><span class="q">[?]</span> The game's intended age group, and how that fits Google Play's Families policy and AdMob's settings for child-directed apps.</p>
+      </section>
+
+      <section>
+        <h2>Your choices and contact</h2>
+        <ul>
+          <li>Play single-player only, and nothing is sent to Firebase.</li>
+          <li>Clear the game's storage to delete everything kept on your device.</li>
+          <li>To ask for online data to be deleted, or with any question: <span class="q">[? contact email]</span></li>
+          <li>Changes to this policy will be posted on this page, with a new date at the top.</li>
+        </ul>
+      </section>
+
+      <section class="draft">
+        <h2>Open questions (remove before publishing)</h2>
+        <ul>
+          <li>The developer's name (or company) and a contact email.</li>
+          <li>The policy's effective date.</li>
+          <li>How long online rooms and armies are kept, and whether to add automatic clean-up (a Firestore TTL policy, for example).</li>
+          <li>How to handle deletion requests: rooms are keyed by anonymous IDs the player can't see.</li>
+          <li>Whether AdMob ads are personalised or non-personalised, and which consent settings are used in AdMob.</li>
+          <li>The intended age rating, and whether the app targets children (affects AdMob and Play Families requirements).</li>
+          <li>The Google sign-in section, once accounts ship.</li>
+          <li>
+            Whether App Check (reCAPTCHA Enterprise on the web, Play Integrity in the app) will be switched on: it's in the
+            code but off, and would send device signals to Google.
+          </li>
+          <li>Where this page will live for the Play Store listing (it needs a public URL).</li>
+          <li>Whether the Google Mobile Ads SDK starts (and collects data) when the app opens, or only when the first ad is requested: the game only calls it then, but the SDK's own behaviour should be checked.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
