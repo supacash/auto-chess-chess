@@ -52,6 +52,7 @@ import { armyCap, BENCH_SIZE, benchCount, MAX_HEIRS } from '../rules/placement';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { moveDiagram } from '../ui/moveDiagram';
+import { reduceMotion } from './settings';
 import { $, escapeHtml, pts } from './dom';
 import type { PlacementSession } from './placementSession';
 import { type Sfx, sfx } from './sound';
@@ -570,7 +571,7 @@ function about(type: PieceType): string {
 
 /** Smooth scrolling, unless the player asked for reduced motion. */
 function smoothScroll(): ScrollBehavior {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  return reduceMotion() ? 'auto' : 'smooth';
 }
 
 /** A sheet button's two lines: what it makes or does, and (smaller) what it takes. */

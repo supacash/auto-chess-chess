@@ -182,6 +182,15 @@ export function dismissTip(id: TipId): void {
   }
 }
 
+/** Shows every tip again (Settings). */
+export function clearTips(): void {
+  try {
+    localStorage.removeItem(TIPS_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export function clearGame(slot: SaveSlot = 'run'): void {
   try {
     localStorage.removeItem(slotKey(slot));
