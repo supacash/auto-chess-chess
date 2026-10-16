@@ -33,11 +33,14 @@ export const MATCH_TIPS: Partial<Record<TipId, string>> = {
 /** How to play first; after that, a set ready to merge beats everything else. */
 const ORDER: TipId[] = ['start', 'merge', 'tap', 'affinity', 'interest', 'opponent'];
 
-/** The tip to show for this shop and round, or null (all relevant ones dismissed). */
-export function nextTip(shop: Shop, round: number, seen: ReadonlySet<TipId>): TipId | null {
+/**
+ * The tip to show for this shop and round, or null (all relevant ones dismissed). `first` is whether
+ * this is the first battle of a game (the daily challenge's starts at round 2).
+ */
+export function nextTip(shop: Shop, round: number, seen: ReadonlySet<TipId>, first = round === 1): TipId | null {
   const applies: Record<TipId, boolean> = {
     merge: shop.pieces.some((p) => setMergePartners(shop, p.id) !== null || rookOptions(shop, p.id).length > 0),
-    start: round === 1,
+    start: first,
     tap: shop.pieces.some((p) => p.type !== 'K'),
     affinity: shop.pieces.some((p) => p.affinity) || (shop.offers ?? []).some((o) => o.length === 2 && o[0] === 'P'),
     interest: shop.gold >= 8,

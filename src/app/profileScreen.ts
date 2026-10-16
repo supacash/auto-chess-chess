@@ -19,6 +19,9 @@ import { matchLabel, type RecordBook, runLabel } from './recordBook';
 
 type Tab = 'single' | 'daily' | 'multi' | 'history' | 'fun' | 'achievements';
 
+/** Where an empty tab's button leads: a new game, today's daily challenge or Multiplayer. */
+export type ProfileGo = 'new' | 'daily' | 'multi';
+
 /** The Profile screen: the player's name and their records, by tab. */
 export class ProfileScreen {
   private readonly section = $('#profile');
@@ -29,12 +32,17 @@ export class ProfileScreen {
     private readonly name: () => string,
     private readonly newName: () => string,
     onBack: () => void,
+    onGo: (go: ProfileGo) => void,
   ) {
     $('#profile-tabs').addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-tab]');
       if (!btn) return;
       this.tab = btn.dataset.tab as Tab;
       this.render();
+    });
+    $('#profile-body').addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-go]');
+      if (btn) onGo(btn.dataset.go as ProfileGo);
     });
     $('#profile-rename').addEventListener('click', () => {
       $('#profile-name').textContent = this.newName();
@@ -79,7 +87,9 @@ const stat = (label: string, value: string) =>
   `<div class="stat"><span class="stat-value">${value}</span><span class="stat-label">${label}</span></div>`;
 const card = (title: string, stats: string, extra = '') =>
   `<div class="record-card"><h3>${title}</h3><div class="stats">${stats}</div>${extra}</div>`;
-const empty = (text: string) => `<p class="profile-empty">${text}</p>`;
+/** An empty tab: what will show up there, and a button to go and play for it. */
+const empty = (text: string, go?: ProfileGo, label = '') =>
+  `<div class="profile-empty"><p>${text}</p>${go ? `<button type="button" class="teal" data-go="${go}">${label}</button>` : ''}</div>`;
 const fmt = (n: number | null, digits = 1) => (n === null ? '–' : n.toFixed(digits).replace(/\.0$/, ''));
 
 function single(r: Records): string {
@@ -104,7 +114,7 @@ function single(r: Records): string {
       ),
     )
     .join('');
-  return cards || empty('No single-player runs yet. Start one from New game!');
+  return cards || empty('No single-player runs yet.', 'new', 'New game');
 }
 
 /** How many recent days the Daily tab lists. */
@@ -112,7 +122,13 @@ const RECENT_DAYS = 14;
 
 function daily(r: Records, today: string): string {
   const days = r.daily;
-  if (days.length === 0) return empty('No daily challenges yet. A new one comes every day at midnight UTC!');
+  if (days.length === 0) {
+    return empty(
+      'No daily challenges yet. A new one comes every day at midnight UTC.',
+      'daily',
+      'Play today’s challenge',
+    );
+  }
   const total = days.reduce((sum, d) => sum + d.score, 0);
   const best = Math.max(...days.map((d) => d.score));
   const byDate = new Map(days.map((d) => [d.date, d]));
@@ -167,7 +183,7 @@ function multi(r: Records): string {
       }),
     )
     .join('');
-  return cards || empty('No multiplayer matches yet. Try one from Multiplayer!');
+  return cards || empty('No multiplayer matches yet.', 'multi', 'Multiplayer');
 }
 
 function history(r: Records): string {

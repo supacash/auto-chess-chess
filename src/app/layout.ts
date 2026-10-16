@@ -13,6 +13,15 @@ const ENGINE_CREDIT = USE_FAIRY
     licensed under the <a href="fairy/GPL-3.0.txt" target="_blank" rel="noopener">GPLv3</a> (source at that link).`
   : 'Chess engine: our own, written for the game.';
 
+/** The menu's small buttons' icons, drawn like the sound switch: round strokes in the text colour. */
+const PROFILE_ICON = '<circle cx="12" cy="8" r="4"/><path d="M4.5 21c0-4.2 3.4-7 7.5-7s7.5 2.8 7.5 7"/>';
+const GUIDE_ICON =
+  '<path d="M12 7.5C10.5 5.6 8 5 3 5v13c5 0 7.5.6 9 2.5 1.5-1.9 4-2.5 9-2.5V5c-5 0-7.5.6-9 2.5z"/><path d="M12 7.5v13"/>';
+const SETTINGS_ICON =
+  '<path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h11m4 0h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>';
+const menuIcon = (paths: string) =>
+  `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+
 /** Renders the page shell: header, menu, Settings, placement and battle screens, and the dialogs. */
 export function renderLayout(root: HTMLElement): void {
   root.innerHTML = `
@@ -41,9 +50,11 @@ export function renderLayout(root: HTMLElement): void {
         Daily challenge<small id="menu-daily-detail"></small>
       </button>
       <button type="button" id="menu-multiplayer">Multiplayer</button>
-      <button type="button" id="menu-profile">Profile</button>
-      <button type="button" id="menu-guide">Piece guide</button>
-      <button type="button" id="menu-settings">Settings</button>
+      <div class="menu-row">
+        <button type="button" id="menu-profile">${menuIcon(PROFILE_ICON)}Profile</button>
+        <button type="button" id="menu-guide">${menuIcon(GUIDE_ICON)}Piece guide</button>
+        <button type="button" id="menu-settings">${menuIcon(SETTINGS_ICON)}Settings</button>
+      </div>
     </div>
     <button type="button" id="menu-replay" class="link-button" hidden>Review your last battle</button>
   </section>
@@ -160,7 +171,13 @@ export function renderLayout(root: HTMLElement): void {
   </section>
 
   <section id="settings" class="settings" hidden aria-labelledby="settings-title">
-    <h2 class="screen-title" id="settings-title">Settings</h2>
+    <div class="profile-head">
+      <img class="profile-logo" src="${import.meta.env.BASE_URL}logo.svg" alt="" width="52" height="52" />
+      <div>
+        <h2 class="profile-name" id="settings-title">Settings</h2>
+        <p class="dialog-text muted">Sound, battles and the small print.</p>
+      </div>
+    </div>
     <div class="settings-body">
       <div class="record-card settings-card">
         <h3>Sound</h3>
@@ -184,6 +201,10 @@ export function renderLayout(root: HTMLElement): void {
         <label class="setting-row">
           <span>Reduce motion<small>Fewer animations. Always on when your device asks for it.</small></span>
           <input type="checkbox" role="switch" id="set-motion" class="switch" />
+        </label>
+        <label class="setting-row">
+          <span>Tutorials<small>Tips in the shop, and how a piece moves when you tap it.</small></span>
+          <input type="checkbox" role="switch" id="set-tutorials" class="switch" />
         </label>
         <div class="setting-row">
           <span>Tips<small id="set-tips-note">Show the first-game tips again.</small></span>

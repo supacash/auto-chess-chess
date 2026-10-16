@@ -9,6 +9,7 @@ export type ToastTone = 'gold' | 'teal';
 
 const queue: { title: string; detail: string; tone: ToastTone }[] = [];
 let showing = false;
+let timer = 0;
 
 /**
  * A short notice at the top of the screen (e.g. an achievement unlocked), gone after a few seconds.
@@ -34,8 +35,14 @@ function showNext(): void {
   el.classList.remove('show');
   void el.offsetWidth; // restart the animation
   el.classList.add('show');
-  window.setTimeout(() => {
-    el.hidden = true;
-    window.setTimeout(showNext, GAP_MS);
-  }, SHOW_MS);
+  // A tap clears it early: it sits over the run bar and Menu.
+  el.onclick = dismiss;
+  timer = window.setTimeout(dismiss, SHOW_MS);
+}
+
+/** Hides the notice on screen, then shows the next one waiting. */
+function dismiss(): void {
+  clearTimeout(timer);
+  $('#toast').hidden = true;
+  window.setTimeout(showNext, GAP_MS);
 }

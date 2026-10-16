@@ -10,6 +10,7 @@ import {
   runAchievements,
 } from './game/achievements';
 import { adsAvailable, showRewardedAd } from './app/ads';
+import { listenForBack } from './app/backButton';
 import { startMenuDrift } from './app/menuDrift';
 import { applyReduceMotion } from './app/settings';
 import { SettingsScreen } from './app/settingsScreen';
@@ -77,8 +78,13 @@ function useSession(next: Session): void {
 }
 const battle = new BattleScreen(
   () => {
-    if (isRunOver(session.run)) showMenu();
-    else showPlacement();
+    if (!isRunOver(session.run)) {
+      showPlacement();
+      return;
+    }
+    showMenu();
+    // A finished run's New run / New game goes straight to the New game window (Cancel stays on the menu).
+    if (!session.run.daily) openNewRun();
   },
   () => void watchReplay(),
   () => openPrestige(),
@@ -127,7 +133,19 @@ soundButton.addEventListener('click', () => {
   sfx('select');
 });
 renderSoundButton();
-const profile = new ProfileScreen(records, playerName, renamePlayer, () => showMenu());
+const profile = new ProfileScreen(
+  records,
+  playerName,
+  renamePlayer,
+  () => showMenu(),
+  // An empty tab's button: off to play for it.
+  (go) => {
+    showMenu();
+    if (go === 'new') openNewRun();
+    else if (go === 'daily') openDaily();
+    else openMultiplayer();
+  },
+);
 $('#menu-profile').addEventListener('click', () => {
   $('#menu').hidden = true;
   profile.show();
@@ -183,11 +201,12 @@ const lobby = new LobbyScreen(
   () => [1, 2, 3].map(() => generateName(Math.random)),
 );
 const matchDialog = $<HTMLDialogElement>('#match-dialog');
-$('#menu-multiplayer').addEventListener('click', () => {
+function openMultiplayer(): void {
   if (busy) return;
   $('#mp-error').textContent = '';
   matchDialog.showModal();
-});
+}
+$('#menu-multiplayer').addEventListener('click', openMultiplayer);
 matchDialog.querySelector('form')?.addEventListener('submit', (e) => {
   const action = (e.submitter as HTMLButtonElement | null)?.value;
   const blitz = $<HTMLInputElement>('#mp-blitz').checked;
@@ -614,6 +633,28 @@ function resumeManual(): void {
   });
 }
 
+/**
+ * Android's back button: closes the window or screen on top, else does what Menu or Leave would.
+ * Returns false on the menu, where there's nowhere further back.
+ */
+function goBack(): boolean {
+  const dialog = [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')].pop();
+  if (dialog) {
+    // Choices are read on submit (not on close), so closing is Cancel. A match's perk pick can't be skipped.
+    if (dialog.id !== 'perk-dialog') dialog.close();
+    return true;
+  }
+  if (guide.isOpen) guide.close();
+  else if (!$('#profile').hidden || !$('#settings').hidden) showMenu();
+  else if (document.body.classList.contains('in-lobby')) $('#lobby-leave').click();
+  // Leave asks for a second tap, so a second press of back leaves the match.
+  else if (match.active) $('#match-leave').click();
+  else if (!$('#menu').hidden) return false;
+  // The shop, a battle or a replay: Menu, which pauses a Play it game (it's disabled while an auto battle plays).
+  else $('#menu-button').click();
+  return true;
+}
+
 const ISOLATION_RELOAD_KEY = 'acc.isolation-reload';
 
 /**
@@ -646,6 +687,7 @@ function boot(): void {
   if (daily.daily) recordDaily(daily.daily);
   renderHeader(session);
   showMenu([notice, daily.notice].filter(Boolean).join(' '));
+  void listenForBack(goBack);
 }
 
 /**

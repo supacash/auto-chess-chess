@@ -48,11 +48,12 @@ import {
   PIECES,
   type PieceType,
 } from '../rules/pieces';
+import { dailyBattle } from '../rules/daily';
 import { armyCap, BENCH_SIZE, benchCount, MAX_HEIRS } from '../rules/placement';
 import { PlacementBoard } from '../ui/board';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { moveDiagram } from '../ui/moveDiagram';
-import { reduceMotion } from './settings';
+import { reduceMotion, settings as playerSettings } from './settings';
 import { $, escapeHtml, pts } from './dom';
 import type { PlacementSession } from './placementSession';
 import { type Sfx, sfx } from './sound';
@@ -231,6 +232,15 @@ export class PlacementScreen {
     this.fightBtn.addEventListener('click', () => (this.mode.onReady ? this.mode.onReady() : onFight()));
     this.playBtn.addEventListener('click', onPlay);
     $('#last-replay').addEventListener('click', onReplay);
+    // The fight bar sticks to the bottom of the screen while the board and shop scroll under it. Only
+    // then does it get a backdrop (style.css), so the shop doesn't show through around the buttons.
+    // Stuck, it sits on the screen's bottom edge, so with that edge pulled up a pixel it's cut off.
+    // (Threshold 0 too: Chrome doesn't report a hidden bar showing up already cut off without it.)
+    const bar = $('#placement .fight-bar');
+    new IntersectionObserver(
+      ([entry]) => bar.classList.toggle('stuck', entry.isIntersecting && entry.intersectionRatio < 1),
+      { threshold: [0, 1], rootMargin: '0px 0px -1px 0px' },
+    ).observe(bar);
   }
 
   /** Switches what's being played (a run, or a match); takes effect on the next show(). */
@@ -401,14 +411,15 @@ export class PlacementScreen {
     this.board.clearSelection();
   }
 
-  /** The offer cards, and the selected offer's description and Buy button. */
   /** The tip currently showing (see game/tips.ts), or null. */
   private tip: TipId | null = null;
 
   /** Shows the most useful first-run tip that hasn't been dismissed on this device. */
   private renderTip(): void {
-    const { shop, round } = this.session.run;
-    this.tip = nextTip(shop, round, seenTips());
+    const { shop, round, daily } = this.session.run;
+    // The daily challenge starts at round 2, but its first battle is someone's first game as much as round 1 is.
+    const first = daily ? dailyBattle(round) === 1 : round === 1;
+    this.tip = playerSettings().tutorials ? nextTip(shop, round, seenTips(), first) : null;
     $('#tip').hidden = this.tip === null;
     $('#tip-text').textContent = this.tip ? this.tipText(this.tip) : '';
     // The how-to-play tip already says to place the king: no need for the hint under the buttons too.
@@ -427,6 +438,7 @@ export class PlacementScreen {
     return TIPS[tip];
   }
 
+  /** The offer cards, and the selected offer's description and Buy button. */
   private renderOffers(): void {
     const { gold, pieces, offers = [] } = this.session.run.shop;
     if (this.selectedOffer !== null && this.selectedOffer >= offers.length) this.selectedOffer = null;
@@ -463,7 +475,7 @@ export class PlacementScreen {
     const disabled = gold < price || full || soldOut ? 'disabled' : '';
     const text = isAffinityOffer(offer) ? affinityText(offer[1] as Affinity, pieces) : about(offer);
     detail.innerHTML =
-      `<div class="panel-head">${offerDiagram(offer)}<p><strong>${offerName(offer)}</strong> · ${text} ${guideLink(isAffinityOffer(offer) ? 'P' : offer)}</p>${CLOSE_BUTTON}</div>` +
+      panelHead(offerDiagram(offer), offerName(offer), `${text} ${guideLink(isAffinityOffer(offer) ? 'P' : offer)}`) +
       `<button type="button" class="primary" data-buy ${disabled}>${soldOut ? 'Sold out' : full ? 'Bench full' : gold < price ? `Need ${price}g` : `Buy · ${price}g`}</button>`;
   }
 
@@ -552,7 +564,7 @@ export class PlacementScreen {
         }`;
     const icon = moveDiagram(piece.type, 'w', piece.affinity);
     actions.innerHTML =
-      `<div class="panel-head">${icon}<p class="piece-info"><strong>${pieceName(piece)}</strong> · ${info} ${guideLink(piece.type)}</p>${CLOSE_BUTTON}</div>` +
+      panelHead(icon, pieceName(piece), `${info} ${guideLink(piece.type)}`) +
       `<div class="panel-buttons">${fusions}${rooks}${pawnFusions}${upgrades}${sell}</div>`;
   }
 
@@ -578,6 +590,17 @@ export class PlacementScreen {
 }
 
 /** "3 pts. Jumps in an L shape." (the King and Heir aren't worth points in battle). */
+/**
+ * A shop panel's head: the piece's move diagram, name and explanation, and Close. With tutorials off
+ * (Settings), just the name.
+ */
+function panelHead(diagram: string, name: string, explanation: string): string {
+  const text = playerSettings().tutorials
+    ? `${diagram}<p><strong>${name}</strong> · ${explanation}</p>`
+    : `<p><strong>${name}</strong></p>`;
+  return `<div class="panel-head">${text}${CLOSE_BUTTON}</div>`;
+}
+
 function about(type: PieceType): string {
   const value = type === 'K' || type === 'J' ? '' : `${pts(PIECE_VALUE[type])}. `;
   return `${value}${PIECES[type].description}`;
