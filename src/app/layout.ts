@@ -202,6 +202,10 @@ export function renderLayout(root: HTMLElement): void {
           <span>Reduce motion<small>Fewer animations. Always on when your device asks for it.</small></span>
           <input type="checkbox" role="switch" id="set-motion" class="switch" />
         </label>
+        <label class="setting-row">
+          <span>Piece explanations<small>How a piece moves and what it's for, when you tap it in the shop.</small></span>
+          <input type="checkbox" role="switch" id="set-piece-info" class="switch" />
+        </label>
         <div class="setting-row">
           <span>Tips<small id="set-tips-note">Show the first-game tips again.</small></span>
           <button type="button" id="set-tips">Show again</button>

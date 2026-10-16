@@ -1279,14 +1279,15 @@ button.fuse {
 }
 
 /* The picture sits on a band coloured by price, like an auto-battler's cost tiers, with the price
-   on its corner. */
+   on its bottom edge. The piece sits at the top of the band, clear of the price. */
 .offer-art {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   width: calc(100% + 6px);
-  height: 2.9rem;
+  height: 3.5rem;
+  padding-top: 0.3rem;
   margin: 0 -3px 2px;
   background: var(--tier);
 }
