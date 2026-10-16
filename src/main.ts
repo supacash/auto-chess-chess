@@ -35,7 +35,9 @@ import { loadRules } from './chess/loadRules';
 import { createEngine, type GameEngine } from './engine/engine';
 import { USE_FAIRY } from './engine/engineChoice';
 import { ManualBattle } from './game/manualBattle';
-import { clearMatch, loadMatch } from './game/storage';
+import { clearMatch, loadMatch, loadReplay } from './game/storage';
+import { GauntletDialog } from './app/gauntletDialog';
+import { dailyBattle, dailyStreak, dailyTheme, type DailyDay } from './rules/daily';
 import { generateName } from './multi/names';
 import { isRoomCode, normalizeCode, versionError } from './online/room';
 import type { RunSettings } from './rules/difficulty';
@@ -49,7 +51,10 @@ const rng = Math.random;
 renderLayout($('#app'));
 applyReduceMotion();
 startMenuDrift($('#menu-drift'));
-const session = new Session(rng);
+/** The normal run, and the daily challenge (its own save and records); `session` is the one on screen. */
+const runSession = new Session(rng);
+const dailySession = new Session(rng, 'daily');
+let session = runSession;
 const records = new RecordBook();
 const placement = new PlacementScreen(
   session,
@@ -59,6 +64,17 @@ const placement = new PlacementScreen(
   () => void watchReplay(),
 );
 const prestigeDialog = new PrestigeDialog();
+const gauntletDialog = new GauntletDialog();
+$('#gauntlet-open').addEventListener('click', () => gauntletDialog.open(session));
+
+/** Puts `next` (the run or the daily challenge) on screen. */
+function useSession(next: Session): void {
+  if (session === next) return;
+  session = next;
+  session.lastReplay = loadReplay(); // the other session may have played the last battle
+  placement.use(session, { header: () => renderHeader(session) });
+  renderHeader(session);
+}
 const battle = new BattleScreen(
   () => {
     if (isRunOver(session.run)) showMenu();
@@ -133,7 +149,9 @@ $('#menu-button').addEventListener('click', () => {
   else showMenu();
 });
 $('#menu-new').addEventListener('click', openNewRun);
+$('#menu-daily').addEventListener('click', openDaily);
 $('#menu-resume').addEventListener('click', () => {
+  useSession(runSession);
   if (session.manual) {
     hideMenu();
     resumeManual();
@@ -148,6 +166,7 @@ const match = new MatchController({
   backgroundEngine,
   records,
   onExit: () => {
+    session = runSession;
     placement.use(session, { header: () => renderHeader(session) });
     showMenu();
   },
@@ -322,12 +341,14 @@ function showMenu(notice = ''): void {
   settingsScreen.hide();
   renderSoundButton();
   $('#menu').hidden = false;
-  const inProgress = session.manual !== null || (session.saved && !isRunOver(session.run));
+  const run = runSession;
+  const inProgress = run.manual !== null || (run.saved && !isRunOver(run.run));
   $('#menu-resume').hidden = !inProgress;
-  const { round, lives } = session.run;
-  $('#menu-resume-detail').textContent = session.manual
+  const { round, lives } = run.run;
+  $('#menu-resume-detail').textContent = run.manual
     ? `Round ${round} · your game is in progress`
-    : `Round ${round} · ${lives} ${lives === 1 ? 'life' : 'lives'} left${session.run.settings.manual ? ' · Play yourself' : ''}`;
+    : `Round ${round} · ${lives} ${lives === 1 ? 'life' : 'lives'} left${run.run.settings.manual ? ' · Play yourself' : ''}`;
+  renderDailyButton();
   const saved = match.active ? null : loadMatch();
   $('#menu-rejoin').hidden = !saved;
   $('#menu-rejoin-detail').textContent = saved ? `Room ${saved.code} · round ${saved.round}` : '';
@@ -348,13 +369,59 @@ function hideMenu(): void {
 
 function openNewRun(): void {
   if (busy) return;
-  newRun.open(session.run.settings, hasStarted(session.run) && !isRunOver(session.run));
+  newRun.open(runSession.run.settings, hasStarted(runSession.run) && !isRunOver(runSession.run));
 }
 
 function startNewRun(settings: RunSettings): void {
+  useSession(runSession);
   session.startNewRun(settings);
   placement.resetForNewRun();
   showPlacement();
+}
+
+/** The menu's Daily challenge entry: today's theme and status, and the day streak. */
+function renderDailyButton(): void {
+  const today = dailySession.today();
+  const done = records.dailyOf(today);
+  const streak = dailyStreak(records.records.daily, today);
+  const flame = streak > 0 ? ` · 🔥 ${streak}` : '';
+  const daily = dailySession.saved ? dailySession.run.daily : undefined;
+  const button = $<HTMLButtonElement>('#menu-daily');
+  let detail: string;
+  if (daily) {
+    const played = dailySession.manual ? 'your game is in progress' : `battle ${dailyBattle(dailySession.run.round)}/5`;
+    detail = `${daily.date === today ? 'Resume' : 'Finish yesterday’s'} · ${played}${flame}`;
+  } else if (done) {
+    detail = `Done today · ${done.score} points${flame} · next at midnight UTC`;
+  } else {
+    const theme = dailyTheme(today);
+    detail = `${theme.name}: ${theme.blurb}${flame}`;
+  }
+  $('#menu-daily-detail').textContent = detail;
+  button.disabled = !daily && done !== undefined;
+  button.classList.toggle('done', !daily && done !== undefined);
+}
+
+/** Opens the daily challenge: resumes the one in progress, or starts today's (one attempt a day). */
+function openDaily(): void {
+  if (busy) return;
+  const started = !dailySession.saved;
+  if (started && !dailySession.startDaily(records.dailyOf(dailySession.today()) !== undefined)) {
+    showMenu('Today’s challenge is done. A new one comes at midnight UTC.');
+    return;
+  }
+  useSession(dailySession);
+  if (started) placement.resetForNewRun();
+  if (session.manual) {
+    hideMenu();
+    resumeManual();
+  } else showPlacement();
+}
+
+/** Records a finished daily challenge; returns the day streak with it. */
+function recordDaily(day: DailyDay): number {
+  records.dailyEnd(day);
+  return dailyStreak(records.records.daily, dailySession.today());
 }
 
 let background: Promise<GameEngine> | null = null;
@@ -405,13 +472,16 @@ async function runRound(play: (engine: GameEngine) => Promise<BattleResult>): Pr
     // Spyglass shows the opponent's placement like the Reveal setting (Warlord needs neither).
     const revealed = session.revealOpponent();
     const outcome = session.finishBattle(result);
+    if (outcome.daily) outcome.dailyStreak = recordDaily(outcome.daily);
     // A run lost on lives can be revived once with a rewarded ad (Android app): it's only recorded
     // as ended once the player moves on without reviving.
     const offerRevive = outcome.over && session.canRevive() && adsAvailable();
     const endRun = () => records.runEnd(settings, outcome.score, outcome.won, outcome.prestige);
     if (offerRevive) pendingRunEnd = endRun;
-    else if (outcome.over) endRun();
-    records.unlock(runAchievements(outcome.won, outcome.record.l, { ...settings, reveal: revealed }));
+    else if (outcome.over && !outcome.isDaily) endRun();
+    if (!outcome.isDaily) {
+      records.unlock(runAchievements(outcome.won, outcome.record.l, { ...settings, reveal: revealed }));
+    }
     renderHeader(session, outcome.playedRound, color);
     battle.showResult(result, outcome, spec, session.run.lives, session.best);
     battle.showAwards(battleAwards);
@@ -437,6 +507,11 @@ async function runRound(play: (engine: GameEngine) => Promise<BattleResult>): Pr
   }
 }
 
+/** The settings a battle's per-mode records go under: none for the daily challenge (it has its own). */
+function runSettings(): RunSettings | undefined {
+  return session.run.daily ? undefined : session.run.settings;
+}
+
 /** The engine plays both sides. */
 function fight(): void {
   if (session.armyErrors().length) return;
@@ -453,7 +528,7 @@ function fight(): void {
       seededRng(seed),
     );
     session.saveReplay({ ...record, moves, evals, result });
-    records.battle(result, 'w', worstDeficit, session.run.settings);
+    records.battle(result, 'w', worstDeficit, runSettings());
     records.unlock(battleAchievements({ fen: start.fen, moves, spec: session.board, side: 'w', result, worstDeficit }));
     return result;
   });
@@ -475,7 +550,7 @@ async function playManual(loaded: GameEngine, game: ManualBattle): Promise<Battl
   try {
     const result = await battle.playManual(loaded, game, (state) => session.saveManual(state));
     session.saveReplay({ ...record, moves: [...game.moves], evals: [], result });
-    records.battle(result, 'w', battle.manualWorstDeficit, session.run.settings);
+    records.battle(result, 'w', battle.manualWorstDeficit, runSettings());
     records.unlock([
       ...battleAchievements({
         fen: game.start,
@@ -566,9 +641,11 @@ function boot(): void {
       // ignore
     }
   }
-  const { notice } = session.restore();
+  const { notice } = runSession.restore();
+  const daily = dailySession.restore();
+  if (daily.daily) recordDaily(daily.daily);
   renderHeader(session);
-  showMenu(notice);
+  showMenu([notice, daily.notice].filter(Boolean).join(' '));
 }
 
 /**

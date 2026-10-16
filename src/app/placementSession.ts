@@ -15,6 +15,8 @@ export interface PlacementSession {
     /** The player's colour on screen this round. */
     color: Color;
     settings: { fairy: boolean; reveal: boolean; manual?: boolean };
+    /** Set in a daily challenge (placement then offers a look at the whole gauntlet). */
+    daily?: object;
   };
   readonly board: BoardSpec;
   readonly lastReplay: BattleRecord | null;

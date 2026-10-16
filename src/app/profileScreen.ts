@@ -7,6 +7,7 @@ import {
   FUSION_RESULTS,
   SHOP_FAIRY,
 } from '../game/achievements';
+import { bestDailyStreak, dailyDate, dailyStreak, previousDate, themeById } from '../rules/daily';
 import { FINAL_ROUND } from '../rules/run';
 import { ordinal } from '../multi/names';
 import { DIFFICULTIES } from '../rules/difficulty';
@@ -16,7 +17,7 @@ import { inlinePiece } from '../ui/boardDom';
 import { $, escapeHtml } from './dom';
 import { matchLabel, type RecordBook, runLabel } from './recordBook';
 
-type Tab = 'single' | 'multi' | 'history' | 'fun' | 'achievements';
+type Tab = 'single' | 'daily' | 'multi' | 'history' | 'fun' | 'achievements';
 
 /** The Profile screen: the player's name and their records, by tab. */
 export class ProfileScreen {
@@ -62,13 +63,15 @@ export class ProfileScreen {
     body.innerHTML =
       this.tab === 'single'
         ? single(r)
-        : this.tab === 'multi'
-          ? multi(r)
-          : this.tab === 'history'
-            ? history(r)
-            : this.tab === 'fun'
-              ? fun(r)
-              : achievementsTab(r);
+        : this.tab === 'daily'
+          ? daily(r, dailyDate(Date.now()))
+          : this.tab === 'multi'
+            ? multi(r)
+            : this.tab === 'history'
+              ? history(r)
+              : this.tab === 'fun'
+                ? fun(r)
+                : achievementsTab(r);
   }
 }
 
@@ -102,6 +105,42 @@ function single(r: Records): string {
     )
     .join('');
   return cards || empty('No single-player runs yet. Start one from New game!');
+}
+
+/** How many recent days the Daily tab lists. */
+const RECENT_DAYS = 14;
+
+function daily(r: Records, today: string): string {
+  const days = r.daily;
+  if (days.length === 0) return empty('No daily challenges yet. A new one comes every day at midnight UTC!');
+  const total = days.reduce((sum, d) => sum + d.score, 0);
+  const best = Math.max(...days.map((d) => d.score));
+  const byDate = new Map(days.map((d) => [d.date, d]));
+  const recent: string[] = [];
+  for (let i = 0, date = today; i < RECENT_DAYS; i++, date = previousDate(date)) {
+    const d = byDate.get(date);
+    const label = new Date(`${date}T12:00:00Z`).toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const result = d
+      ? `<span class="${d.w === 5 ? 'win' : ''}">${d.score} · ${d.w}/${d.w + d.l + d.d} won</span>`
+      : date === today
+        ? '<span class="muted">not played yet</span>'
+        : '<span class="muted">missed</span>';
+    const theme = d ? escapeHtml(themeById(d.theme).name) : '';
+    recent.push(
+      `<li><span class="history-mode">${theme}</span><span class="history-result">${result}</span><span class="history-when">${label}</span></li>`,
+    );
+  }
+  return (
+    card(
+      'Daily challenge',
+      stat('Day streak', `🔥 ${dailyStreak(days, today)}`) +
+        stat('Best streak', String(bestDailyStreak(days))) +
+        stat('Days played', String(days.length)) +
+        stat('Best score', String(best)) +
+        stat('Average', fmt(total / days.length, 0)),
+    ) +
+    `<h3 class="achievement-group">Last ${RECENT_DAYS} days</h3><ol class="history daily-days">${recent.join('')}</ol>`
+  );
 }
 
 function multi(r: Records): string {

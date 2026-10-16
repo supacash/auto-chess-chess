@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  mergeDays,
+  recordDailyEnd,
   averagePlace,
   averageScore,
   emptyRecords,
@@ -73,5 +75,27 @@ describe('records', () => {
     expect(
       parseRecords({ version: 1, runs: { x: { runs: -1 } }, history: [{ at: 'x' }], fun: { bought: { V: 3 } } }),
     ).toEqual(emptyRecords());
+  });
+});
+
+describe('daily challenge records', () => {
+  const day = (date: string, score: number) => ({ date, theme: 'growing', score, w: 2, l: 3, d: 0, gold: score - 200 });
+
+  it('keeps one result a day (the first), oldest first, and survives saving', () => {
+    let r = recordDailyEnd(emptyRecords(), day('2026-10-16', 230));
+    r = recordDailyEnd(r, day('2026-10-14', 210));
+    r = recordDailyEnd(r, day('2026-10-16', 999));
+    expect(r.daily.map((d) => [d.date, d.score])).toEqual([
+      ['2026-10-14', 210],
+      ['2026-10-16', 230],
+    ]);
+    expect(parseRecords(JSON.parse(JSON.stringify(r))).daily).toEqual(r.daily);
+    expect(parseRecords({ ...r, daily: [{ date: 'yesterday', score: 1 }] }).daily).toEqual([]);
+    expect(parseRecords({ ...r, daily: undefined }).daily).toEqual([]);
+  });
+
+  it('merges the days played on two devices', () => {
+    const a = mergeDays([day('2026-10-14', 210)], [day('2026-10-15', 220), day('2026-10-14', 300)]);
+    expect(a.map((d) => d.score)).toEqual([210, 220]);
   });
 });

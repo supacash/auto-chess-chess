@@ -501,6 +501,25 @@ More duels, same command as §23 with 300 games (±6) and seed 3:
 - **Growing Hard came out 9 points easier.** Rerun with 80 runs (seed 5), it scored 37% ±2 (run score 4.9 ±0.9), between §24's 32% and §22's 36%. The first row was a high draw, so no budget change was made.
 - **The suites' 40-run rows vary by more than their ±3** (battles in one run aren't independent). Treat moves of up to about 5 points as noise.
 
+### 26. Tuning the daily challenge's gold (shop player, 200–300 gauntlets per row)
+
+`npm run sim -- --player shop --games 300 --fairy both --daily [--daily-gold N] [--daily-bonus N] [--daily-income N] [--daily-interest N]` plays the daily challenge: five battles at rounds 2, 4, 6, 8 and 10, no lives. The target is a run's same rounds: `--rounds 10 --games 200 --fairy both` (Growing Normal, seed 7) won rounds 2/4/6/8/10 **51/76/64/63/74%, 66%** on average, with armies about level with the AI.
+
+| Daily (Growing Normal) | B1 | B2 | B3 | B4 | B5 | Avg | Wins / 5 | Cleared |
+|---|---|---|---|---|---|---|---|---|
+| +6 start, 2× income (first version; seed 7) | 37% | 45% | 45% | 39% | 47% | 43% | 2.1 | 17% |
+| +6, 3× income (seed 7) | 37% | 79% | 83% | 97% | 99% | 79% | 3.9 | 30% |
+| +9, 2× income, 2× interest (seed 7) | 34% | 50% | 46% | 48% | 53% | 46% | 2.3 | 12% |
+| +12, +2 a battle (seed 11) | 59% | 66% | 69% | 72% | 86% | 70% | 3.5 | 33% |
+| **+12, +1 a battle** (seed 11) | 59% | 65% | 62% | 61% | 74% | **64%** | 3.2 | 29% |
+
+- **2× income was too little:** the stand-in fell 8–10 points behind the AI by the last battle. A run pays interest every round; the daily once.
+- **Doubling the interest barely helped;** a flat bonus a battle did. +12 start and +1 a battle follows the run battle by battle, and the last battle (74%) matches round 10.
+- **Classic (standard pieces, seed 11, +12 / +1):** a run's rounds 2–10 won 55/63/43/35/30% (45%); the daily 48/64/42/48/53% (51%), within noise, first battle included.
+- **The first army stays the normal one.** With no discount the first battle is 59% (a run's round 2: 51%); 1 point off made it 63%, 2 points 76%.
+- **A mistake on the way:** a first pass also let the stand-in reroll 12 times a shop instead of 6 (one shop per two rounds), picked +2 a battle, and found the first battle hard (41%). The cap doesn't matter at +6 starting gold but does at +12, where it buys partial sets it can't finish. Every row above is with the normal cap.
+- The stand-in spends almost all its gold in both modes (under 1 gold left going into a battle: the report's "Gold unspent" line).
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.

@@ -1,4 +1,12 @@
-import { emptyRecords, HISTORY_SIZE, type HistoryEntry, type MatchStats, type Records, type RunStats } from './records';
+import {
+  emptyRecords,
+  HISTORY_SIZE,
+  mergeDays,
+  type HistoryEntry,
+  type MatchStats,
+  type Records,
+  type RunStats,
+} from './records';
 
 // Merging records across devices. Each device remembers the records as they were at its last sync
 // (`base`); what it has added since (local − base) is added onto the account's copy (`cloud`).
@@ -50,6 +58,8 @@ export function mergeRecords(cloud: Records, local: Records, base: Records): Rec
   for (const key of ['fielded', 'fused'] as const) {
     out.collections[key] = [...new Set([...out.collections[key], ...local.collections[key]])];
   }
+  // Daily challenges: every day played on either side (one attempt a day, so the account's first).
+  out.daily = mergeDays(cloud.daily, local.daily);
   // Achievements: unlocked anywhere is unlocked, from the earliest time.
   for (const [id, at] of Object.entries(local.achievements) as [keyof Records['achievements'], number][]) {
     const had = out.achievements[id];

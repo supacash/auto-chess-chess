@@ -9,6 +9,7 @@ import {
   SAVE_VERSION,
   saveBest,
   saveGame,
+  type SaveSlot,
   saveReplay,
 } from '../game/storage';
 import { RULES_VERSION } from '../game/version';
@@ -42,6 +43,7 @@ import type { PlacementSession } from './placementSession';
 import { armyErrors, fitToBoard } from '../rules/placement';
 import { type StartPosition, startPosition } from '../rules/position';
 import { type Rng, randomSeed } from '../rules/rng';
+import { type DailyDay, dailyBattle, dailyDate, dailyDay, dailyOpponent, dailyRng, newDailyRun } from '../rules/daily';
 import {
   applyResult,
   battleIncome,
@@ -75,6 +77,12 @@ export interface BattleOutcome {
   income: number;
   /** Every battle of the run so far (the summary shows it when the run ends). */
   history: RoundLog[];
+  /** True in a daily challenge (no lives; five battles). */
+  isDaily: boolean;
+  /** The finished day, when this battle ended a daily challenge. */
+  daily?: DailyDay;
+  /** The day streak with this day counted (filled in by the caller from the records). */
+  dailyStreak?: number;
 }
 
 /**
@@ -93,7 +101,29 @@ export class Session implements PlacementSession {
   /** True once the run has been saved (the player has started it), so the menu offers Resume. */
   saved = false;
 
-  constructor(private readonly rng: Rng = Math.random) {}
+  /**
+   * `slot` 'daily' makes this the daily challenge's session: its own save, today's run (daily.ts) and
+   * every random choice from the day's seed. `now` is the clock (for tests).
+   */
+  constructor(
+    private readonly rng: Rng = Math.random,
+    readonly slot: SaveSlot = 'run',
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  /** The UTC day it is now ("2026-10-16"). */
+  today(): string {
+    return dailyDate(this.now());
+  }
+
+  /**
+   * Where a random choice comes from: the session's Rng, or in a daily challenge the day's stream for
+   * this battle and purpose, so everyone gets the same whatever they did before.
+   */
+  private stream(...purpose: (string | number)[]): Rng {
+    const daily = this.run.daily;
+    return daily ? dailyRng(daily.date, RULES_VERSION, dailyBattle(this.run.round), ...purpose) : this.rng;
+  }
 
   /** The opponent shown during placement: the AI's style and army. */
   opponent(): { name: string; pieces: Piece[] } {
@@ -121,25 +151,29 @@ export class Session implements PlacementSession {
   /** `battleInProgress` marks a battle as started, so leaving mid-battle counts as a loss on the next load. */
   persist(battleInProgress = false): void {
     this.saved = true;
-    saveGame({
-      version: SAVE_VERSION,
-      run: this.run,
-      ai: { styleId: this.aiStyle.id, pieces: this.aiPieces },
-      ...(battleInProgress ? { battleInProgress: true } : {}),
-      ...(this.manual ? { manual: this.manual } : {}),
-    });
+    saveGame(
+      {
+        version: SAVE_VERSION,
+        run: this.run,
+        ai: { styleId: this.aiStyle.id, pieces: this.aiPieces },
+        ...(battleInProgress ? { battleInProgress: true } : {}),
+        ...(this.manual ? { manual: this.manual } : {}),
+      },
+      this.slot,
+    );
   }
 
   /**
    * Resumes the saved run, or starts a default one (`firstVisit`). A battle left unfinished counts
    * as a loss; `notice` explains that.
    */
-  restore(): { notice: string; firstVisit: boolean } {
+  restore(): { notice: string; firstVisit: boolean; daily?: DailyDay } {
     this.lastReplay = loadReplay();
-    const saved = loadGame();
+    const saved = loadGame(this.slot);
     const style = saved && AI_STYLES.find((s) => s.id === saved.ai.styleId);
-    if (!saved || !style) {
-      this.run = newRun();
+    if (!saved || !style || (this.slot === 'daily' && !saved.run.daily)) {
+      this.saved = false;
+      this.run = this.slot === 'daily' ? newDailyRun(this.today()) : newRun();
       this.draftOpponent();
       this.best = this.loadBest();
       return { notice: '', firstVisit: true };
@@ -154,7 +188,7 @@ export class Session implements PlacementSession {
         ...this.run,
         shop: {
           ...this.run.shop,
-          offers: rollOffers(this.run.round, this.rng, this.run.settings.fairy, offerOdds(this.run.perks)),
+          offers: rollOffers(this.run.round, this.stream('shop'), this.run.settings.fairy, offerOdds(this.run.perks)),
         },
       };
     }
@@ -163,6 +197,16 @@ export class Session implements PlacementSession {
 
     // The page was closed or reloaded mid-battle: count it as a loss.
     this.run = applyResult(this.run, 'b');
+    const day = dailyDay(this.run);
+    if (day) {
+      clearGame(this.slot);
+      this.saved = false;
+      return {
+        notice: `Your last battle was interrupted and counted as a loss. The daily challenge is over: ${day.score} points.`,
+        firstVisit: false,
+        daily: day,
+      };
+    }
     if (isRunOver(this.run)) {
       const score = runScore(this.run);
       const newBest = this.recordScore(score);
@@ -179,14 +223,16 @@ export class Session implements PlacementSession {
     this.draftOpponent();
     this.persist();
     return {
-      notice: `Your last battle was interrupted and counted as a loss (−1 life, ${this.run.lives} left).`,
+      notice: this.run.daily
+        ? 'Your last battle was interrupted and counted as a loss.'
+        : `Your last battle was interrupted and counted as a loss (−1 life, ${this.run.lives} left).`,
       firstVisit: false,
     };
   }
 
   /** Starts over, keeping the current settings unless new ones are given. */
   startNewRun(settings: RunSettings = this.run.settings, carry?: PrestigeCarry): void {
-    clearGame();
+    clearGame(this.slot);
     this.manual = null;
     this.run = newRun(settings, this.rng, carry);
     this.best = this.loadBest();
@@ -194,12 +240,45 @@ export class Session implements PlacementSession {
     this.persist(); // a run the player chose: the menu offers Resume from now on
   }
 
+  /**
+   * Starts today's daily challenge (a daily session only). False if it was already started, finished
+   * (`done`, from the records) or a challenge from an earlier day is still in progress.
+   */
+  startDaily(done: boolean): boolean {
+    if (this.slot !== 'daily' || done || this.saved) return false;
+    this.manual = null;
+    this.run = newDailyRun(this.today());
+    this.draftOpponent();
+    this.persist();
+    return true;
+  }
+
+  /** The daily challenge's five opponents (empty for a normal run). */
+  gauntlet(): ReturnType<typeof dailyOpponent>[] {
+    const daily = this.run.daily;
+    if (!daily) return [];
+    return [1, 2, 3, 4, 5].map((battle) => dailyOpponent(daily.date, RULES_VERSION, battle));
+  }
+
   /** Drafts this round's opponent and stocks the shop with fresh offers. */
   draftOpponent(): void {
     this.run = {
       ...this.run,
-      shop: restock(this.run.shop, this.run.round, this.rng, this.run.settings.fairy, offerOdds(this.run.perks)),
+      shop: restock(
+        this.run.shop,
+        this.run.round,
+        this.stream('shop'),
+        this.run.settings.fairy,
+        offerOdds(this.run.perks),
+      ),
     };
+    const daily = this.run.daily;
+    if (daily) {
+      const opponent = dailyOpponent(daily.date, RULES_VERSION, dailyBattle(this.run.round));
+      this.aiStyle = opponent.style;
+      this.aiPieces = opponent.pieces;
+      return;
+    }
     const spec = this.board;
     const { settings } = this.run;
     const mode = gameMode(settings.mode);
@@ -225,14 +304,16 @@ export class Session implements PlacementSession {
   /** Pays for a fresh set of offers (doesn't apply it: see setShop). Haggler makes the first ones each round free. */
   rerollOffers(): ShopResult {
     const cost = this.rerollCost();
+    const daily = this.run.daily;
     const result = rerollOffers(
       this.run.shop,
       this.run.round,
-      this.rng,
+      this.stream('reroll', daily?.rerolls ?? 0),
       this.run.settings.fairy,
       cost,
       offerOdds(this.run.perks),
     );
+    if (result.ok && daily) this.run = { ...this.run, daily: { ...daily, rerolls: daily.rerolls + 1 } };
     if (result.ok && cost === 0) {
       this.run = { ...this.run, freeRerolls: { round: this.run.round, used: this.freeRerollsUsed() + 1 } };
     }
@@ -278,7 +359,7 @@ export class Session implements PlacementSession {
 
   /** A fresh seed for a battle's move picking. */
   newSeed(): number {
-    return randomSeed(this.rng);
+    return randomSeed(this.stream('battle'));
   }
 
   /**
@@ -327,7 +408,14 @@ export class Session implements PlacementSession {
     const start = startPosition(this.run.shop.pieces, this.aiPieces, playerFirst, this.board);
     if (start.ok) return start;
     const types = this.aiPieces.map((p) => p.type);
-    const placed = placeForBattle(this.run.shop.pieces, types, this.aiStyle, this.rng, this.board, playerFirst);
+    const placed = placeForBattle(
+      this.run.shop.pieces,
+      types,
+      this.aiStyle,
+      this.stream('place'),
+      this.board,
+      playerFirst,
+    );
     this.aiPieces = placed.ai;
     return placed.start;
   }
@@ -351,9 +439,11 @@ export class Session implements PlacementSession {
     const over = isRunOver(this.run);
     const score = runScore(this.run);
     let newBest = false;
+    const day = dailyDay(this.run) ?? undefined;
     if (over) {
-      newBest = this.recordScore(score);
-      clearGame();
+      if (!day) newBest = this.recordScore(score);
+      clearGame(this.slot);
+      if (day) this.saved = false; // the daily is done: nothing to resume
     } else {
       this.run = nextRound(this.run, this.rng);
       this.draftOpponent();
@@ -370,6 +460,8 @@ export class Session implements PlacementSession {
       prestige: this.run.prestige,
       income,
       history: this.run.history ?? [],
+      isDaily: this.run.daily !== undefined,
+      ...(day ? { daily: day } : {}),
     };
   }
 

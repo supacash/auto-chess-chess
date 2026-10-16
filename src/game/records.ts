@@ -1,4 +1,5 @@
 import { type AchievementId, type Collections, isAchievementId } from './achievements';
+import type { DailyDay } from '../rules/daily';
 import type { DifficultyId } from '../rules/difficulty';
 import type { ModeId } from '../rules/mode';
 import { isPieceType, type PieceType } from '../rules/pieces';
@@ -9,6 +10,8 @@ import { isPieceType, type PieceType } from '../rules/pieces';
 export const RECORDS_VERSION = 1;
 /** How many recent runs and matches the history keeps. */
 export const HISTORY_SIZE = 20;
+/** How many finished daily challenges are kept (streaks are worked out from them). */
+export const DAILY_DAYS_KEPT = 400;
 
 /** Single-player stats for one board mode and difficulty. */
 export interface RunStats {
@@ -65,6 +68,8 @@ export interface Records {
   achievements: Partial<Record<AchievementId, number>>;
   /** Career collections for Zoo Keeper and Fusion Chef (missing in older records). */
   collections: Collections;
+  /** Finished daily challenges, oldest first, one per day (missing in older records). */
+  daily: DailyDay[];
 }
 
 export function emptyRecords(): Records {
@@ -76,7 +81,20 @@ export function emptyRecords(): Records {
     fun: { bought: {}, winStreak: 0, bestWinStreak: 0, checkmates: 0, biggestComeback: 0 },
     achievements: {},
     collections: { fielded: [], fused: [] },
+    daily: [],
   };
+}
+
+/** Records a finished daily challenge. One attempt a day: a day already recorded keeps its first result. */
+export function recordDailyEnd(records: Records, day: DailyDay): Records {
+  return { ...records, daily: mergeDays(records.daily, [day]) };
+}
+
+/** Both lists of days, one entry per date (the first one seen), oldest first, the newest DAILY_DAYS_KEPT. */
+export function mergeDays(a: readonly DailyDay[], b: readonly DailyDay[]): DailyDay[] {
+  const byDate = new Map<string, DailyDay>();
+  for (const day of [...a, ...b]) if (!byDate.has(day.date)) byDate.set(day.date, day);
+  return [...byDate.values()].sort((x, y) => (x.date < y.date ? -1 : 1)).slice(-DAILY_DAYS_KEPT);
 }
 
 /** The records with `ids` unlocked (now, unless they already were), and which of them are new. */
@@ -276,6 +294,20 @@ export function parseRecords(data: unknown): Records {
       const list = data.collections[key];
       if (Array.isArray(list)) out.collections[key] = [...new Set(list.filter(isPieceType))];
     }
+  }
+  if (Array.isArray(data.daily)) {
+    const days = data.daily.filter(
+      (d): d is DailyDay =>
+        isObject(d) &&
+        typeof d.date === 'string' &&
+        /^\d{4}-\d{2}-\d{2}$/.test(d.date) &&
+        typeof d.theme === 'string' &&
+        [d.score, d.w, d.l, d.d, d.gold].every(isCount),
+    );
+    out.daily = mergeDays(
+      days.map(({ date, theme, score, w, l, d, gold }) => ({ date, theme, score, w, l, d, gold })),
+      [],
+    );
   }
   if (isObject(data.achievements)) {
     for (const [id, at] of Object.entries(data.achievements))

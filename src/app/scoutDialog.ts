@@ -74,15 +74,19 @@ function pieceRow(types: PieceType[]): string {
   return `<p class="scout-pieces">${sorted.map((t) => inlinePiece(t)).join('')}</p>`;
 }
 
-/** The player's home rows with their army on it, as they placed it (their side at the bottom). */
-function miniBoard(pieces: Piece[], spec: BoardSpec): string {
+/**
+ * A player's home rows with their army on it, as they placed it (their side at the bottom). `facing`
+ * draws an opponent's army as seen from across the board instead: back row on top, in `color`.
+ */
+export function miniBoard(pieces: Piece[], spec: BoardSpec, facing = false, color: 'w' | 'b' = 'w'): string {
   const rows: string[] = [];
-  for (let rank = spec.homeRows - 1; rank >= 0; rank--) {
+  for (let i = 0; i < spec.homeRows; i++) {
+    const rank = facing ? i : spec.homeRows - 1 - i;
     for (let file = 0; file < spec.files; file++) {
       const piece = pieces.find((x) => x.square?.file === file && x.square.rank === rank);
       const shade = (file + rank) % 2 === 0 ? 'dark' : 'light';
       rows.push(
-        `<span class="mini-square ${shade}">${piece ? inlinePiece(piece.type, 'w', piece.affinity) : ''}</span>`,
+        `<span class="mini-square ${shade}">${piece ? inlinePiece(piece.type, color, piece.affinity) : ''}</span>`,
       );
     }
   }
