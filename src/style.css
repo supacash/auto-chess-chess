@@ -58,6 +58,43 @@ body {
   /* Clear the notch and home indicator when installed as an app. */
   padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
     max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  /* One short top row: the title (where there's room), the run bar (round, lives, record) and Menu.
+     The header's parts join #app's grid; everything else gets a full-width row of its own. */
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 12px;
+  align-items: center;
+}
+#app > * {
+  grid-column: 1 / -1;
+}
+#app > header {
+  display: contents;
+}
+header h1 {
+  grid-area: 1 / 1;
+}
+header .header-actions {
+  grid-area: 1 / 3;
+}
+#app > .run-bar {
+  grid-area: 1 / 2;
+}
+header h1,
+header .header-actions,
+#app > .run-bar {
+  margin-bottom: 10px;
+}
+
+/* On a phone held upright the play screens need every row they can get: the title gives way to the
+   run bar (it stays on the menu, and in a room's lobby). */
+@media (orientation: portrait) {
+  body:not(.in-lobby) header h1 {
+    display: none;
+  }
+  body:not(.in-lobby) #app > .run-bar {
+    grid-column: 1 / 3;
+  }
 }
 
 #placement:not([hidden]),
@@ -85,19 +122,11 @@ body {
   }
 }
 
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 h1 {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 8px;
+  margin: 0;
   font-family: var(--display);
   font-size: 1.35rem;
   font-weight: 400;
@@ -219,10 +248,78 @@ h1 .logo {
 }
 
 .piece.selected {
-  background: rgb(255 201 60 / 0.4);
-  border-radius: 8px;
+  background: radial-gradient(circle, rgb(255 201 60 / 0.55) 0%, rgb(255 201 60 / 0.18) 70%);
+  border-radius: 10px;
   outline: 3px solid var(--gold);
   outline-offset: -3px;
+}
+
+/* A piece just bought or made by a merge pops in with a flash; one just put down lands. */
+.piece.fresh > img:first-child {
+  animation: piece-pop 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.piece.fresh::before {
+  content: "";
+  position: absolute;
+  inset: 6%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 201 60 / 0.75), rgb(255 201 60 / 0) 70%);
+  animation: piece-flash 0.5s ease-out forwards;
+  pointer-events: none;
+}
+
+.piece.landed > img:first-child {
+  animation: piece-land 0.22s ease-out;
+}
+
+@keyframes piece-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+@keyframes piece-flash {
+  from {
+    opacity: 1;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+@keyframes piece-land {
+  from {
+    transform: translateY(-8%) scale(1.12);
+  }
+}
+
+/* The board grew: a quick swell and a teal glow. */
+.board.grew {
+  animation: board-grow 0.9s ease-out;
+}
+
+@keyframes board-grow {
+  0% {
+    transform: scale(0.94);
+    box-shadow:
+      0 0 0 4px var(--teal),
+      0 0 0 16px rgb(51 195 176 / 0.35),
+      0 10px 0 0 var(--deep);
+  }
+  55% {
+    transform: scale(1.01);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piece.fresh::before {
+    display: none;
+  }
 }
 
 /* A square a piece couldn't go to: a short red flash with the reason below the board. */
@@ -293,13 +390,21 @@ h1 .logo {
   height: calc(var(--sq) * 1.15);
 }
 
+/* The bench's label sits on its top border, like a tab, so it costs no row of its own. */
 .bench-label {
-  margin: 18px 0 4px;
-  font-size: 0.75rem;
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+  margin: 12px 0 -9px 14px;
+  padding: 0 6px;
+  font-size: 0.7rem;
   font-weight: 900;
+  line-height: 16px;
   color: var(--faint);
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  background: var(--bg);
+  border-radius: 6px;
 }
 
 /* Eight slots in one row (BENCH_SIZE): pieces shrink a little to fit inside the padding and border. */
@@ -308,7 +413,7 @@ h1 .logo {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
   align-items: center;
-  padding: 6px;
+  padding: 9px 6px 6px;
   background: var(--deep);
   border: 2px dashed var(--border-strong);
   border-radius: var(--radius);
@@ -331,11 +436,22 @@ h1 .logo {
   padding: 0 8px;
 }
 
+/* Why a move or purchase didn't happen (or what the game is waiting on), just above the fight buttons. */
 #message {
-  min-height: 1.4em;
-  margin: 10px 0 0;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 6px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
   color: var(--danger);
-  font-size: 0.9rem;
+  background: var(--deep);
+  border-radius: 12px;
+}
+
+#message:empty {
+  display: none;
 }
 
 .actions {
@@ -408,8 +524,8 @@ button.teal:not(.primary):active:not(:disabled) {
 dialog button:not(.primary):not(.teal):not(.link-button):not(.prestige-button),
 .result button:not(.primary):not(.revive-button):not(.prestige-button),
 .lobby button:not(.primary),
-.piece-actions button:not(.primary):not(.fuse),
-.offer-detail button:not(.primary):not(.fuse) {
+.piece-actions button:not(.primary):not(.fuse):not(.panel-close),
+.offer-detail button:not(.primary):not(.fuse):not(.panel-close) {
   background: var(--raised);
 }
 
@@ -427,10 +543,31 @@ button:disabled {
 
 /* ---- battle ---- */
 
+/* "VS Cavalry Charge · 12 pts" and the opponent's pieces, which wrap to a line of their own if need be. */
 .opponent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
   margin: 0 0 8px;
   font-size: 0.9rem;
   color: var(--muted);
+}
+
+.opp-label {
+  padding: 1px 7px;
+  font-family: var(--display);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 2px 0 var(--accent-shadow);
+}
+
+.opp-name {
+  color: var(--text);
 }
 
 /* Light chips, so the opponent's black pieces show up against the violet. */
@@ -480,7 +617,9 @@ button:disabled {
 }
 
 .opponent .glyphs {
-  white-space: nowrap;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
 }
 
 .inline-piece {
@@ -517,23 +656,49 @@ button:disabled {
   background-image: radial-gradient(circle, rgb(230 40 40 / 0.85) 0%, rgb(230 40 40 / 0.4) 45%, transparent 75%);
 }
 
+/* Playback: the speeds as one segmented control, and Skip beside it. */
 #playback {
+  align-items: stretch;
   margin-top: 16px;
 }
 
+#playback .speeds {
+  flex: 3;
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+  padding: 5px;
+  background: var(--deep);
+  border-radius: 16px;
+}
+
 button.speed {
+  min-height: 42px;
+  margin: 0;
   font-family: var(--display);
   font-weight: 400;
   font-size: 1.1rem;
+  color: var(--muted);
+  background: transparent;
+  box-shadow: none;
 }
 
 button.speed.active {
   color: var(--ink);
   background: var(--gold);
-  box-shadow: 0 4px 0 var(--gold-shadow);
+  box-shadow: 0 3px 0 var(--gold-shadow);
+}
+
+#playback #skip {
+  flex: 1.4;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
 }
 
 .result {
+  position: relative;
   margin-top: 18px;
   padding: 22px 16px 16px;
   background: var(--panel);
@@ -541,6 +706,205 @@ button.speed.active {
   text-align: center;
   box-shadow: 0 6px 0 var(--deep);
   animation: pop-in 0.25s ease-out;
+}
+
+/* What the round did to the run: gold, lives and record (or score and best when it's over). */
+.result-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.result-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 4px 8px;
+  background: var(--bg);
+  border-radius: 16px;
+  animation: stat-in 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.result-stat:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.result-stat:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.result-stat strong {
+  font-family: var(--display);
+  font-size: 1.55rem;
+  font-weight: 400;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-stat small {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.result-stat.tone-gold strong {
+  color: var(--gold);
+}
+.result-stat.tone-hearts strong,
+.result-stat.tone-loss strong {
+  color: var(--danger);
+}
+.result-stat.tone-loss {
+  box-shadow: inset 0 0 0 2px rgb(255 94 138 / 0.45);
+}
+.result-stat.tone-teal strong {
+  color: var(--teal);
+}
+
+@keyframes stat-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+}
+
+/* A won round throws a little confetti from the title (confetti.ts), which rises and falls away. */
+.confetti {
+  position: absolute;
+  top: 46px;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.confetti i {
+  position: absolute;
+  left: -4px;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--c);
+  opacity: 0;
+  animation: confetti 1.5s linear var(--d) forwards;
+}
+
+@keyframes confetti {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(0.5);
+    animation-timing-function: cubic-bezier(0.1, 0.8, 0.3, 1);
+  }
+  45% {
+    opacity: 1;
+    transform: translate(calc(var(--dx) * 0.8), var(--dy)) rotate(calc(var(--r) * 0.5)) scale(1);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), calc(var(--dy) + 140px)) rotate(var(--r)) scale(1);
+  }
+}
+
+/* The achievements a battle unlocked: a gold banner on the result card. */
+.result p.result-awards {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 8px 14px;
+  text-align: left;
+  color: var(--ink);
+  background: var(--gold);
+  border-radius: 16px;
+  box-shadow: 0 4px 0 var(--gold-shadow);
+  animation: stat-in 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) 0.25s both;
+}
+
+.result p.result-awards[hidden] {
+  display: none;
+}
+
+.result-awards .award-icon {
+  font-size: 1.5rem;
+}
+
+.result-awards span {
+  display: flex;
+  flex-direction: column;
+}
+
+.result-awards small {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.result-awards strong {
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+/* The round's result slides up from the bottom of the screen like a sheet over the end of the
+   battle, so its buttons are always in reach (landscape keeps it in the side column). */
+#battle .result {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 20;
+  width: min(100%, calc(var(--column) + 32px));
+  margin: 0;
+  padding: 22px 16px calc(14px + env(safe-area-inset-bottom));
+  border-radius: 28px 28px 0 0;
+  box-shadow:
+    0 -6px 0 var(--deep),
+    0 -18px 40px rgb(0 0 0 / 0.45);
+  transform: translateX(-50%);
+  animation: result-up 0.32s cubic-bezier(0.2, 1, 0.4, 1);
+}
+
+@keyframes result-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 35%);
+  }
+}
+
+/* Room to scroll the end of the battle out from under the sheet. */
+#battle:has(.result:not([hidden])) {
+  padding-bottom: 300px;
+}
+
+/* A lost round's title gives a little shake. */
+.result[data-winner="b"] h2 {
+  animation: shake 0.45s ease-out 0.1s;
+}
+
+@keyframes shake {
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti {
+    display: none;
+  }
 }
 
 .result h2 {
@@ -597,8 +961,8 @@ button.speed.active {
 /* ---- shop ---- */
 
 .shop {
-  margin-top: 14px;
-  padding: 12px;
+  margin-top: 12px;
+  padding: 10px;
   background: var(--panel);
   border-radius: 20px;
   box-shadow: 0 6px 0 var(--deep);
@@ -640,39 +1004,191 @@ button.speed.active {
   padding: 8px 10px;
 }
 
-.piece-actions {
+/* The selected offer (with Buy) under the offers, or a selected piece's choices in their place:
+   scrolled into view clear of the pinned fight buttons. */
+.shop .panel {
+  margin-top: 12px;
+  scroll-margin-bottom: 100px;
+  animation: fade-in 0.15s ease-out;
+}
+
+.shop .offer-detail.panel {
+  padding: 10px;
+  background: var(--deep);
+  border-radius: 16px;
+}
+
+.panel-head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  min-height: 38px;
+  align-items: flex-start;
+  gap: 10px;
 }
 
-.piece-actions .hint {
+.panel-head p,
+.panel-head > span:not(.move-diagram) {
+  flex: 1;
+  min-width: 0;
   margin: 0;
-}
-
-.piece-actions button {
-  flex: 0 1 auto;
-}
-
-.selected-name {
-  font-weight: 600;
-  margin-right: 4px;
-}
-
-.piece-info,
-.offer-detail p {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  line-height: 1.3;
   color: var(--muted);
 }
 
-.piece-info strong,
-.offer-detail strong {
+/* How a piece moves: a little board with the piece in the middle (moveDiagram.ts). */
+.move-diagram {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(var(--md), 1fr);
+  width: 77px;
+  height: 77px;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px var(--deep);
+}
+
+.md {
+  position: relative;
+}
+
+.md.light {
+  background: var(--light);
+}
+
+.md.dark {
+  background: var(--dark);
+}
+
+.md.md-piece {
+  z-index: 1;
+  background: var(--gold);
+}
+
+.md.md-piece .inline-piece,
+.md.md-piece .inline-affinity {
+  position: absolute;
+  inset: -25%;
+  width: 150%;
+  height: 150%;
+}
+
+.md.md-piece .inline-affinity .inline-piece {
+  position: static;
+  width: 100%;
+  height: 100%;
+}
+
+.md::after {
+  content: "";
+  position: absolute;
+  inset: 26%;
+  border-radius: 50%;
+}
+
+/* Moves or captures: a dot. Moves only: a ring. Captures only: a cross. Lands by hopping: a diamond. */
+.md.md-any::after {
+  background: var(--teal-shadow);
+}
+
+.md.md-move::after {
+  box-shadow: inset 0 0 0 1.5px var(--teal-shadow);
+}
+
+.md.md-capture::after {
+  inset: 22%;
+  border-radius: 0;
+  background:
+    linear-gradient(45deg, transparent 40%, var(--danger) 40% 60%, transparent 60%),
+    linear-gradient(-45deg, transparent 40%, var(--danger) 40% 60%, transparent 60%);
+}
+
+.md.md-hop::after {
+  inset: 28%;
+  border-radius: 1px;
+  background: var(--accent-shadow);
+  transform: rotate(45deg);
+}
+
+.panel-head strong {
   color: var(--text);
+}
+
+button.panel-close {
+  flex: none;
+  width: 32px;
+  min-height: 0;
+  height: 32px;
+  margin: -2px -4px 0 0;
+  padding: 0;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--muted);
+  background: var(--deep);
+  border-radius: 50%;
+  box-shadow: none;
+}
+
+button.panel-close:active:not(:disabled) {
+  box-shadow: none;
+}
+
+/* Two to a row, so even a pawn's five choices take three short rows. */
+.panel-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
+  margin-top: 8px;
+}
+
+.panel-buttons:empty {
+  display: none;
+}
+
+.panel-buttons button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 46px;
+  padding: 5px 6px;
+  line-height: 1.15;
+  border-radius: 12px;
+}
+
+/* What the button makes (or does), and what it takes. */
+.act {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.act-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  opacity: 0.8;
+}
+
+.panel-buttons .inline-piece {
+  width: 1.3em;
+  height: 1.3em;
+  vertical-align: 0;
+}
+
+.act-note .inline-piece,
+.act-note .inline-affinity {
+  width: 1.15em;
+  height: 1.15em;
+}
+
+.offer-detail button[data-buy] {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  font-size: 1.1rem;
 }
 
 button.fuse {
@@ -707,7 +1223,7 @@ button.fuse {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .shop button.offer {
@@ -717,7 +1233,8 @@ button.fuse {
   justify-content: flex-start;
   gap: 3px;
   min-width: 0;
-  padding: 8px 3px 8px;
+  padding: 0 3px 8px;
+  overflow: hidden;
   font-size: 0.75rem;
   font-weight: 800;
   background: var(--deep);
@@ -725,10 +1242,65 @@ button.fuse {
   box-shadow: 0 4px 0 #0a0518;
 }
 
-.offer .inline-piece {
-  width: 2.6rem;
-  height: 2.6rem;
+/* The picture sits on a band coloured by price, like an auto-battler's cost tiers, with the price
+   on its corner. */
+.offer-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% + 6px);
+  height: 2.9rem;
+  margin: 0 -3px 2px;
+  background: var(--tier);
+}
+
+.offer-art .offer-price {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  transform: translateX(-50%);
+  box-shadow: 0 2px 0 var(--gold-shadow);
+}
+
+.offer.pricey .offer-art .offer-price {
+  box-shadow: 0 2px 0 #a3294f;
+}
+
+.offer .offer-name {
+  margin-top: 8px;
+}
+
+.offer[data-tier="1"] {
+  --tier: #3e3270;
+}
+.offer[data-tier="2"] {
+  --tier: #2b7f78;
+}
+.offer[data-tier="3"] {
+  --tier: #3b6bc9;
+}
+.offer[data-tier="4"] {
+  --tier: #a84a90;
+}
+.offer[data-tier="5"] {
+  --tier: #c08a12;
+}
+
+.offer.pricey .offer-art {
+  filter: saturate(0.4) brightness(0.75);
+}
+
+.offer .inline-piece,
+.offer .inline-affinity {
+  width: 2.3rem;
+  height: 2.3rem;
   vertical-align: 0;
+}
+
+.offer .inline-affinity > .inline-piece {
+  width: 100%;
+  height: 100%;
 }
 
 /* Names get two lines, so "Berolina pawn" and "Grasshopper" aren't cut off. */
@@ -759,22 +1331,8 @@ button.fuse {
 }
 
 .shop button.offer.selected {
-  box-shadow:
-    inset 0 0 0 3px var(--gold),
-    0 4px 0 #0a0518;
-}
-
-.offer-detail {
-  animation: fade-in 0.15s ease-out;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.offer-detail button {
-  flex: 0 0 auto;
+  outline: 3px solid var(--gold);
+  outline-offset: -3px;
 }
 
 button.sell {
@@ -798,12 +1356,24 @@ header .link {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 12px;
-  margin-bottom: 12px;
-  font-size: 0.85rem;
+  gap: 4px 10px;
+  font-size: 0.8rem;
   font-weight: 800;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* Board size and side, record and best: one unit that drops under the round and lives when it must. */
+.run-meta {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.run-meta > span + span::before {
+  content: "·";
+  margin-right: 6px;
+  color: var(--faint);
 }
 
 #round {
@@ -1069,18 +1639,6 @@ dialog::backdrop {
   color: var(--muted);
 }
 
-.notice {
-  margin: 0 0 8px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  font-weight: 800;
-  color: var(--ink);
-  background: var(--teal);
-  border-radius: 12px;
-  box-shadow: 0 4px 0 var(--teal-shadow);
-  animation: pop-in 0.25s ease-out;
-}
-
 button.muted {
   color: var(--muted);
   font-weight: 700;
@@ -1194,6 +1752,88 @@ body.in-match #menu-button {
   gap: 8px;
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+/* On a phone, the four players two to a row: name and health over a slim bar. */
+@media (max-width: 560px) {
+  .match-players {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 14px;
+  }
+  .match-players .player {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "name hp extra"
+      "bar bar bar";
+    gap: 2px 6px;
+  }
+  .match-players .name {
+    grid-area: name;
+  }
+  .match-players .hp-bar {
+    grid-area: bar;
+    height: 6px;
+  }
+  .match-players .hp {
+    grid-area: hp;
+  }
+  .match-players .extra {
+    grid-area: extra;
+  }
+  .match-players .extra:empty {
+    display: none;
+  }
+}
+
+/* The shop's countdown over the Ready button (matches only). */
+.fight-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  background: var(--deep);
+  border-radius: 999px;
+  box-shadow: 0 -6px 16px rgb(0 0 0 / 0.3);
+}
+
+.fight-timer-bar {
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  background: var(--deep);
+  border-radius: 999px;
+}
+
+#fight-timer-fill {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  border-radius: 999px;
+  transition: width 0.25s linear;
+}
+
+#fight-timer-text {
+  min-width: 2.4em;
+  text-align: right;
+  font-family: var(--display);
+  font-size: 1.05rem;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.fight-timer.urgent #fight-timer-fill {
+  background: var(--danger);
+}
+
+.fight-timer.urgent #fight-timer-text {
+  color: var(--danger);
+  animation: urgent 1s ease-in-out infinite;
+}
+
+@keyframes urgent {
+  50% {
+    transform: scale(1.15);
+  }
 }
 
 .match-players .player.me .name {
@@ -1440,7 +2080,7 @@ body.in-lobby #menu-button {
 body.in-menu .run-bar,
 body.in-menu #placement,
 body.in-menu #battle,
-body.in-menu header {
+body.in-menu #app > header {
   display: none;
 }
 
@@ -1496,6 +2136,35 @@ body.in-menu header {
     top: var(--y);
     transform: rotate(var(--r0));
   }
+}
+
+/* Round icon buttons (the menu's sound switch). */
+button.icon-button {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 0;
+  height: 44px;
+  padding: 0;
+  color: var(--muted);
+  background: var(--panel);
+  border-radius: 14px;
+}
+
+button.icon-button[aria-pressed="false"] {
+  color: var(--faint);
+}
+
+.menu {
+  position: relative;
+}
+
+.menu .menu-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .menu-logo {
@@ -1601,11 +2270,15 @@ body.in-menu .credits {
 
 .side-label {
   flex: none;
-  width: 6.2em;
+  min-width: 3.4em;
   color: var(--faint);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+#side-you .side-label {
+  color: var(--accent);
 }
 
 .side-list {
@@ -1715,6 +2388,7 @@ body.in-menu .credits {
 
 .profile-body {
   display: grid;
+  align-content: start;
   gap: 12px;
   min-height: 120px;
 }
@@ -1861,7 +2535,7 @@ body.in-menu .credits {
 }
 
 #placement .fight-bar .actions {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 #placement .fight-bar #fight {
@@ -1878,7 +2552,7 @@ body.in-menu .credits {
 }
 
 #placement .fight-bar button {
-  min-height: 54px;
+  min-height: 52px;
   border-radius: 16px;
 }
 
@@ -1957,11 +2631,11 @@ body.in-menu .credits {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 0 0 10px;
-  padding: 10px 6px 10px 12px;
-  font-size: 0.85rem;
+  margin: 0 0 8px;
+  padding: 8px 4px 8px 10px;
+  font-size: 0.8rem;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.3;
   color: var(--text);
   background: var(--panel);
   border-radius: var(--radius);
@@ -1979,8 +2653,8 @@ body.in-menu .credits {
 button.tip-close {
   flex: 0 0 auto;
   min-height: 0;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   margin: 0;
   padding: 0;
   font-size: 1.2rem;
@@ -2072,19 +2746,15 @@ button.tip-close:active:not(:disabled) {
   font-size: 0.9rem;
 }
 
-/* Multiplayer: the rules for a created room (or vs bots). */
-.room-rules {
-  margin: 0;
-  padding: 8px 12px 6px;
+/* Multiplayer: the rules for a created room, quick play or bots (the legend styled like the New
+   game window's section labels). */
+.room-rules-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
   background: var(--deep);
-  border: 0;
   border-radius: 14px;
-}
-
-.room-rules legend {
-  padding: 0 4px;
-  font-size: 0.8rem;
-  color: var(--muted);
 }
 
 .lobby-rules {
@@ -2264,6 +2934,14 @@ button.tip-close:active:not(:disabled) {
   display: none;
 }
 
+/* News about the run (the board grew) is teal; rewards stay gold. */
+.toast[data-tone="teal"] {
+  background: var(--teal);
+  box-shadow:
+    0 5px 0 var(--teal-shadow),
+    0 12px 32px rgb(0 0 0 / 0.4);
+}
+
 .toast.show {
   animation: toast-in 0.25s ease-out;
 }
@@ -2290,9 +2968,53 @@ button.tip-close:active:not(:disabled) {
   }
 }
 
+/* How many achievements are unlocked, with a bar filling up towards all of them. */
 .achievement-count {
-  margin: 0 0 8px;
+  display: grid;
+  gap: 6px;
+  margin: 0;
   color: var(--muted);
+}
+
+.achievement-count strong {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--gold);
+}
+
+.progress {
+  display: block;
+  height: 10px;
+  overflow: hidden;
+  background: var(--deep);
+  border-radius: 999px;
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  min-width: 10px;
+  background: linear-gradient(90deg, var(--gold), var(--accent));
+  border-radius: 999px;
+}
+
+.achievement-group {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.achievement-group small {
+  font-family: "Nunito Variable", system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--faint);
 }
 
 .achievements {
@@ -2305,22 +3027,54 @@ button.tip-close:active:not(:disabled) {
 
 .achievement {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 12px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--panel);
   box-shadow: var(--lift);
 }
 
+.achievement-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* The badge: a gold medal once unlocked, a grey token before. */
+.achievement .badge {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: var(--faint);
+  background: var(--deep);
+  border-radius: 50%;
+}
+
+.achievement.unlocked .badge {
+  background: radial-gradient(circle at 35% 30%, #ffe8a3, var(--gold) 55%, var(--gold-shadow));
+  box-shadow: 0 3px 0 #8a5a00;
+}
+
+.achievement.locked .badge {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+
 .achievement.unlocked {
   box-shadow:
-    inset 0 0 0 2px var(--gold),
+    inset 0 0 0 2px rgb(255 201 60 / 0.6),
     var(--lift);
 }
 
 .achievement.locked {
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
 .achievement-name {
@@ -2352,32 +3106,14 @@ button.tip-close:active:not(:disabled) {
 
   #app {
     max-width: calc(var(--board) + 448px + 48px);
-    /* One short top row: logo and title, the run bar (round, lives, record), Menu. The header's
-       parts join #app's grid; everything else gets a full-width row of its own. */
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
     column-gap: 16px;
-    align-items: center;
-  }
-  #app > * {
-    grid-column: 1 / -1;
-  }
-  #app > header {
-    display: contents;
   }
   header h1 {
-    grid-area: 1 / 1;
     font-size: 1.05rem;
   }
   header h1 .logo {
     width: 24px;
     height: 24px;
-  }
-  header .header-actions {
-    grid-area: 1 / 3;
-  }
-  #app > .run-bar {
-    grid-area: 1 / 2;
   }
   header h1,
   header .header-actions,
@@ -2418,8 +3154,22 @@ button.tip-close:active:not(:disabled) {
     padding: 2px 16px calc(10px + env(safe-area-inset-bottom)) 0;
   }
 
-  .result {
+  /* The result card stays a card in the side column. */
+  #battle .result {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    z-index: auto;
+    width: auto;
     margin-top: 0;
+    padding: 22px 16px 16px;
+    border-radius: 24px;
+    box-shadow: 0 6px 0 var(--deep);
+    transform: none;
+    animation: pop-in 0.25s ease-out;
+  }
+  #battle:has(.result:not([hidden])) {
+    padding-bottom: 0;
   }
 
   /* A smaller logo so the menu's buttons start on the first screen. */

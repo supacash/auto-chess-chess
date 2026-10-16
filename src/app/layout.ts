@@ -25,6 +25,7 @@ export function renderLayout(root: HTMLElement): void {
   </header>
   <section id="menu" class="menu" hidden>
     <div class="menu-drift" id="menu-drift" aria-hidden="true"></div>
+    <button type="button" id="sound-toggle" class="icon-button menu-corner" aria-pressed="true"></button>
     <img class="menu-logo" src="${import.meta.env.BASE_URL}logo.svg" alt="" width="148" height="148" />
     <h2 class="menu-title">Pawned Up</h2>
     <p class="menu-badge">Chess Auto Battler</p>
@@ -53,11 +54,11 @@ export function renderLayout(root: HTMLElement): void {
     <div class="timer-bar"><div id="timer-fill"></div></div>
     <ol id="match-players" class="match-players"></ol>
   </section>
+  <!-- The run's line, beside Menu: round and lives, then the board, side, record and best. -->
   <div class="run-bar">
     <span id="round"></span>
     <span class="lives" id="lives"></span>
-    <span id="record"></span>
-    <span id="best"></span>
+    <span class="run-meta"><span id="board-size"></span><span id="record"></span><span id="best"></span></span>
   </div>
 
   <section id="placement">
@@ -67,7 +68,6 @@ export function renderLayout(root: HTMLElement): void {
         <span class="tip-icon" aria-hidden="true">💡</span><span id="tip-text"></span>
         <button type="button" id="tip-close" class="tip-close" aria-label="Dismiss tip">×</button>
       </div>
-      <p class="notice" id="notice" role="status" hidden></p>
       <p class="opponent" id="opponent"></p>
       <p class="opponent-info" id="opponent-info" role="status" hidden></p>
     </div>
@@ -80,11 +80,18 @@ export function renderLayout(root: HTMLElement): void {
           <button id="reroll" type="button">Reroll · ${REROLL_COST}g</button>
         </div>
         <div class="offers" id="offers"></div>
-        <div class="offer-detail" id="offer-detail" hidden></div>
-        <div class="piece-actions" id="piece-actions"></div>
+        <!-- The selected offer, how it moves and Buy. -->
+        <div class="offer-detail panel" id="offer-detail" hidden></div>
+        <!-- A selected piece's merges, upgrades and Sell take the offers' place until it's put down. -->
+        <div class="piece-actions panel" id="piece-actions" hidden></div>
       </div>
-      <p id="message" role="status" aria-live="polite"></p>
+      <!-- Pinned to the bottom of the screen: what went wrong (or the time left in a match), then the fight buttons. -->
       <div class="fight-bar">
+        <p id="message" role="status" aria-live="polite"></p>
+        <!-- In a match: the shop's time left, in reach wherever the screen is scrolled. -->
+        <div class="fight-timer" id="fight-timer" hidden>
+          <span class="fight-timer-bar"><span id="fight-timer-fill"></span></span><span id="fight-timer-text"></span>
+        </div>
         <div class="actions">
           <button id="clear" type="button">Clear</button>
           <button id="play" type="button" disabled>Play it</button>
@@ -151,8 +158,10 @@ export function renderLayout(root: HTMLElement): void {
     <div class="screen-side">
       <div class="side-pieces" id="side-you" hidden></div>
       <div class="actions" id="playback">
-        ${SPEEDS.map((s) => `<button type="button" class="speed" data-speed="${s}">${s}×</button>`).join('')}
-        <button type="button" id="skip">Skip</button>
+        <div class="speeds" role="group" aria-label="Playback speed">
+          ${SPEEDS.map((s) => `<button type="button" class="speed" data-speed="${s}">${s}×</button>`).join('')}
+        </div>
+        <button type="button" id="skip">Skip ⏭</button>
       </div>
       <div class="promo" id="promo" hidden></div>
       <div class="actions" id="manual" hidden>
@@ -173,8 +182,10 @@ export function renderLayout(root: HTMLElement): void {
         <button type="button" id="replay-done" class="primary" hidden>Done</button>
       </div>
       <div class="result" id="result" hidden>
+        <div class="confetti" id="confetti" aria-hidden="true"></div>
         <h2 id="result-title"></h2>
         <p id="result-detail"></p>
+        <div class="result-stats" id="result-stats" hidden></div>
         <p class="result-awards" id="result-awards" hidden></p>
         <div class="run-summary" id="run-summary" hidden></div>
         <div class="actions result-actions">
@@ -204,11 +215,13 @@ export function renderLayout(root: HTMLElement): void {
           game with the same rules; empty seats get bots after 30 seconds.
         </p>
       </details>
-      <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 20-second shop</label>
       <fieldset class="room-rules">
         <legend>Rules</legend>
-        <label class="check"><input type="checkbox" id="mp-growing" /> Growing board: 5×5 up to 9×9</label>
-        <label class="check"><input type="checkbox" id="mp-fairy" /> Fairy pieces and fusion</label>
+        <div class="room-rules-box">
+          <label class="check"><input type="checkbox" id="mp-growing" /> Growing board: 5×5 up to 9×9</label>
+          <label class="check"><input type="checkbox" id="mp-fairy" /> Fairy pieces and fusion</label>
+          <label class="check"><input type="checkbox" id="mp-blitz" /> Blitz: 20-second shop</label>
+        </div>
       </fieldset>
       <button type="submit" value="quick" class="primary big-choice">
         Quick play<small>Play with anyone looking for a game</small>

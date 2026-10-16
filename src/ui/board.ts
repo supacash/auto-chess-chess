@@ -6,6 +6,8 @@ import { fillPiece, label, squareEl } from './boardDom';
 
 /** Pointer travel (px) before a press becomes a drag instead of a tap. */
 const DRAG_THRESHOLD = 6;
+/** How long a new piece (bought or merged) or one just put down keeps its arrival animation. */
+const POP_MS = 400;
 
 type DropTarget = { kind: 'square'; sq: Square } | { kind: 'bench' };
 
@@ -40,6 +42,9 @@ export class PlacementBoard {
   private rejected: Square | null = null;
   private rejectedTimer = 0;
   private reportedSelection: string | null = null;
+  /** Pieces still playing their arrival animation (new ones pop in, moved ones land), until when. */
+  private readonly popping = new Map<string, number>();
+  private landed: { id: string; until: number } | null = null;
   private press: Press | null = null;
   private spec: BoardSpec = BOARD_8;
   private readonly boardEl: HTMLElement;
@@ -73,15 +78,23 @@ export class PlacementBoard {
 
   /** Replaces the pieces. The selection survives if the selected piece still exists. */
   setPieces(pieces: Piece[]): void {
+    // Pieces that weren't here before (bought, or made by a merge) pop in.
+    const before = new Set(this.pieces.map((p) => p.id));
+    const until = performance.now() + POP_MS;
+    for (const p of pieces) if (!before.has(p.id)) this.popping.set(p.id, until);
     this.pieces = pieces;
     if (!pieces.some((p) => p.id === this.selected)) this.selected = null;
     this.render();
   }
 
-  /** Switches the board size (e.g. when the board grows between rounds). */
-  setSpec(spec: BoardSpec): void {
+  /** Switches the board size (e.g. when the board grows between rounds); `grew` plays a short flourish. */
+  setSpec(spec: BoardSpec, grew = false): void {
     this.spec = spec;
     this.render();
+    if (!grew) return;
+    this.boardEl.classList.remove('grew');
+    void this.boardEl.offsetWidth; // restart the animation
+    this.boardEl.classList.add('grew');
   }
 
   /** Shows the opponent's placed army in its rows, or hides it again with null. */
@@ -141,6 +154,13 @@ export class PlacementBoard {
   private pieceEl(p: Piece): HTMLElement {
     const el = document.createElement('div');
     el.className = 'piece';
+    const now = performance.now();
+    const pop = this.popping.get(p.id);
+    if (pop !== undefined) {
+      if (now < pop) el.classList.add('fresh');
+      else this.popping.delete(p.id);
+    }
+    if (this.landed?.id === p.id && now < this.landed.until) el.classList.add('landed');
     if (p.id === this.selected) el.classList.add('selected');
     if (this.press?.dragging && p.id === this.press.pieceId) el.classList.add('drag-source');
     el.dataset.id = p.id;
@@ -251,6 +271,7 @@ export class PlacementBoard {
       return false;
     }
     this.pieces = next;
+    this.landed = { id: pieceId, until: performance.now() + POP_MS };
     this.opts.onMessage('');
     this.opts.onChange(next);
     return true;

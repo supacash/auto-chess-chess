@@ -4,15 +4,18 @@ import { $, escapeHtml } from './dom';
 const SHOW_MS = 4500;
 const GAP_MS = 250;
 
-const queue: { title: string; detail: string }[] = [];
+/** Gold for rewards (achievements, an extra life); teal for news about the run (the board grew). */
+export type ToastTone = 'gold' | 'teal';
+
+const queue: { title: string; detail: string; tone: ToastTone }[] = [];
 let showing = false;
 
 /**
  * A short notice at the top of the screen (e.g. an achievement unlocked), gone after a few seconds.
  * Notices that arrive while one is up wait their turn, so two unlocked at once are both seen.
  */
-export function showToast(title: string, detail = ''): void {
-  queue.push({ title, detail });
+export function showToast(title: string, detail = '', tone: ToastTone = 'gold'): void {
+  queue.push({ title, detail, tone });
   if (!showing) showNext();
 }
 
@@ -26,6 +29,7 @@ function showNext(): void {
   }
   showing = true;
   el.innerHTML = `<strong>${escapeHtml(next.title)}</strong>${next.detail ? `<span>${escapeHtml(next.detail)}</span>` : ''}`;
+  el.dataset.tone = next.tone;
   el.hidden = false;
   el.classList.remove('show');
   void el.offsetWidth; // restart the animation

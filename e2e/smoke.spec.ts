@@ -115,7 +115,7 @@ test('a multiplayer match against bots plays a round with health and moves on', 
   await expect(page.locator('#match-players .player')).toHaveCount(4);
   await expect(page.locator('#match-round')).toContainText('Round 1 · Shop');
   // The next opponent (a bot) and its pieces are shown before the round, but not where they stand.
-  await expect(page.locator('#opponent')).toContainText('Next opponent');
+  await expect(page.locator('#opponent')).toContainText('Up next');
   await expect(page.locator('#opponent .foe').first()).toBeVisible();
   await expect(page.locator('#play')).toBeHidden();
   await expect(page.locator('#fight')).toHaveText('Ready');
