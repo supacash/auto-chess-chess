@@ -501,6 +501,25 @@ More duels, same command as §23 with 300 games (±6) and seed 3:
 - **Growing Hard came out 9 points easier.** Rerun with 80 runs (seed 5), it scored 37% ±2 (run score 4.9 ±0.9), between §24's 32% and §22's 36%. The first row was a high draw, so no budget change was made.
 - **The suites' 40-run rows vary by more than their ±3** (battles in one run aren't independent). Treat moves of up to about 5 points as noise.
 
+### 26. Tuning the daily challenge's gold (shop player, 200–300 gauntlets per row)
+
+`npm run sim -- --player shop --games 200 --fairy both --daily [--daily-gold N] [--daily-bonus N] [--daily-income N] [--daily-interest N]` plays the daily challenge: five battles at rounds 2, 4, 6, 8 and 10, no lives. The target is a run's same rounds: `--rounds 10 --games 200 --fairy both` (Growing Normal, seed 7) won rounds 2/4/6/8/10 51/76/64/63/74%, **66%** on average, with armies about level with the AI.
+
+| Daily (Growing Normal, seed 7) | B1 | B2 | B3 | B4 | B5 | Avg | Wins / 5 | Cleared |
+|---|---|---|---|---|---|---|---|---|
+| +6 start, 2× income (first version) | 37% | 45% | 45% | 39% | 47% | 43% | 2.1 | 17% |
+| +6, 3× income | 37% | 79% | 83% | 97% | 99% | 79% | 3.9 | 30% |
+| +9, 2× income, 2× interest | 32% | 50% | 47% | 48% | 51% | 46% | 2.3 | 12% |
+| +6, +2 a battle | 37% | 61% | 61% | 64% | 82% | 61% | 3.0 | 22% |
+| +6, +3 a battle | 37% | 69% | 73% | 78% | 89% | 69% | 3.5 | 28% |
+| **+12, +2 a battle** (seed 11, 300) | 41% | 67% | 65% | 72% | 85% | **66%** | 3.3 | 26% |
+
+- **2× income was too little:** the stand-in fell 8–10 points behind the AI by the last battle. A run pays interest every round and gets two shops; the daily one.
+- **Doubling the interest or adding starting gold barely helped;** a flat bonus a battle did. +12 start and +2 a battle matches the run's average.
+- **Classic (standard pieces, seed 11):** a run's rounds 2–10 won 55/63/43/35/30% (45%); the daily 37/60/49/46/55% (49%), within noise.
+- **The first battle stays hard for the stand-in** (37–41% against 51–55% in round 2 of a run): it buys partial affinity sets it can't finish in one shop, so 16 gold builds about 10 points on 5×5. People will likely do better. The last battle comes out easier than round 10 of a run (wins pay for the next shop).
+- The stand-in spends almost all its gold in both modes (under 1 gold left going into a battle; the report's new "Gold unspent" line). Raising its reroll cap for the daily's single shop changed nothing.
+
 ## Problems found
 
 1. **Fixed:** the piece limit in `src/rules/composition.ts` (see DESIGN.md) now applies to the shop, placement and `draftAiArmy`. At the 6×round AI budget all 1000 battles of `npm run sim -- --rounds 10 --games 100` play out.

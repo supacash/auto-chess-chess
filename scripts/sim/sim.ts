@@ -7,6 +7,9 @@
  * The "player" is a stand-in with an AI style, placed with placeAiArmy. `--player redraft`
  * re-drafts its whole army each round at its current army value (start army + gold + income so far);
  * `--player shop` keeps a persistent Shop and spends gold greedily (shopPlayer.ts).
+ * `--daily` plays the daily challenge instead (daily.ts): five battles at rounds 2, 4, 6, 8 and 10, no
+ * lives, its starting gold and income (`--daily-gold N`, `--daily-income N` (rounds' income a battle),
+ * `--daily-interest N` and `--daily-bonus N` override them, for tuning; SIMULATION.md §26).
  * See SIMULATION.md.
  */
 import { availableParallelism } from 'node:os';
@@ -38,7 +41,14 @@ import {
   startGold,
   startPieces,
 } from '../../src/rules/prestige';
-import { maxLives } from '../../src/rules/run';
+import {
+  DAILY_BATTLE_BONUS,
+  DAILY_BATTLES,
+  DAILY_INTEREST_TIMES,
+  DAILY_ROUND_STEP,
+  maxLives,
+} from '../../src/rules/run';
+import { DAILY_EXTRA_GOLD, dailyRound, dailyScore } from '../../src/rules/daily';
 import { randomInt, seededRng } from '../../src/rules/rng';
 import { formatMargin, meanMargin } from './stats';
 import { loadRulesForNode } from '../../src/chess/testRules';
@@ -73,10 +83,27 @@ const { values: opts } = parseArgs({
     prestige: { type: 'string', default: '0' },
     save: { type: 'string', default: '0' },
     json: { type: 'boolean', default: false },
+    daily: { type: 'boolean', default: false },
+    'daily-gold': { type: 'string' },
+    'daily-income': { type: 'string' },
+    'daily-interest': { type: 'string' },
+    'daily-bonus': { type: 'string' },
   },
 });
 
-const ROUNDS = Number(opts.rounds);
+/** `--daily`: the daily challenge's five battles (rounds 2–10) instead of rounds 1..--rounds. */
+const DAILY = opts.daily === true;
+/** Gold on top of the run's starting gold, and how many rounds' income each battle pays, in a daily. */
+const DAILY_GOLD = opts['daily-gold'] ? Number(opts['daily-gold']) : DAILY_EXTRA_GOLD;
+const DAILY_INCOME = opts['daily-income'] ? Number(opts['daily-income']) : DAILY_ROUND_STEP;
+/** How many times a daily battle pays interest. */
+const DAILY_INTEREST = opts['daily-interest'] ? Number(opts['daily-interest']) : DAILY_INTEREST_TIMES;
+/** Flat gold on top of each daily battle's income. */
+const DAILY_BONUS = opts['daily-bonus'] ? Number(opts['daily-bonus']) : DAILY_BATTLE_BONUS;
+const ROUND_LIST = DAILY
+  ? Array.from({ length: DAILY_BATTLES }, (_, i) => dailyRound(i + 1))
+  : Array.from({ length: Number(opts.rounds) }, (_, i) => i + 1);
+const ROUNDS = ROUND_LIST.length;
 const RUNS = Number(opts.games);
 const SEED = Number(opts.seed);
 const DEPTH = opts.depth ? Number(opts.depth) : undefined;
@@ -167,6 +194,8 @@ interface GameRecord {
   /** Largest material lead either side held at any point, and who held it ('w' = player). */
   peakLead: number;
   peakLeader: 'w' | 'b' | null;
+  /** Gold the shop player left unspent going into the battle. */
+  goldUnspent: number;
 }
 
 /** A battle Stockfish could not play out (see EngineFailure); it is left out of W/D/L. */
@@ -182,6 +211,8 @@ interface RejectedRecord {
 interface RunRecord {
   games: GameRecord[];
   rejected: RejectedRecord[];
+  /** Gold unspent after the last battle (the daily challenge scores it). */
+  goldLeft: number;
 }
 
 /** One run: rounds 1..ROUNDS in order, carrying the player's gold from round to round. */
@@ -194,14 +225,18 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
   let playerPoints =
     [...MODE.startArmy, ...gifts.map((p) => p.type)].reduce((s, t) => s + PIECE_VALUE[t], 0) +
     startGold(PERKS) +
-    MODE.extraGold;
+    MODE.extraGold +
+    (DAILY ? DAILY_GOLD : 0);
   let shop = startingShop(MODE.startArmy);
-  shop = { gold: startGold(PERKS) + MODE.extraGold, pieces: [...shop.pieces, ...gifts] };
+  shop = { gold: startGold(PERKS) + MODE.extraGold + (DAILY ? DAILY_GOLD : 0), pieces: [...shop.pieces, ...gifts] };
   /** Income after a battle, as in the game (run.battleIncome): round income, Tithe, interest. */
   const income = (winner: BattleResult['winner'], gold: number) =>
-    roundIncome(winner) + extraIncome(PERKS) + perkInterest(gold, PERKS);
+    (DAILY ? DAILY_INCOME : 1) * roundIncome(winner) +
+    (DAILY ? DAILY_BONUS : 0) +
+    extraIncome(PERKS) +
+    (DAILY ? DAILY_INTEREST : 1) * perkInterest(gold, PERKS);
 
-  for (let round = 1; round <= ROUNDS; round++) {
+  for (const round of ROUND_LIST) {
     const spec = boardFor(round);
     const aiStyle = AI_STYLE === 'random' ? pickStyle(rng, AI_FAIRY) : AI_STYLES.find((s) => s.id === AI_STYLE)!;
     const first = playerFirst(rng);
@@ -218,7 +253,11 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
         spec,
         PLAYER_FAIRY,
         round,
-        { odds: offerOdds(PERKS), freeRerolls: freeRerolls(PERKS), reserve: round >= 3 ? SAVE : 0 },
+        {
+          odds: offerOdds(PERKS),
+          freeRerolls: freeRerolls(PERKS),
+          reserve: round >= 3 ? SAVE : 0,
+        },
       );
       playerPoints = armyValue(shop);
       playerTypes = shop.pieces.map((p) => p.type);
@@ -267,7 +306,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       if (!(e instanceof EngineFailure)) throw e;
       const side = e.kind === 'hung' ? null : /WHITE/.test(e.detail) ? 'player' : 'AI';
       rejected.push({ kind: e.kind, round, plies, fen: e.fen, side });
-      playerPoints += roundIncome('draw');
+      playerPoints += (DAILY ? DAILY_INCOME : 1) * roundIncome('draw');
       shop = { ...shop, gold: shop.gold + income('draw', shop.gold) };
       onGame();
       continue;
@@ -283,12 +322,13 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       result,
       peakLead,
       peakLeader,
+      goldUnspent: shop.gold,
     });
-    playerPoints += roundIncome(result.winner);
+    playerPoints += (DAILY ? DAILY_INCOME : 1) * roundIncome(result.winner);
     // As in the game: income plus interest on the gold saved (see run.battleIncome).
     shop = { ...shop, gold: shop.gold + income(result.winner, shop.gold) };
   }
-  return { games: records, rejected };
+  return { games: records, rejected, goldLeft: shop.gold };
 }
 
 // ---------- aggregation ----------
@@ -419,9 +459,15 @@ function report(records: RunRecord[]): string {
   const moreLife = runScores(LIVES + 1);
   const avgMoreLife = moreLife.reduce((s, x) => s + x.score, 0) / moreLife.length;
 
+  const unspent = [...byRound.keys()]
+    .sort((a, b) => a - b)
+    .map((r) => {
+      const gs = games.filter((g) => g.round === r);
+      return `r${r} ${(gs.reduce((s, g) => s + g.goldUnspent, 0) / gs.length).toFixed(1)}`;
+    });
   const out = [
     `Pawned Up sim — ${RUNS} runs × ${ROUNDS} rounds, seed ${SEED}, ${DEPTH ? `Fairy-Stockfish depth ${DEPTH}` : `our engine ${ACC_LIMITS.depth}/${ACC_LIMITS.nodes}`}, ` +
-      `mode ${MODE.name}, ply limit ${PLY_OVERRIDE ?? '10 × size + 10'}${DECISIVE ? `, decisive lead ${DECISIVE[0]} for ${DECISIVE[1]} plies` : ''}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
+      `${DAILY ? 'DAILY (rounds 2–10), ' : ''}mode ${MODE.name}, ply limit ${PLY_OVERRIDE ?? '10 × size + 10'}${DECISIVE ? `, decisive lead ${DECISIVE[0]} for ${DECISIVE[1]} plies` : ''}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
       `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round ±1` : `${PER_ROUND}×round × ramp${MODE.aiBonus ? ` + ${MODE.aiBonus}` : ''} ±1 (round 1: −${MODE.roundOneDiscount})`}` +
       `${PRESTIGE ? `, prestige ${PRESTIGE}` : ''}${PERKS.length ? `, perks ${PERKS.join(',')}` : ''}${SAVE ? `, saves ${SAVE} gold from round 3` : ''}`,
     'W/D/L are from the player\'s side. "lead≥N" = games where a side was ever ≥N points of material ahead;',
@@ -434,12 +480,33 @@ function report(records: RunRecord[]): string {
     table('By AI style', [...byStyle.entries()]),
     table('By player stand-in style', [...byPlayerStyle.entries()]),
     table('Total', [['all', total]]),
-    `\nEnd reasons: ${[...reasons.entries()].map(([r, n]) => `${r} ${pct(n, games.length)}`).join(', ')}`,
+    `\nGold unspent going into battle: ${unspent.join(', ')}`,
+    `End reasons: ${[...reasons.entries()].map(([r, n]) => `${r} ${pct(n, games.length)}`).join(', ')}`,
     `Run score (wins before ${LIVES} losses): avg ${avgScore.toFixed(2)} ±${scoreMargin.toFixed(2)}, ` +
       `${pct(scores.filter((s) => s.survived).length, scores.length)} of runs still alive after round ${ROUNDS}` +
       `\nWith one more life: avg ${avgMoreLife.toFixed(2)}, ` +
       `${pct(moreLife.filter((s) => s.survived).length, moreLife.length)} alive after round ${ROUNDS}`,
   ];
+  if (DAILY) {
+    // The daily challenge: every battle is played; scored 100 a win, 50 a draw, plus gold left.
+    const wins = records.map((r) => r.games.filter((g) => g.result.winner === 'w').length);
+    const daily = records.map((r) => {
+      const w = r.games.filter((g) => g.result.winner === 'w').length;
+      const d = r.games.filter((g) => g.result.winner === 'draw').length;
+      return dailyScore({ w, d }, r.goldLeft);
+    });
+    const dist = Array.from({ length: DAILY_BATTLES + 1 }, (_, n) =>
+      pct(wins.filter((w) => w === n).length, wins.length),
+    );
+    out.push(
+      `
+Daily (start gold +${DAILY_GOLD}, ${DAILY_INCOME}× income, ${DAILY_INTEREST}× interest, +${DAILY_BONUS} a battle): wins per gauntlet avg ` +
+        `${(wins.reduce((a, b) => a + b, 0) / wins.length).toFixed(2)} ±${meanMargin(wins).toFixed(2)}, ` +
+        `cleared ${pct(wins.filter((w) => w === DAILY_BATTLES).length, wins.length)}; ` +
+        `0–5 wins: ${dist.join(' / ')}; score avg ${(daily.reduce((a, b) => a + b, 0) / daily.length).toFixed(0)}, ` +
+        `gold left avg ${(records.reduce((a, r) => a + r.goldLeft, 0) / records.length).toFixed(1)}`,
+    );
+  }
   const all = games.length + rejected.length;
   const refused = rejected.filter((r) => r.kind === 'rejected');
   const hung = rejected.filter((r) => r.kind === 'hung');

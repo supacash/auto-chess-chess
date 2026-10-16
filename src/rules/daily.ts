@@ -44,8 +44,11 @@ export const DAILY_THEMES: DailyTheme[] = [
   { id: 'hard', name: 'Hard', blurb: 'Hard budgets', settings: { ...BASE, difficulty: 'hard' } },
 ];
 
-/** Gold on top of a run's starting gold: about what round 1 of a run pays, since the daily starts at round 2. */
-export const DAILY_EXTRA_GOLD = 6;
+/**
+ * Gold on top of a run's starting gold, since the daily starts at round 2. Tuned with the simulator with
+ * DAILY_BATTLE_BONUS so the stand-in wins as often as in a run's rounds 2–10 (SIMULATION.md §26).
+ */
+export const DAILY_EXTRA_GOLD = 12;
 
 /** The UTC day of `now`, "2026-10-16". The challenge changes at UTC midnight. */
 export function dailyDate(now: number): string {

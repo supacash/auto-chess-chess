@@ -20,6 +20,10 @@ export const DAILY_BATTLES = 5;
  * and shops), so five battles cover a whole run's arc.
  */
 export const DAILY_ROUND_STEP = 2;
+/** How many times a daily battle pays interest (a run pays it every round). */
+export const DAILY_INTEREST_TIMES = 1;
+/** Flat gold on top of a daily battle's income (tuned with the simulator: SIMULATION.md §26). */
+export const DAILY_BATTLE_BONUS = 2;
 
 /** What makes a run the day's challenge: its date (which seeds it) and theme. */
 export interface DailyRun {
@@ -140,7 +144,12 @@ export function applyResult(run: Run, winner: Winner): Run {
 /** Gold a battle pays: round income, Tithe, and interest on the gold saved before it (Banker's terms). */
 export function battleIncome(run: Run, winner: Winner): number {
   // A daily battle stands for two rounds of a run, so it pays two rounds' income (interest once).
-  if (run.daily) return DAILY_ROUND_STEP * roundIncome(winner) + perkInterest(run.shop.gold, []);
+  if (run.daily)
+    return (
+      DAILY_ROUND_STEP * roundIncome(winner) +
+      DAILY_BATTLE_BONUS +
+      DAILY_INTEREST_TIMES * perkInterest(run.shop.gold, [])
+    );
   return roundIncome(winner) + extraIncome(run.perks) + perkInterest(run.shop.gold, run.perks);
 }
 

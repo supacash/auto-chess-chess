@@ -13,7 +13,7 @@ import {
   newDailyRun,
   previousDate,
 } from './daily';
-import { applyResult, DAILY_BATTLES, isRunOver, newRun, nextRound } from './run';
+import { applyResult, DAILY_BATTLE_BONUS, DAILY_BATTLES, isRunOver, newRun, nextRound } from './run';
 
 /** An army's pieces and squares (piece ids differ from draft to draft). */
 const army = (pieces: readonly { type: string; square: unknown }[]) => pieces.map((p) => [p.type, p.square]);
@@ -60,7 +60,7 @@ describe('daily challenge', () => {
     expect([1, 2, 3, 4, 5].map((n) => dailyOpponent('2026-10-16', 11, n).style.id)).toEqual(Array(5).fill('fortress'));
   });
 
-  it('plays all five battles without lives, at rounds 2 to 10, with two rounds of income each', () => {
+  it('plays all five battles without lives, at rounds 2 to 10, with two rounds of income and a bonus each', () => {
     let run = newDailyRun('2026-10-13');
     expect(run.round).toBe(2);
     expect(run.shop.gold).toBe(newRun().shop.gold + DAILY_EXTRA_GOLD);
@@ -68,7 +68,7 @@ describe('daily challenge', () => {
       expect(isRunOver(run)).toBe(false);
       const gold = run.shop.gold;
       run = applyResult(run, 'b');
-      expect(run.shop.gold).toBe(gold + 10 + Math.min(3, Math.floor(gold / 10)));
+      expect(run.shop.gold).toBe(gold + 10 + DAILY_BATTLE_BONUS + Math.min(3, Math.floor(gold / 10)));
       if (i < DAILY_BATTLES - 1) run = nextRound(run);
     }
     expect(run.round).toBe(10);

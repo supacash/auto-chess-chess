@@ -214,7 +214,7 @@ Live, TFT-style matches for 4 players. Everything that decides a match is determ
 ## Daily challenge
 A short daily gauntlet, the same for every player: five battles against armies fixed for the day, with a day streak. The puzzle is spending your gold to beat armies you can see coming.
 - **The five armies:** for now drafted and placed by the AI drafter from the day's seed (the UTC date plus RULES_VERSION, so a rules update starts a fresh challenge instead of quietly changing today's). All five are shown in full, pieces and squares, from the start: placement shows the current one (as with Reveal) and *Today's gauntlet* lists all five on their home rows, with the results so far. (A battle that would start with both kings in check re-places the army from the day's seed, so its squares can differ from the preview.)
-- **Steeper than a run:** the battles use the Normal budgets of rounds 2, 4, 6, 8 and 10, on the Growing boards for those rounds (5×5, 6×6, 7×7, 8×8, 9×9), so five battles cover a whole run's arc. You start with King + 3 pawns and the mode's starting gold +6 (about what round 1 of a run pays), and each battle pays two rounds' income (2 × (5, +2 a win, +1 a draw)) plus interest once. These are starting values: tuning them with the simulator so a good player can win all five is still to do.
+- **Steeper than a run:** the battles use the Normal budgets of rounds 2, 4, 6, 8 and 10, on the Growing boards for those rounds (5×5, 6×6, 7×7, 8×8, 9×9), so five battles cover a whole run's arc. You start with King + 3 pawns and the mode's starting gold +12 (16 on Growing), and each battle pays two rounds' income (2 × (5, +2 a win, +1 a draw)), +2 gold, and interest once. Tuned with the simulator (SIMULATION.md §26) so its stand-in wins as often as in a run's rounds 2–10 (66% a battle on Growing; 3.3 wins a gauntlet, a quarter of gauntlets cleared). The first battle is the hardest for it (about 40%, against 51% in round 2 of a run): one shop has to build an army that a run builds from two.
 - **Same shops for everyone:** each battle's shop, and each reroll, comes from its own stream of the day's seed, as does each battle's seed, so your choices never change what later battles bring.
 - **Every battle is played** (no lives). **Score:** 100 per win, 50 per draw, plus the gold left after the fifth battle (shown as "4/5 won · 12 gold left").
 - **Weekday themes** (UTC): Mon *Classic* (8×8 every battle, standard pieces) · Tue *Growing* (the default, fairy pieces on) · Wed *Menagerie* (every opponent a Menagerie army) · Thu *Black* (you play Black) · Fri *Fortress* (every opponent a Fortress) · Sat *Hard* (Hard budgets) · Sun *Play yourself* (you move your own pieces).
@@ -232,7 +232,7 @@ Done: reproducible seeded battles, RULES_VERSION, army snapshots, replays, brows
 
 Next candidates (not yet decided):
 1. **Multiplayer:** balance runs for 4-player matches (see Multiplayer).
-2. **Daily challenge follow-ups:** tune its gold with the simulator; a hand-made army pool; online leaderboards.
+2. **Daily challenge follow-ups:** a hand-made army pool; online leaderboards; the first battle's difficulty (SIMULATION.md §26).
 3. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
 4. **Bigger boards** past 8×8, with a longer move limit.
 
