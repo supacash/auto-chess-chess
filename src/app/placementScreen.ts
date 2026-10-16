@@ -7,7 +7,7 @@ import {
   shopAchievements,
 } from '../game/achievements';
 import { dismissTip, seenTips } from '../game/storage';
-import { MATCH_TIPS, nextTip, TIPS, type TipId } from '../game/tips';
+import { interestTip, MATCH_TIPS, nextTip, PLAY_IT_START_TIP, TIPS, type TipId } from '../game/tips';
 import {
   buyOffer,
   canMakeHeir,
@@ -394,10 +394,21 @@ export class PlacementScreen {
     const { shop, round } = this.session.run;
     this.tip = nextTip(shop, round, seenTips());
     $('#tip').hidden = this.tip === null;
+    $('#tip-text').textContent = this.tip ? this.tipText(this.tip) : '';
+    // The how-to-play tip already says to place the king: no need for the hint under the buttons too.
+    if (this.tip === 'start') $('#fight-hint').hidden = true;
+  }
+
+  /** A tip's words here: the run's own interest terms, and how to play in a Play it run or a match. */
+  private tipText(tip: TipId): string {
+    if (tip === 'interest') {
+      const { step, max } = this.session.interestTerms?.() ?? { step: INTEREST_STEP, max: MAX_INTEREST };
+      return interestTip(step, max);
+    }
     // A match is won on health, not lives, and its button reads Ready.
-    const text =
-      this.tip && this.mode.onReady ? (MATCH_TIPS[this.tip] ?? TIPS[this.tip]) : this.tip ? TIPS[this.tip] : '';
-    $('#tip-text').textContent = text;
+    if (this.mode.onReady) return MATCH_TIPS[tip] ?? TIPS[tip];
+    if (tip === 'start' && this.session.run.settings.manual) return PLAY_IT_START_TIP;
+    return TIPS[tip];
   }
 
   private renderOffers(): void {
