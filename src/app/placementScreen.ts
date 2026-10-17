@@ -698,6 +698,11 @@ function synergyHelp(): string {
   );
 }
 
+/** The text with its first letter in capitals. */
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** "a Knight fights as a Centaur, a Camel as a Wildebeest": what a family's upgrades make. */
 function upgradeText(fam: Family): string {
   const byTarget = new Map<PieceType, PieceType[]>();
@@ -721,9 +726,14 @@ function familyText(
   spec: BoardSpec,
 ): string {
   const count = types.filter((t) => fam.members.includes(t)).length;
+  const front = ['one', 'two', 'three'];
   const tiers = fam.tiers
-    .map((n, i) => `${n} on the board upgrade ${i === 0 ? 'the front one' : `the front ${i + 1}`}`)
-    .join(', ');
+    .map((n, i) =>
+      i === 0
+        ? `With ${n} on the board, the front ${front[i]} fights this battle as a stronger piece`
+        : `with ${n}, the front ${front[i]}`,
+    )
+    .join('; ');
   const ups = upgrades?.filter((u) => u.family === fam.id) ?? [];
   const where = (u: SynergyUpgrade) => (mine ? ` on ${fileLetter(u.square.file)}${u.square.rank + 1}` : '');
   const now = ups.length
@@ -735,7 +745,7 @@ function familyText(
     fam.members.every(isPawnLike) && pawnSquares(spec) < fam.tiers[0]
       ? ` Only the 8×8 and 9×9 boards have room for ${fam.tiers[0]} pawns.`
       : '';
-  return `<strong>${fam.name}</strong> (${fam.kind}) ${icons} · ${tiers}: ${upgradeText(fam)}, for the battle. ${now}${room}`;
+  return `<strong>${fam.name}</strong> (${fam.kind}) ${icons} · ${tiers}. ${capitalize(upgradeText(fam))}. ${now}${room}`;
 }
 
 /** "3 pts. Jumps in an L shape." (the King and Heir aren't worth points in battle). */
