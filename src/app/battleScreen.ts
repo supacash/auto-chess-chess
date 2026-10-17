@@ -1,4 +1,4 @@
-import { type BoardSpec, plyLimit } from '../chess/boardSpec';
+import { type BoardSpec, plyLimit, squareName } from '../chess/boardSpec';
 import { DAILY_BATTLES, DAILY_ROUND_STEP, FINAL_ROUND, bestStreak, type RoundLog } from '../rules/run';
 import type { Color } from '../chess/fen';
 import { Game, type Move } from '../chess/rules';
@@ -10,6 +10,7 @@ import { type MoveSource, runBattle, SEARCH_DEPTH } from '../game/runBattle';
 import { type BattleResult, type EndReason, material, wonOnPoints } from '../rules/battle';
 import type { Rng } from '../rules/rng';
 import { PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
+import type { BattleUpgrade, StartSynergies } from '../rules/position';
 import { BattleView } from '../ui/battleView';
 import { displayColor, inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { throwConfetti } from './confetti';
@@ -24,6 +25,37 @@ const MOVE_MS = 400;
 const INTRO_MS = 700;
 /** Longer pause in multiplayer, where the player's side is announced first. */
 const SIDE_INTRO_MS = 2000;
+/** How long the armies show as placed before synergies upgrade their pieces. */
+const UPGRADE_MS = 900;
+
+/** A piece's name for more than one ("Men", "Ferzes", "Knights"). */
+function plural(type: PieceType): string {
+  const name = PIECE_NAME[type];
+  // Man → Men, Stackman → Stackmen.
+  if (/man$/i.test(name)) return `${name.slice(0, -2)}en`;
+  return name === 'Ferz' ? 'Ferzes' : `${name}s`;
+}
+
+/** "Synergies! You: Knight → Centaur. Them: 2 Pawns → Knights." */
+export function synergyNote(upgrades: readonly BattleUpgrade[], mine: Color): string {
+  const side = (color: Color) => {
+    const counts = new Map<string, { from: PieceType; to: PieceType; n: number }>();
+    for (const u of upgrades) {
+      if (u.side !== color) continue;
+      const key = `${u.from}${u.to}`;
+      const seen = counts.get(key);
+      counts.set(key, { from: u.from, to: u.to, n: (seen?.n ?? 0) + 1 });
+    }
+    return [...counts.values()]
+      .map(({ from, to, n }) =>
+        n > 1 ? `${n} ${plural(from)} → ${plural(to)}` : `${PIECE_NAME[from]} → ${PIECE_NAME[to]}`,
+      )
+      .join(', ');
+  };
+  const you = side(mine);
+  const them = side(mine === 'w' ? 'b' : 'w');
+  return ['Synergies!', you && `You: ${you}.`, them && `Them: ${them}.`].filter(Boolean).join(' ');
+}
 
 const REASON_TEXT: Record<EndReason, string> = {
   checkmate: 'by checkmate',
@@ -162,6 +194,32 @@ export class BattleScreen {
     });
   }
 
+  /**
+   * Draws a battle's start: with synergy upgrades, first the armies as placed, then (after a moment)
+   * the upgraded pieces, lit up, and a line saying what changed. `show`/`square` turn the battle's
+   * FEN and squares into what's drawn (mirrored when the player is Black in a match).
+   */
+  private async showUpgrades(
+    fen: string,
+    spec: BoardSpec,
+    synergies: StartSynergies | undefined,
+    show: (fen: string) => string,
+    square: (name: string) => string,
+    mine: Color,
+  ): Promise<void> {
+    const upgrades = synergies?.upgrades ?? [];
+    if (synergies && upgrades.length > 0) {
+      const placed = `${synergies.before}${fen.slice(fen.indexOf(' '))}`;
+      this.view.render(show(placed), spec);
+      this.renderSides(show(placed), spec.files);
+      await sleep(reduceMotion() ? 0 : UPGRADE_MS);
+      sfx('merge');
+    }
+    const glow = upgrades.map((u) => square(squareName(u.square.file, u.square.rank)));
+    this.view.render(show(fen), spec, { glow });
+    if (upgrades.length > 0) this.announce(synergyNote(upgrades, mine));
+  }
+
   hide(): void {
     this.waiting = false;
     this.section.hidden = true;
@@ -184,7 +242,15 @@ export class BattleScreen {
       opponent = '',
       announceSide = false,
       watching = '',
-    }: { flip?: boolean; opponent?: string; announceSide?: boolean; watching?: string } = {},
+      synergies,
+    }: {
+      flip?: boolean;
+      opponent?: string;
+      announceSide?: boolean;
+      watching?: string;
+      /** What synergies upgraded: shown changing before the first move. */
+      synergies?: StartSynergies;
+    } = {},
   ): Promise<Playback> {
     // In a match the player's pieces are drawn in their real colour (black when they're Black); the
     // mirrored position puts them at the bottom either way.
@@ -209,7 +275,8 @@ export class BattleScreen {
     $('#eval').hidden = false;
 
     const limit = plyLimit(spec);
-    this.view.render(show(fen), spec);
+    $('#battle-announce').hidden = true;
+    await this.showUpgrades(fen, spec, synergies, show, square, mine);
     this.renderSides(show(fen), spec.files);
     // The bar's light side is White's: flip it when the player is Black.
     $('#eval-bar').classList.toggle('as-black', displayColor('w') === 'b');
@@ -234,7 +301,6 @@ export class BattleScreen {
     let worstDeficit = 0;
     let before = fen;
     let files = spec.files;
-    $('#battle-announce').hidden = true;
     const result = await runBattle(
       fen,
       engine,
@@ -430,6 +496,8 @@ export class BattleScreen {
     engine: MoveSource,
     game: ManualBattle,
     onSave: (state: ManualState) => void,
+    /** What synergies upgraded (a new game; not when resuming one): shown changing first. */
+    synergies?: StartSynergies,
   ): Promise<BattleResult> {
     this.section.hidden = false;
     this.result.hidden = true;
@@ -458,7 +526,11 @@ export class BattleScreen {
     this.manualWorstDeficit = 0;
     this.sideLabels = { w: 'You', b: 'Them' };
     this.showSides(true);
-    draw();
+    if (synergies && game.moves.length === 0) {
+      const same = (f: string) => f;
+      await this.showUpgrades(game.fen, game.spec, synergies, same, same, 'w');
+      this.renderSides(game.fen, game.spec.files);
+    } else draw();
 
     this.inManual = true;
     this.pauseRequested = false;

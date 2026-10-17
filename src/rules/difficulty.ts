@@ -46,6 +46,11 @@ export interface RunSettings {
    * opponents. A harder challenge with its own records. Off = auto battles only.
    */
   manual: boolean;
+  /**
+   * Synergies (a prototype, fairy runs only): fielding enough pieces of a family upgrades its front
+   * pieces for the battle, for both sides (synergy.ts). Absent = off.
+   */
+  synergies?: boolean;
 }
 
 export const DEFAULT_SETTINGS: RunSettings = {

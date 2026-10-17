@@ -86,6 +86,9 @@ export function renderLayout(root: HTMLElement): void {
       <p class="opponent" id="opponent"></p>
       <button type="button" id="gauntlet-open" class="link-button gauntlet-open" hidden>Today’s gauntlet: all 5 armies</button>
       <p class="opponent-info" id="opponent-info" role="status" hidden></p>
+      <!-- Synergy runs: each side's families, and what the tapped one does. -->
+      <div class="synergies" id="synergies" hidden></div>
+      <p class="opponent-info synergy-info" id="synergy-info" role="status" hidden></p>
     </div>
     <div id="board-root"></div>
     <div class="screen-side">
@@ -397,6 +400,7 @@ export function renderLayout(root: HTMLElement): void {
       <label class="check"><input type="checkbox" id="nr-fairy" /> Fairy pieces</label>
       <label class="check"><input type="checkbox" id="nr-reveal" /> Reveal opponent's setup (easier)</label>
       <label class="check"><input type="checkbox" id="nr-manual" /> Play yourself (harder)</label>
+      <label class="check"><input type="checkbox" id="nr-synergies" /> Synergies <span class="new-tag">Prototype</span></label>
       <p class="warning" id="nr-warning" hidden>Starting a new game abandons the one in progress.</p>
       <div class="actions">
         <button type="submit" value="cancel" formnovalidate>Cancel</button>

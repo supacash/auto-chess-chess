@@ -455,7 +455,8 @@ function points(types: PieceType[]): number {
  * Places the AI army against `player` so the battle can start: both kings may not begin in check.
  * Re-places a few times in the style, then in the other styles' layouts (their kings stand on other
  * files), and as a last resort drops the AI's least valuable pieces until the start is legal (a lone
- * king can't give check, so this always ends). Needs the chess rules loaded.
+ * king can't give check, so this always ends). `synergies`: both armies fight with their synergy
+ * upgrades (startPosition). Needs the chess rules loaded.
  */
 export function placeForBattle(
   player: Piece[],
@@ -464,17 +465,18 @@ export function placeForBattle(
   rng: Rng,
   spec: BoardSpec,
   playerFirst: boolean,
+  synergies = false,
 ): { ai: Piece[]; start: Extract<StartPosition, { ok: true }> } {
   for (let attempt = 0; attempt < 60; attempt++) {
     const layout = attempt < 20 ? style : AI_STYLES[attempt % AI_STYLES.length];
     const ai = placeAiArmy(aiTypes, layout, rng, spec);
-    const start = startPosition(player, ai, playerFirst, spec);
+    const start = startPosition(player, ai, playerFirst, spec, synergies);
     if (start.ok) return { ai, start };
   }
   const types = [...aiTypes].sort((a, b) => PIECE_VALUE[b] - PIECE_VALUE[a]);
   for (;;) {
     const ai = placeAiArmy(types, style, rng, spec);
-    const start = startPosition(player, ai, playerFirst, spec);
+    const start = startPosition(player, ai, playerFirst, spec, synergies);
     if (start.ok) return { ai, start };
     let drop = types.length - 1;
     while (drop >= 0 && types[drop] === 'K') drop--;

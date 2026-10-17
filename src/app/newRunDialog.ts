@@ -2,7 +2,10 @@ import { DEFAULT_SETTINGS, isDifficultyId, isSideId, type RunSettings } from '..
 import { isModeId } from '../rules/mode';
 import { $ } from './dom';
 
-/** The New run window: board (game mode), difficulty, side, fairy pieces and reveal. Runs start only from here. */
+/**
+ * The New run window: board (game mode), difficulty, side, fairy pieces, reveal, Play yourself and
+ * Synergies. Runs start only from here.
+ */
 export class NewRunDialog {
   private readonly dialog = $<HTMLDialogElement>('#new-run-dialog');
 
@@ -21,8 +24,19 @@ export class NewRunDialog {
         side: isSideId(side) ? side : DEFAULT_SETTINGS.side,
         fairy: $<HTMLInputElement>('#nr-fairy').checked,
         manual: $<HTMLInputElement>('#nr-manual').checked,
+        synergies: $<HTMLInputElement>('#nr-fairy').checked && $<HTMLInputElement>('#nr-synergies').checked,
       });
     });
+    // Synergies upgrade pieces into fairy pieces, so they need Fairy pieces on.
+    $('#nr-fairy').addEventListener('change', () => this.syncSynergies());
+  }
+
+  /** Greys out Synergies while Fairy pieces is off. */
+  private syncSynergies(): void {
+    const fairy = $<HTMLInputElement>('#nr-fairy').checked;
+    const box = $<HTMLInputElement>('#nr-synergies');
+    box.disabled = !fairy;
+    box.closest('label')?.classList.toggle('disabled', !fairy);
   }
 
   /** Opens preset to `current`; `warnAbandon` shows that starting ends the run in progress. */
@@ -35,6 +49,8 @@ export class NewRunDialog {
     $<HTMLSelectElement>('#nr-side').value = current.side;
     $<HTMLInputElement>('#nr-fairy').checked = current.fairy;
     $<HTMLInputElement>('#nr-manual').checked = current.manual;
+    $<HTMLInputElement>('#nr-synergies').checked = current.synergies === true;
+    this.syncSynergies();
     $('#nr-warning').hidden = !warnAbandon;
     this.dialog.showModal();
   }

@@ -14,7 +14,7 @@ export interface PlacementSession {
     round: number;
     /** The player's colour on screen this round. */
     color: Color;
-    settings: { fairy: boolean; reveal: boolean; manual?: boolean };
+    settings: { fairy: boolean; reveal: boolean; manual?: boolean; synergies?: boolean };
     /** Set in a daily challenge (placement then offers a look at the whole gauntlet). */
     daily?: object;
   };

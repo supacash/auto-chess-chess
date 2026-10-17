@@ -15,6 +15,10 @@
  * 5. Reroll (up to MAX_REROLLS a round, keeping REROLL_RESERVE gold) while it has gold to spend.
  * Gold that fits nothing carries over. Every action goes through the real shop functions, so the
  * caps (bench, pawns) apply exactly as in the game. The caller stocks `shop.offers` each round.
+ *
+ * With `seek` (a synergy family, `--seek` in sim.ts) it builds toward that family: its pieces (and
+ * the knight-pawns of Cavalry) are what it likes best, it never sells them, and for Infantry it keeps
+ * buying pawns up to eight and doesn't merge its plain ones.
  */
 import { type BoardSpec, pawnSquares } from '../../src/chess/boardSpec';
 import type { AiStyle } from '../../src/rules/aiArmy';
@@ -41,6 +45,7 @@ import {
 import { type Affinity, isPawnLike, type Piece, type PieceType, PIECE_VALUE } from '../../src/rules/pieces';
 import { armyCap } from '../../src/rules/placement';
 import { type Rng, weightedPick } from '../../src/rules/rng';
+import type { Family } from '../../src/rules/synergy';
 
 export function armyValue(shop: Shop): number {
   return shop.pieces.reduce((s, p) => s + PIECE_VALUE[p.type], 0);
@@ -58,8 +63,11 @@ const affinityOf = (offer: Offer): Affinity | null => (isAffinityOffer(offer) ? 
 /** Affinity pawns in a finished set: two for a Rook (with a Bishop, Knight or Man), three for the rest. */
 const setSize = (a: Affinity) => (a === 'R' ? ROOK_PAWNS : 3);
 
+/** Pawns an Infantry seeker keeps (its tier needs eight). */
+const INFANTRY_PAWNS = 8;
+
 /** One merge, best first, or null. Affinity sets always; the rest only to free squares. */
-function bestMerge(shop: Shop, full: boolean, fairy: boolean): Shop | null {
+function bestMerge(shop: Shop, full: boolean, fairy: boolean, seek?: Family): Shop | null {
   const byAffinity = new Map<Affinity, Piece[]>();
   for (const p of shop.pieces) if (p.affinity) byAffinity.set(p.affinity, [...(byAffinity.get(p.affinity) ?? []), p]);
   for (const [affinity, set] of byAffinity) {
@@ -89,9 +97,9 @@ function bestMerge(shop: Shop, full: boolean, fairy: boolean): Shop | null {
       if (r.ok) return r.shop;
     }
   }
-  // Three plain pawns (the starting ones) into a minor piece.
+  // Three plain pawns (the starting ones) into a minor piece (an Infantry seeker keeps them).
   const pawns = plain('P');
-  if (pawns.length >= 3) {
+  if (pawns.length >= 3 && seek?.id !== 'infantry') {
     const r = fuseSet(shop, ids(pawns.slice(0, 3)), 'N');
     if (r.ok) return r.shop;
   }
@@ -104,6 +112,8 @@ export interface SpendOptions {
   freeRerolls?: number;
   /** Gold kept unspent (for interest). */
   reserve?: number;
+  /** A synergy family to build toward. */
+  seek?: Family;
 }
 
 export function spendGold(
@@ -113,20 +123,22 @@ export function spendGold(
   spec: BoardSpec,
   fairy = false,
   round = 1,
-  { odds = {}, freeRerolls = 0, reserve = 0 }: SpendOptions = {},
+  { odds = {}, freeRerolls = 0, reserve = 0, seek }: SpendOptions = {},
 ): Shop {
   let shop = start;
   let rerolls = 0;
   /** Gold it's willing to spend. */
   const spendable = () => shop.gold - reserve;
-  const like = (t: PieceType) => style.weights[t] ?? 0.1;
+  /** A family seeker likes its family best (Cavalry's knight-pawns too: they make Knights). */
+  const inFamily = (t: PieceType) => seek !== undefined && (seek.members.includes(t) || (seek.id === 'cavalry' && t === 'N'));
+  const like = (t: PieceType) => (inFamily(t) ? 4 : (style.weights[t] ?? 0.1));
   for (;;) {
     const offers = shop.offers ?? [];
     const full = shop.pieces.length >= armyCap(spec);
     const pawns = shop.pieces.filter((p) => isPawnLike(p.type)).length;
     const pawnRoom = pawns < pawnSquares(spec);
 
-    const merged = bestMerge(shop, full, fairy);
+    const merged = bestMerge(shop, full, fairy, seek);
     if (merged) {
       shop = merged;
       continue;
@@ -153,8 +165,13 @@ export function spendGold(
       }
     }
 
-    // Finished pieces the style likes (and plain pawns while short of the style's pawn share).
-    const wantPawn = pawnRoom && pawns * PIECE_VALUE.P < style.pawnShare * (armyValue(shop) + shop.gold);
+    // Finished pieces the style likes (and plain pawns while short of the style's pawn share, or of
+    // eight for an Infantry seeker).
+    const wantPawn =
+      pawnRoom &&
+      (seek?.id === 'infantry'
+        ? pawns < INFANTRY_PAWNS
+        : pawns * PIECE_VALUE.P < style.pawnShare * (armyValue(shop) + shop.gold));
     const pieces = offers
       .map((o, i) => ({ o, i }))
       .filter(
@@ -188,7 +205,7 @@ export function spendGold(
     // Full with nothing to do: sell the cheapest piece for a finished piece worth more than it.
     if (full) {
       const cheapest = shop.pieces
-        .filter((p) => p.type !== 'K' && !p.affinity)
+        .filter((p) => p.type !== 'K' && !p.affinity && !(seek && seek.members.includes(p.type)))
         .reduce<Piece | null>((a, b) => (!a || PIECE_VALUE[b.type] < PIECE_VALUE[a.type] ? b : a), null);
       if (cheapest) {
         const budget = spendable() + sellValue(cheapest);

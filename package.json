@@ -22,6 +22,7 @@
     "engine:check": "cd engine && cargo fmt --check && cargo clippy --all-targets --locked -- -D warnings && cargo test --locked",
     "sim": "tsx scripts/sim/sim.ts",
     "sim:duel": "tsx scripts/sim/duel.ts",
+    "sim:synergy": "tsx scripts/sim/synergyDuel.ts",
     "lint": "biome check .",
     "format": "biome check --write .",
     "check:determinism": "tsx scripts/check/determinism.ts",

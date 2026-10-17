@@ -43,6 +43,7 @@ import { generateName } from './multi/names';
 import { isRoomCode, normalizeCode, versionError } from './online/room';
 import type { RunSettings } from './rules/difficulty';
 import type { BattleResult } from './rules/battle';
+import type { StartSynergies } from './rules/position';
 import { perk, perkChoices } from './rules/prestige';
 import { seededRng } from './rules/rng';
 import { hasStarted, isRunOver } from './rules/run';
@@ -366,7 +367,7 @@ function showMenu(notice = ''): void {
   const { round, lives } = run.run;
   $('#menu-resume-detail').textContent = run.manual
     ? `Round ${round} · your game is in progress`
-    : `Round ${round} · ${lives} ${lives === 1 ? 'life' : 'lives'} left${run.run.settings.manual ? ' · Play yourself' : ''}`;
+    : `Round ${round} · ${lives} ${lives === 1 ? 'life' : 'lives'} left${run.run.settings.manual ? ' · Play yourself' : ''}${run.run.settings.synergies ? ' · Synergies' : ''}`;
   renderDailyButton();
   const saved = match.active ? null : loadMatch();
   $('#menu-rejoin').hidden = !saved;
@@ -545,6 +546,7 @@ function fight(): void {
       start.firstMover,
       session.board,
       seededRng(seed),
+      { synergies: start.synergies },
     );
     session.saveReplay({ ...record, moves, evals, result });
     records.battle(result, 'w', worstDeficit, runSettings());
@@ -560,14 +562,14 @@ function playYourself(): void {
     const start = session.resolveStart();
     const seed = session.newSeed();
     session.saveManual({ fen: start.fen, moves: [], seed });
-    return playManual(loaded, new ManualBattle(start.fen, session.board, [], seed));
+    return playManual(loaded, new ManualBattle(start.fen, session.board, [], seed), start.synergies);
   });
 }
 
-async function playManual(loaded: GameEngine, game: ManualBattle): Promise<BattleResult> {
+async function playManual(loaded: GameEngine, game: ManualBattle, synergies?: StartSynergies): Promise<BattleResult> {
   const record = session.startRecord(game.start, game.seed, true);
   try {
-    const result = await battle.playManual(loaded, game, (state) => session.saveManual(state));
+    const result = await battle.playManual(loaded, game, (state) => session.saveManual(state), synergies);
     session.saveReplay({ ...record, moves: [...game.moves], evals: [], result });
     records.battle(result, 'w', battle.manualWorstDeficit, runSettings());
     records.unlock([
