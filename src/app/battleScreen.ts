@@ -10,13 +10,14 @@ import { type MoveSource, runBattle, SEARCH_DEPTH } from '../game/runBattle';
 import { type BattleResult, type EndReason, material, wonOnPoints } from '../rules/battle';
 import type { Rng } from '../rules/rng';
 import { PIECE_NAME, PIECE_VALUE, type PieceType } from '../rules/pieces';
-import type { BattleUpgrade, StartSynergies } from '../rules/position';
+import type { StartSynergies } from '../rules/position';
 import { BattleView } from '../ui/battleView';
 import { displayColor, inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { throwConfetti } from './confetti';
 import { reduceMotion, settings } from './settings';
 import { sfx } from './sound';
 import { $, escapeHtml, pts, sleep } from './dom';
+import { synergyNote } from './synergyText';
 import type { BattleOutcome } from './session';
 
 /** Base playback time per move at 1× speed. */
@@ -27,35 +28,8 @@ const INTRO_MS = 700;
 const SIDE_INTRO_MS = 2000;
 /** How long the armies show as placed before synergies upgrade their pieces. */
 const UPGRADE_MS = 900;
-
-/** A piece's name for more than one ("Men", "Ferzes", "Knights"). */
-function plural(type: PieceType): string {
-  const name = PIECE_NAME[type];
-  // Man → Men, Stackman → Stackmen.
-  if (/man$/i.test(name)) return `${name.slice(0, -2)}en`;
-  return name === 'Ferz' ? 'Ferzes' : `${name}s`;
-}
-
-/** "Synergies! You: Knight → Centaur. Them: 2 Pawns → Knights." */
-export function synergyNote(upgrades: readonly BattleUpgrade[], mine: Color): string {
-  const side = (color: Color) => {
-    const counts = new Map<string, { from: PieceType; to: PieceType; n: number }>();
-    for (const u of upgrades) {
-      if (u.side !== color) continue;
-      const key = `${u.from}${u.to}`;
-      const seen = counts.get(key);
-      counts.set(key, { from: u.from, to: u.to, n: (seen?.n ?? 0) + 1 });
-    }
-    return [...counts.values()]
-      .map(({ from, to, n }) =>
-        n > 1 ? `${n} ${plural(from)} → ${plural(to)}` : `${PIECE_NAME[from]} → ${PIECE_NAME[to]}`,
-      )
-      .join(', ');
-  };
-  const you = side(mine);
-  const them = side(mine === 'w' ? 'b' : 'w');
-  return ['Synergies!', you && `You: ${you}.`, them && `Them: ${them}.`].filter(Boolean).join(' ');
-}
+/** How long the upgraded pieces show lit up before the first move. */
+const UPGRADED_MS = 900;
 
 const REASON_TEXT: Record<EndReason, string> = {
   checkmate: 'by checkmate',
@@ -217,7 +191,9 @@ export class BattleScreen {
     }
     const glow = upgrades.map((u) => square(squareName(u.square.file, u.square.rank)));
     this.view.render(show(fen), spec, { glow });
-    if (upgrades.length > 0) this.announce(synergyNote(upgrades, mine));
+    if (upgrades.length === 0) return;
+    this.announce(synergyNote(upgrades, mine));
+    await sleep(reduceMotion() ? 0 : UPGRADED_MS);
   }
 
   hide(): void {

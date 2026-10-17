@@ -60,7 +60,7 @@ import {
   synergyUpgrades,
 } from '../rules/synergy';
 import { PlacementBoard } from '../ui/board';
-import { fileLetter } from '../chess/boardSpec';
+import { type BoardSpec, fileLetter, pawnSquares } from '../chess/boardSpec';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { moveDiagram } from '../ui/moveDiagram';
 import { reduceMotion, settings as playerSettings } from './settings';
@@ -407,9 +407,9 @@ export class PlacementScreen {
     const help = `<button type="button" class="syn-chip syn-help${helpShown ? ' active' : ''}" data-syn="help" aria-pressed="${helpShown}" aria-label="What are synergies?">?</button>`;
     bar.hidden = false;
     bar.innerHTML =
-      `<div class="syn-row mine"><span class="syn-label">Your synergies</span>${myChips || '<span class="syn-none">none yet</span>'}${help}</div>` +
+      `<div class="syn-row mine"><span class="syn-label">You</span>${myChips || '<span class="syn-none">no synergies yet</span>'}${help}</div>` +
       (opponent && theirs.length
-        ? `<div class="syn-row theirs"><span class="syn-label">Theirs</span>${theirChips || '<span class="syn-none">none</span>'}</div>`
+        ? `<div class="syn-row theirs"><span class="syn-label">Them</span>${theirChips || '<span class="syn-none">none</span>'}</div>`
         : '');
 
     // The tapped chip's explanation (dropped once that family is no longer on the board).
@@ -418,9 +418,9 @@ export class PlacementScreen {
     let text = '';
     if (this.synInfo === 'help') text = synergyHelp();
     else if (fam && who === 'you' && placedTypes(mine).some((t) => fam.members.includes(t)))
-      text = familyText(fam, placedTypes(mine), myUpgrades, true);
+      text = familyText(fam, placedTypes(mine), myUpgrades, true, spec);
     else if (fam && who === 'them' && theirActive.some((s) => s.family === fam))
-      text = familyText(fam, placedTypes(theirs), reveal ? theirUpgrades : null, false);
+      text = familyText(fam, placedTypes(theirs), reveal ? theirUpgrades : null, false, spec);
     if (!text) this.synInfo = null;
     info.hidden = !text;
     info.innerHTML = text;
@@ -713,7 +713,13 @@ function upgradeText(fam: Family): string {
  * A family's explanation: its members, what each tier does, and what it does for this army now.
  * `upgrades`: the army's upgrades, or null when where its pieces stand is hidden (the opponent's).
  */
-function familyText(fam: Family, types: PieceType[], upgrades: SynergyUpgrade[] | null, mine: boolean): string {
+function familyText(
+  fam: Family,
+  types: PieceType[],
+  upgrades: SynergyUpgrade[] | null,
+  mine: boolean,
+  spec: BoardSpec,
+): string {
   const count = types.filter((t) => fam.members.includes(t)).length;
   const tiers = fam.tiers
     .map((n, i) => `${n} on the board upgrade ${i === 0 ? 'the front one' : `the front ${i + 1}`}`)
@@ -724,7 +730,12 @@ function familyText(fam: Family, types: PieceType[], upgrades: SynergyUpgrade[] 
     ? `This battle: ${ups.map((u) => `${mine ? 'your' : 'their'} ${PIECE_NAME[u.from]}${where(u)} fights as ${aName(u.to)}`).join(', ')}.`
     : `${mine ? 'You have' : 'They have'} ${count}.`;
   const icons = fam.members.map((t) => inlinePiece(t, mine ? 'w' : 'b')).join('');
-  return `<strong>${fam.name}</strong> (${fam.kind}) ${icons} · ${tiers}: ${upgradeText(fam)}, for the battle. ${now}`;
+  // Pawns only stand off the back row, so on the small boards there's no room for Infantry's eight.
+  const room =
+    fam.members.every(isPawnLike) && pawnSquares(spec) < fam.tiers[0]
+      ? ` Only the 8×8 and 9×9 boards have room for ${fam.tiers[0]} pawns.`
+      : '';
+  return `<strong>${fam.name}</strong> (${fam.kind}) ${icons} · ${tiers}: ${upgradeText(fam)}, for the battle. ${now}${room}`;
 }
 
 /** "3 pts. Jumps in an L shape." (the King and Heir aren't worth points in battle). */

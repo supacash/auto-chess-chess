@@ -43,6 +43,7 @@ Draft and place a chess army, then watch an engine play the round for both sides
   - **Play as:** White (default; you move first), Black (the opponent moves first, but its army is 2% smaller: moving second costs a few points of win rate) or Random each round. Your pieces are always white to the engine; playing Black only swaps the colours on screen and who moves first.
   - **Fairy pieces** (default on): fairy pieces in the shop and in AI armies, and fusion. Off = standard chess pieces only.
   - **Reveal opponent's placement:** an easier option that shows where the AI's pieces are during placement.
+  - **Synergies** (a prototype, off by default; needs Fairy pieces): see Synergies.
   - Starting a new run while one is in progress warns that it will be abandoned.
 - **Best score** is kept per mode and difficulty.
 - **Profile** (from the menu): the player's generated name (*New name* picks another; it's what friends see online) and records kept on this device, by tab:
@@ -110,6 +111,25 @@ Values are tuned with the simulator (SIMULATION.md section 11): at equal points,
 | Wildebeest | 6 | Knight and Camel jumps (fusion: Knight + Camel) |
 | Siege Cannon | 6 | Moves like a queen; captures by jumping exactly one piece (fusion: Cannon + Bishop) |
 | Stackman | 9 | Jumps to any square up to two away, over anything in between (merge: three Men; also sold, rarely, for 9 gold) |
+
+## Synergies (prototype)
+A New game option being tested: off by default, fairy runs only, single-player runs only (not the daily challenge or multiplayer). The numbers are first guesses, measured but not yet balanced (SIMULATION.md §27).
+
+- **Families:** pieces belong to families by how they move, the marks on their move diagrams. A compound counts toward each of its parts' families (a Centaur is Cavalry and Guard). The King, the Heir, Bishops, Rooks and Queens belong to none: they're the raw-strength pieces.
+
+| Family | Members | Tiers | Upgrade, for the battle |
+|---|---|---|---|
+| Infantry (pawns) | Pawn, Berolina pawn (affinity pawns too) | 8 | Pawn or Berolina pawn → Knight |
+| Cavalry (leapers) | Knight, Camel, Wildebeest, Centaur, Archbishop, Chancellor, Amazon, Stackman | 3 / 6 | Knight → Centaur, Camel → Wildebeest |
+| Guard (steppers) | Ferz, Wazir, Man, Centaur, Dragon King, Dragon Horse, Stackman | 3 / 6 | Ferz or Wazir → Man, Man → Centaur |
+| Siege (hoppers) | Cannon, Siege Cannon, Grasshopper | 2 / 4 | Cannon → Siege Cannon, Grasshopper → Cannon |
+
+- **How it works:** each tier reached upgrades one of the family's pieces that can be upgraded, for that battle only, as a promotion is: the frontmost first, then the one nearest the middle file, then the leftmost (so placement decides which). Only pieces on the board count, not the bench, and an upgraded piece doesn't count again toward another family. Both sides get their synergies, worked out the same way from each army as placed. The AI's drafter doesn't build for them.
+- **The thresholds** are set so that AI armies, which don't build for synergies, reach them only now and then. The AI fields about eight pawns from round 5 on, so Infantry needs all eight. A first try with lower tiers (Infantry 4/6/8, Cavalry 2/4/6) gave AI armies +8 to +11 points of upgrades a battle in rounds 5–9, mostly Knights made from their pawns; these give +2 to +6 (SIMULATION.md §27). Eight pawns only fit from the 8×8 board.
+- **One kind of effect:** every synergy is an upgrade into an existing piece, worth 2–4 points. Other kinds (bonus pieces, starting further forward, free moves) were left out: bonus pieces don't fit on a full small board, and positions and tempo can't be priced in points. Upgrades only change the start position, so battles stay deterministic, the engine is unchanged, and Review and replays work as before. RULES_VERSION is unchanged: with the option off nothing changes, and a synergy battle's record holds its upgraded start.
+- **Placement:** a synergy bar above the board. *You*: each family you field, as its piece with how many you have and the next tier ("3/6"), lit up when active, with ↑N for the pieces it upgrades; *Them*: the opponent's active families. Tapping a chip explains the family and what it does this battle; ? explains synergies. On a phone the chips drop their names. Each piece that will be upgraded carries a small badge of what it fights as (the opponent's too, when its placement is shown), and piece panels name a piece's families.
+- **Battle start:** the armies show as placed, then the upgraded pieces change and light up, with a line saying what changed ("Synergies! You: Knight → Centaur. Them: 2 Pawns → Knights.").
+- **Not yet:** the AI building for synergies (or a budget that allows for them), records kept apart (synergy runs count in the normal records), the daily challenge and multiplayer, and the late game: compounds and Queens have nothing to upgrade, so synergies fade from about round 15.
 
 ## Board sizes
 In Growing mode the board opens up during the run:
@@ -239,7 +259,7 @@ Done: reproducible seeded battles, RULES_VERSION, army snapshots, replays, brows
 Next candidates (not yet decided):
 1. **Multiplayer:** balance runs for 4-player matches (see Multiplayer).
 2. **Daily challenge follow-ups:** a hand-made army pool; online leaderboards.
-3. **Auto-chess depth:** synergies between pieces; more fairy pieces and fusion recipes; tuning fairy values with the simulator.
+3. **Auto-chess depth:** synergies between pieces (a prototype is in: see Synergies); more fairy pieces and fusion recipes; tuning fairy values with the simulator.
 4. **Bigger boards** past 8×8, with a longer move limit.
 
 ## Open questions

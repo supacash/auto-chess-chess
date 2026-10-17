@@ -113,11 +113,7 @@ describe('synergyUpgrades', () => {
       at('M', 2, 0),
     ];
     const upgrades = synergyUpgrades(pieces, BOARD_8);
-    expect(upgrades.map((u) => `${u.family}:${u.from}>${u.to}`)).toEqual([
-      'infantry:P>N',
-      'guard:M>T',
-      'siege:X>S',
-    ]);
+    expect(upgrades.map((u) => `${u.family}:${u.from}>${u.to}`)).toEqual(['infantry:P>N', 'guard:M>T', 'siege:X>S']);
     expect(upgradePoints(upgrades)).toBe(2 + 3 + 3);
   });
 

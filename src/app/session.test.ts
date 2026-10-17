@@ -71,6 +71,18 @@ describe('Session', () => {
     expect(s.run.round).toBe(2);
   });
 
+  it('plays with synergies in a run that has them, and without in one that doesn’t', () => {
+    const s = ready();
+    // Three Knights on the board: Cavalry upgrades the front one.
+    const knights = [0, 1, 4].map((file, i) => ({ id: `n${i}`, type: 'N' as const, square: { file, rank: 1 } }));
+    s.setPieces([...s.run.shop.pieces.filter((p) => p.type === 'K'), ...knights]);
+    expect(s.resolveStart().synergies).toBeUndefined();
+    s.run = { ...s.run, settings: { ...s.run.settings, synergies: true } };
+    const start = s.resolveStart();
+    expect(start.synergies?.upgrades.filter((u) => u.side === 'w').map((u) => [u.id, u.to])).toEqual([['n1', 'T']]);
+    expect(start.fen.split(' ')[0]).toContain('T');
+  });
+
   it('ends the run after the last life and records a new best', () => {
     const s = ready();
     s.finishBattle(result('w'));
