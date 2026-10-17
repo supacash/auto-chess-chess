@@ -29,8 +29,8 @@ export interface Family {
 /**
  * The families, first numbers (not yet balanced: SIMULATION.md §27). Each upgrade is worth 2 to 4
  * points. AI armies don't build for synergies, so the thresholds are high enough that they reach them
- * only now and then: Infantry needs a full eight pawns, because the AI fields about that many from
- * round 5 on (with six, nearly every AI army would get a free Knight).
+ * only now and then: Infantry needs a full eight pawns, because the AI fields six or more from round 5
+ * (with six, nearly every AI army would get a free Knight).
  */
 export const FAMILIES: readonly Family[] = [
   {
