@@ -500,7 +500,9 @@ function report(records: RunRecord[]): string {
       });
     const withSyn = games.filter((g) => g.synergy);
     const families = (side: 'playerFamilies' | 'aiFamilies') =>
-      FAMILIES.map((f) => `${f.name} ${pct(withSyn.filter((g) => g.synergy![side].includes(f.id)).length, withSyn.length)}`).join(', ');
+      FAMILIES.map(
+        (f) => `${f.name} ${pct(withSyn.filter((g) => g.synergy![side].includes(f.id)).length, withSyn.length)}`,
+      ).join(', ');
     synergyLines.push(
       '\nSynergies (battles where a side got upgrades, and the average points they added):',
       ...rows,

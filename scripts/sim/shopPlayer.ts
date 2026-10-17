@@ -130,7 +130,8 @@ export function spendGold(
   /** Gold it's willing to spend. */
   const spendable = () => shop.gold - reserve;
   /** A family seeker likes its family best (Cavalry's knight-pawns too: they make Knights). */
-  const inFamily = (t: PieceType) => seek !== undefined && (seek.members.includes(t) || (seek.id === 'cavalry' && t === 'N'));
+  const inFamily = (t: PieceType) =>
+    seek !== undefined && (seek.members.includes(t) || (seek.id === 'cavalry' && t === 'N'));
   const like = (t: PieceType) => (inFamily(t) ? 4 : (style.weights[t] ?? 0.1));
   for (;;) {
     const offers = shop.offers ?? [];
@@ -205,7 +206,7 @@ export function spendGold(
     // Full with nothing to do: sell the cheapest piece for a finished piece worth more than it.
     if (full) {
       const cheapest = shop.pieces
-        .filter((p) => p.type !== 'K' && !p.affinity && !(seek && seek.members.includes(p.type)))
+        .filter((p) => p.type !== 'K' && !p.affinity && !seek?.members.includes(p.type))
         .reduce<Piece | null>((a, b) => (!a || PIECE_VALUE[b.type] < PIECE_VALUE[a.type] ? b : a), null);
       if (cheapest) {
         const budget = spendable() + sellValue(cheapest);
