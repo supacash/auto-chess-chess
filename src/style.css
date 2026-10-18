@@ -632,6 +632,163 @@ button:disabled {
   vertical-align: -0.35em;
 }
 
+/* ---- synergies (a New game option): each side's families above the board ---- */
+
+.synergies {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 8px;
+}
+
+.syn-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.syn-label {
+  padding: 1px 7px;
+  font-family: var(--display);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--teal);
+  border-radius: 8px;
+  box-shadow: 0 2px 0 var(--teal-shadow);
+}
+
+.syn-row.theirs .syn-label {
+  background: var(--light);
+  box-shadow: 0 2px 0 var(--dark);
+}
+
+button.syn-chip {
+  display: inline-flex;
+  flex: none;
+  gap: 3px;
+  align-items: center;
+  min-height: 0;
+  margin: 1px 0;
+  padding: 2px 6px 2px 3px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--muted);
+  background: var(--deep);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+button.syn-chip:active:not(:disabled) {
+  box-shadow: none;
+}
+
+button.syn-chip.on {
+  color: var(--text);
+  background: var(--raised);
+  border-color: var(--teal);
+}
+
+/* The opponent's black pieces need a light chip, as in their piece list. */
+.syn-row.theirs button.syn-chip {
+  color: var(--ink);
+  background: var(--light);
+}
+
+button.syn-chip.active {
+  border-color: var(--accent);
+}
+
+.syn-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* On a phone the chips are the family's piece and its count; tapping one names and explains it. */
+@media (max-width: 420px) {
+  .syn-name {
+    display: none;
+  }
+}
+
+.syn-up {
+  padding: 0 4px;
+  font-weight: 900;
+  color: var(--ink);
+  background: var(--teal);
+  border-radius: 999px;
+}
+
+button.syn-help {
+  justify-content: center;
+  width: 26px;
+  padding: 2px 0;
+  font-family: var(--display);
+}
+
+.syn-none {
+  color: var(--faint);
+}
+
+.syn-tag,
+.new-tag {
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--ink);
+  background: var(--teal);
+  border-radius: 999px;
+}
+
+.new-tag {
+  background: var(--gold);
+}
+
+.new-run-form .check.disabled {
+  opacity: 0.5;
+}
+
+/* What a piece fights as this battle (a synergy upgrade): a small picture in its top corner. */
+.piece .upgrade-badge {
+  position: absolute;
+  top: 2%;
+  right: 2%;
+  width: 46%;
+  height: 46%;
+  padding: 1px;
+  border-radius: 50%;
+  background: rgb(26 16 53 / 0.8);
+  box-shadow: 0 0 0 1.5px var(--teal);
+  filter: none;
+}
+
+.enemy-piece .upgrade-badge {
+  background: rgb(233 224 252 / 0.9);
+}
+
+/* Battle start: the pieces synergies upgrade light up as they change. */
+.square.upgraded {
+  box-shadow: inset 0 0 0 3px var(--teal);
+}
+
+.square.upgraded .piece {
+  animation: upgrade-flash 0.9s ease-out;
+}
+
+@keyframes upgrade-flash {
+  0% {
+    transform: scale(0.6);
+    filter: brightness(2.2) drop-shadow(0 0 6px var(--teal));
+  }
+  60% {
+    transform: scale(1.12);
+  }
+}
+
 .hint {
   margin: 8px 0 0;
   color: var(--muted);

@@ -55,6 +55,7 @@ import { loadRulesForNode } from '../../src/chess/testRules';
 import { ACC_LIMITS } from '../../src/engine/accSettings';
 import { EngineFailure, NodeEngine } from './nodeEngine';
 import { armyValue, spendGold } from './shopPlayer';
+import { FAMILIES, type FamilyId, familyStatus, upgradePoints } from '../../src/rules/synergy';
 
 const { values: opts } = parseArgs({
   options: {
@@ -84,6 +85,10 @@ const { values: opts } = parseArgs({
     save: { type: 'string', default: '0' },
     json: { type: 'boolean', default: false },
     daily: { type: 'boolean', default: false },
+    /** Both sides fight with their synergy upgrades (synergy.ts), as in a run with Synergies on. */
+    synergies: { type: 'boolean', default: false },
+    /** The shop stand-in builds toward one synergy family (shopPlayer.ts). */
+    seek: { type: 'string' },
     'daily-gold': { type: 'string' },
     'daily-income': { type: 'string' },
     'daily-interest': { type: 'string' },
@@ -159,6 +164,12 @@ if (PERKS.length && PLAYER !== 'shop') throw new Error('--perks needs --player s
 /** `--save N`: the shop player keeps N gold unspent from round 3 on (an interest strategy, e.g. with Banker). */
 const SAVE = Number(opts.save);
 const LIVES = maxLives(PERKS);
+/** `--synergies`: both sides fight with their synergy upgrades. */
+const SYNERGIES = opts.synergies === true;
+/** `--seek <family>`: the shop stand-in builds toward that synergy family. */
+const SEEK = opts.seek ? FAMILIES.find((f) => f.id === opts.seek) : undefined;
+if (opts.seek && !SEEK) throw new Error(`--seek must be one of: ${FAMILIES.map((f) => f.id).join(', ')}`);
+if (SEEK && PLAYER !== 'shop') throw new Error('--seek needs --player shop');
 /** `--black-discount F` overrides how much smaller the AI is when the player is Black (0 = none). */
 const BLACK = opts['black-discount'] ? Number(opts['black-discount']) : BLACK_DISCOUNT;
 /** `--side white|black|random`: who moves first (the player as White moves first, the game's default). */
@@ -196,6 +207,8 @@ interface GameRecord {
   peakLeader: 'w' | 'b' | null;
   /** Gold the shop player left unspent going into the battle. */
   goldUnspent: number;
+  /** With --synergies: the points each side's upgrades added, and the families each side had active. */
+  synergy?: { player: number; ai: number; playerFamilies: FamilyId[]; aiFamilies: FamilyId[] };
 }
 
 /** A battle Stockfish could not play out (see EngineFailure); it is left out of W/D/L. */
@@ -257,6 +270,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
           odds: offerOdds(PERKS),
           freeRerolls: freeRerolls(PERKS),
           reserve: round >= 3 ? SAVE : 0,
+          seek: SEEK,
         },
       );
       playerPoints = armyValue(shop);
@@ -279,7 +293,20 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
     const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec, AI_FAIRY, round);
 
     // As in the game: the AI re-places (falling back to other layouts) until both kings aren't in check.
-    const { start } = placeForBattle(player, aiTypes, aiStyle, rng, spec, first);
+    const { ai, start } = placeForBattle(player, aiTypes, aiStyle, rng, spec, first, SYNERGIES);
+    const active = (types: PieceType[]) =>
+      familyStatus(types)
+        .filter((s) => s.tier > 0)
+        .map((s) => s.family.id);
+    const upgrades = start.synergies?.upgrades ?? [];
+    const synergy = SYNERGIES
+      ? {
+          player: upgradePoints(upgrades.filter((u) => u.side === 'w')),
+          ai: upgradePoints(upgrades.filter((u) => u.side === 'b')),
+          playerFamilies: active(player.map((p) => p.type)),
+          aiFamilies: active(ai.map((p) => p.type)),
+        }
+      : undefined;
 
     let peakLead = 0;
     let peakLeader: 'w' | 'b' | null = null;
@@ -323,6 +350,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       peakLead,
       peakLeader,
       goldUnspent: shop.gold,
+      ...(synergy ? { synergy } : {}),
     });
     playerPoints += (DAILY ? DAILY_INCOME : 1) * roundIncome(result.winner);
     // As in the game: income plus interest on the gold saved (see run.battleIncome).
@@ -459,6 +487,30 @@ function report(records: RunRecord[]): string {
   const moreLife = runScores(LIVES + 1);
   const avgMoreLife = moreLife.reduce((s, x) => s + x.score, 0) / moreLife.length;
 
+  // With --synergies: how often each side's synergies did something, and what they were worth.
+  const synergyLines: string[] = [];
+  if (SYNERGIES) {
+    const rows = [...byRound.keys()]
+      .sort((a, b) => a - b)
+      .map((r) => {
+        const gs = games.filter((g) => g.round === r && g.synergy);
+        const share = (f: (g: GameRecord) => number) => pct(gs.filter((g) => f(g) > 0).length, gs.length);
+        const avg = (f: (g: GameRecord) => number) => (gs.reduce((s, g) => s + f(g), 0) / (gs.length || 1)).toFixed(1);
+        return `round ${String(r).padEnd(2)}  you ${share((g) => g.synergy!.player).padStart(4)} +${avg((g) => g.synergy!.player).padStart(4)}   AI ${share((g) => g.synergy!.ai).padStart(4)} +${avg((g) => g.synergy!.ai).padStart(4)}`;
+      });
+    const withSyn = games.filter((g) => g.synergy);
+    const families = (side: 'playerFamilies' | 'aiFamilies') =>
+      FAMILIES.map(
+        (f) => `${f.name} ${pct(withSyn.filter((g) => g.synergy![side].includes(f.id)).length, withSyn.length)}`,
+      ).join(', ');
+    synergyLines.push(
+      '\nSynergies (battles where a side got upgrades, and the average points they added):',
+      ...rows,
+      `Families active, you: ${families('playerFamilies')}`,
+      `Families active, AI: ${families('aiFamilies')}`,
+    );
+  }
+
   const unspent = [...byRound.keys()]
     .sort((a, b) => a - b)
     .map((r) => {
@@ -469,7 +521,8 @@ function report(records: RunRecord[]): string {
     `Pawned Up sim — ${RUNS} runs × ${ROUNDS} rounds, seed ${SEED}, ${DEPTH ? `Fairy-Stockfish depth ${DEPTH}` : `our engine ${ACC_LIMITS.depth}/${ACC_LIMITS.nodes}`}, ` +
       `${DAILY ? 'DAILY (rounds 2–10), ' : ''}mode ${MODE.name}, ply limit ${PLY_OVERRIDE ?? '10 × size + 10'}${DECISIVE ? `, decisive lead ${DECISIVE[0]} for ${DECISIVE[1]} plies` : ''}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
       `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round ±1` : `${PER_ROUND}×round × ramp${MODE.aiBonus ? ` + ${MODE.aiBonus}` : ''} ±1 (round 1: −${MODE.roundOneDiscount})`}` +
-      `${PRESTIGE ? `, prestige ${PRESTIGE}` : ''}${PERKS.length ? `, perks ${PERKS.join(',')}` : ''}${SAVE ? `, saves ${SAVE} gold from round 3` : ''}`,
+      `${PRESTIGE ? `, prestige ${PRESTIGE}` : ''}${PERKS.length ? `, perks ${PERKS.join(',')}` : ''}${SAVE ? `, saves ${SAVE} gold from round 3` : ''}` +
+      `${SYNERGIES ? ', SYNERGIES' : ''}${SEEK ? `, stand-in seeks ${SEEK.name}` : ''}`,
     'W/D/L are from the player\'s side. "lead≥N" = games where a side was ever ≥N points of material ahead;',
     '"no mate"/"no win" = share of those where that side failed to checkmate / failed to win at all.',
     '"±win" = 95% margin of error on the win rate, in points. Treat gaps smaller than the margins as noise.',
@@ -480,6 +533,7 @@ function report(records: RunRecord[]): string {
     table('By AI style', [...byStyle.entries()]),
     table('By player stand-in style', [...byPlayerStyle.entries()]),
     table('Total', [['all', total]]),
+    ...synergyLines,
     `\nGold unspent going into battle: ${unspent.join(', ')}`,
     `End reasons: ${[...reasons.entries()].map(([r, n]) => `${r} ${pct(n, games.length)}`).join(', ')}`,
     `Run score (wins before ${LIVES} losses): avg ${avgScore.toFixed(2)} ±${scoreMargin.toFixed(2)}, ` +

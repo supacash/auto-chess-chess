@@ -2,7 +2,7 @@ import { BOARD_8, type BoardSpec } from '../chess/boardSpec';
 import { type Piece, type PieceType, type Square, PIECE_NAME } from '../rules/pieces';
 import { movePiece, pieceAt, placementError, capacityError } from '../rules/placement';
 import { mirror } from '../rules/position';
-import { fillPiece, label, squareEl } from './boardDom';
+import { fillPiece, label, pieceUrl, squareEl } from './boardDom';
 
 /** Pointer travel (px) before a press becomes a drag instead of a tap. */
 const DRAG_THRESHOLD = 6;
@@ -37,6 +37,8 @@ export class PlacementBoard {
   private pieces: Piece[];
   /** The opponent's army (AI-local squares), shown read-only when revealed; null = hidden. */
   private enemy: Piece[] | null = null;
+  /** Pieces a synergy upgrades for the battle (by id, mine and the revealed opponent's), and what they fight as. */
+  private upgrades: ReadonlyMap<string, PieceType> = new Map();
   private selected: string | null = null;
   /** A square a move was refused on, flashed for a moment so the reason (onMessage) is noticed. */
   private rejected: Square | null = null;
@@ -103,6 +105,12 @@ export class PlacementBoard {
     this.render();
   }
 
+  /** Marks the pieces a synergy upgrades for the battle (by id, either side's), with what each fights as. */
+  setUpgrades(upgrades: ReadonlyMap<string, PieceType>): void {
+    this.upgrades = upgrades;
+    this.render();
+  }
+
   clearSelection(): void {
     this.selected = null;
     this.render();
@@ -133,7 +141,7 @@ export class PlacementBoard {
           const sq = mirror(p.square, this.spec);
           return sq.file === file && sq.rank === rank;
         });
-        if (foe) cell.appendChild(enemyEl(foe));
+        if (foe) cell.appendChild(enemyEl(foe, this.upgrades.get(foe.id)));
         this.boardEl.appendChild(cell);
       }
     }
@@ -166,6 +174,8 @@ export class PlacementBoard {
     el.dataset.id = p.id;
     fillPiece(el, p.type, 'w', p.affinity);
     el.title = p.affinity ? `${PIECE_NAME[p.affinity]}-pawn` : PIECE_NAME[p.type];
+    const to = p.square ? this.upgrades.get(p.id) : undefined;
+    if (to) addUpgradeBadge(el, to, 'w');
     return el;
   }
 
@@ -302,13 +312,26 @@ export class PlacementBoard {
 }
 
 /** A read-only opponent piece: no data-id, so it can't be picked up. */
-function enemyEl(p: Piece): HTMLElement {
+function enemyEl(p: Piece, upgrade?: PieceType): HTMLElement {
   const el = document.createElement('div');
   el.className = 'piece black enemy-piece';
   fillPiece(el, p.type, 'b');
   el.title = `Opponent's ${PIECE_NAME[p.type]}`;
   el.dataset.foe = p.type;
+  if (upgrade) addUpgradeBadge(el, upgrade, 'b');
   return el;
+}
+
+/** A small picture of what a piece fights as this battle (a synergy upgrade), in its top corner. */
+function addUpgradeBadge(el: HTMLElement, to: PieceType, color: 'w' | 'b'): void {
+  const badge = document.createElement('img');
+  badge.className = 'upgrade-badge';
+  badge.src = pieceUrl(to, color);
+  badge.alt = '';
+  badge.draggable = false;
+  el.appendChild(badge);
+  el.classList.add('upgraded');
+  el.title += ` · fights as a ${PIECE_NAME[to]} (synergy)`;
 }
 
 function dropTargetAt(x: number, y: number): DropTarget | null {

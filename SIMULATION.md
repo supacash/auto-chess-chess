@@ -20,6 +20,8 @@ npm run sim -- --rounds 10 --games 100
 | `--plies` | `PLY_LIMIT` (60) | Overrides the move limit (see section 7) |
 | `--decisive lead,plies` | off | Prototype early end: a side that holds a material lead of at least `lead` for `plies` consecutive half-moves wins (`decisive` end reason) |
 | `--lead` | 5 | Material lead threshold for the "lead≥N / no mate / no win" columns |
+| `--synergies` | off | Both sides fight with their synergy upgrades (DESIGN.md, Synergies), and the report adds how often each side's synergies did something and what they added |
+| `--seek <family>` | — | The shop stand-in builds toward one synergy family (`infantry`, `cavalry`, `guard`, `siege`): its pieces are what it likes best and it never sells them (see §27) |
 | `--json` | off | Dumps every game record instead of the tables |
 
 **How it works.** The script lives in `scripts/sim/` and runs with `tsx`, so it is not part of the browser bundle. It reuses `draftAiArmy`/`placeAiArmy`/`aiBudget`, `startPosition`, `runBattle` and `roundIncome` unchanged. `nodeEngine.ts` is a `MoveSource` that runs the game's engine natively (the same moves as the WASM build the game ships: `npm run check:determinism`), or Fairy-Stockfish with `--depth`, as a child process speaking UCI, with the game's move picking (`pickMove`). The stand-in player has an AI style for the whole run and places with `placeAiArmy`. With `--player redraft` it re-drafts its whole army each round at its current army value (3 pawns + 3 gold = 6 at the start, then +5/+6/+7 per round). This is an optimistic "spends everything well" player that can freely reshape its army. With `--player shop` (`scripts/sim/shopPlayer.ts`) it keeps one `Shop` from `startingShop()`, adds `roundIncome` after each battle, and before each battle spends greedily through `buyPawn`/`upgradePiece`, so the 16-piece cap and the piece limit apply as in the real shop. Each step buys a pawn while pawns are below the style's pawn share of army + gold, otherwise makes an affordable upgrade picked by the style's weights for the target piece, otherwise buys a pawn. It never sells, and gold that fits nothing (usually 0–1) carries over. It plays on through all rounds even after a third loss, so later rounds have samples. The run score applies the 3 lives afterwards.
@@ -519,6 +521,73 @@ More duels, same command as §23 with 300 games (±6) and seed 3:
 - **The first army stays the normal one.** With no discount the first battle is 59% (a run's round 2: 51%); 1 point off made it 63%, 2 points 76%.
 - **A mistake on the way:** a first pass also let the stand-in reroll 12 times a shop instead of 6 (one shop per two rounds), picked +2 a battle, and found the first battle hard (41%). The cap doesn't matter at +6 starting gold but does at +12, where it buys partial sets it can't finish. Every row above is with the normal cap.
 - The stand-in spends almost all its gold in both modes (under 1 gold left going into a battle: the report's "Gold unspent" line).
+
+### 27. Synergies: a first baseline (prototype, not balanced)
+
+Synergies (DESIGN.md) are a New game option for fairy runs. These are the prototype's first numbers, measured before any balancing. All rows use the game's engine (depth 8 / 150k nodes).
+
+**What one synergy is worth on its own** (`npm run sim:synergy -- --family <f> --tier <t> --games 300 --budget <b> --board <n>`). Each game drafts a random fairy army with enough of the family for the tier and plays it against an exact copy in which only one side gets that family's upgrades (colours and first move alternate):
+
+| Synergy | Upgrade | Board, armies | Points added | Upgraded side's score |
+|---|---|---|---|---|
+| Infantry, 8 pawns | a pawn → Knight | 8×8, 30 pts | +2.0 | 83% ±4 |
+| Cavalry, 3 leapers | Knight → Centaur | 8×8, 30 pts | +3.2 | 93% ±3 |
+| Cavalry, 6 | two | 8×8, 30 pts | +6.1 | 99% ±1 |
+| Guard, 3 steppers | Ferz or Wazir → Man, Man → Centaur | 8×8, 30 pts | +2.2 | 79% ±5 |
+| Guard, 6 | two | 8×8, 30 pts | +4.1 | 89% ±4 |
+| Siege, 2 hoppers | Cannon → Siege Cannon | 8×8, 30 pts | +3.0 | 74% ±5 |
+| Siege, 4 | two | 8×8, 30 pts | +6.0 | 88% ±4 |
+| Cavalry, 3 | Knight → Centaur | 6×6, 15 pts | +3.1 | 97% ±2 |
+| Guard, 3 | as above | 6×6, 15 pts | +2.1 | 82% ±4 |
+| Siege, 2 | Cannon → Siege Cannon | 6×6, 15 pts | +3.0 | 80% ±5 |
+
+- **A synergy only one side has decides most battles,** as any 2–3 point edge does on this engine (§23: a Camel against a Wazir, 2 points against 1, scored 77%).
+- **Per point they differ:** Cavalry gets the most from its points (the Centaur plays above its 6), Siege the least (a Siege Cannon plays less than 3 points above a Cannon).
+
+**How often AI armies get them.** The AI's drafter doesn't build for synergies, so it only gets them by chance. Upgrade points per AI army, from 2,000 drafted armies a round (Growing Normal, fairy pieces):
+
+| Round | 1 | 2 | 3 | 5 | 7 | 9 | 12 | 15 | 20 | 25 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| First try (Infantry 4/6/8, Cavalry 2/4/6, Guard 3/5, Siege 2/3) | +0.7 | +2.8 | +4.6 | +7.8 | +9.1 | +10.7 | +6.2 | +2.8 | +0.4 | 0 |
+| Prototype (Infantry 8, Cavalry 3/6, Guard 3/6, Siege 2/4) | +0.1 | +0.7 | +1.0 | +2.5 | +4.3 | +5.6 | +2.7 | +1.2 | +0.2 | 0 |
+
+- The first try was mostly Infantry: the AI fields six or more pawns from round 5 (eight in most armies from round 7), so a low pawn tier gave nearly every AI army free Knights. Hence Infantry needs all eight.
+- **From round 15 there's nothing left to upgrade:** the AI's armies are Queens, Amazons and other compounds, and only base pieces (pawns, Knights, Camels, Ferzes, Wazirs, Men, Cannons) get upgraded.
+
+**Whole runs** (`npm run sim -- --player shop --rounds 25 --games <n> --fairy both --difficulty normal --board schedule|8 [--synergies]`, seed 1; Growing 80 runs, Classic 40). Rows are synergies off / on:
+
+| Normal | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|
+| Growing | 65% / 66% | 61% / 67% | 63% / 80% | 46% / 64% | 44% / 61% | **56% / 68%** | 8.1 / 10.8 | 5% / 18% |
+| Classic | 50% / 50% | 52% / 62% | 49% / 66% | 36% / 45% | 50% / 58% | **47% / 56%** | 5.1 / 6.1 | 3% / 10% |
+
+Upgrade points a battle with synergies on (Growing):
+
+| Round | 3 | 5 | 7 | 9 | 11 | 13 | 15 | 20 | 25 |
+|---|---|---|---|---|---|---|---|---|---|
+| Stand-in | +2.0 | +4.0 | +6.0 | +7.7 | +8.6 | +8.1 | +7.7 | +6.8 | +5.4 |
+| AI | +1.1 | +2.6 | +4.8 | +5.4 | +3.8 | +1.5 | +1.6 | +0.2 | 0 |
+
+Families active over the run: the stand-in's Siege 76%, Guard 35%, Cavalry 31%, Infantry 0%; the AI's Cavalry 69%, Guard 51%, Siege 33%, Infantry 15%.
+
+- **As built, synergies make the game easier:** 12 points of win rate in Growing, 9 in Classic, and three times as many runs reach round 25. The off rows match §25 (57% and 47%), so the change is the synergies'.
+- **The gap opens from round 7 and keeps growing.** The stand-in holds on to the base pieces synergies upgrade (it buys Cannons, Knights and Ferzes and never fuses them), so it gets +6 to +9 points a battle to the end. The AI's drafter turns its leftover budget into Queens and compounds, which have nothing to upgrade: under +2 from round 13 and nothing from round 18, though its Cavalry and Guard are often still active (with only compounds in them).
+- **Rounds 1–5 don't move:** few families fit in 5×5 and 6×6 armies.
+- The stand-in only gets synergies by chance (Siege, because a Cannon is often the finished piece on offer). A player who builds for them would gain more.
+
+**Building toward one family** (`--seek <family>`: the shop stand-in likes that family's pieces best and never sells them; 40 runs × 15 rounds, Growing Normal, seed 1). Win rate over rounds 1–15, synergies off / on. The normal stand-in wins 63% / 71% over the same rounds.
+
+| Seeks | Off | On | Run score off / on | Reading |
+|---|---|---|---|---|
+| Infantry | 30% | 30% | 3.6 / 3.2 | A pawn army is weak, and eight pawns only fit from 8×8 (round 7): one free Knight doesn't rescue it |
+| Cavalry | 69% | 73% | 8.1 / 8.6 | Knights are already a strong build; +10 in rounds 11–15 |
+| Guard | 42% | 55% | 5.1 / 6.3 | Ferzes and Wazirs are a weak build, and synergies make it playable (rounds 11–15: 23% → 47%) |
+| Siege | 74% | 74% | 8.2 / 9.1 | Cannons are already a strong build for the stand-in, and the Siege upgrade adds the least |
+
+- Guard is what synergies are for: a build that didn't work now does. Infantry isn't there yet.
+- These runs show which builds the synergies help, not how strong a player building for them is.
+
+**Not done yet (balancing).** Synergy runs are about 10 points easier than normal runs, mostly from round 7 on. The next step is to let the AI's armies get synergies at rates like the player's, for instance by having each AI style lean toward a family (Cavalry Charge toward Cavalry, Fortress toward Guard, Heavy Artillery toward Siege) and keep that family's base pieces instead of upgrading them all into compounds. Then the thresholds per family: Cavalry's Centaur is the most efficient upgrade, Siege's and Infantry's the least.
 
 ## Problems found
 

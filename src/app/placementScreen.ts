@@ -50,7 +50,17 @@ import {
 } from '../rules/pieces';
 import { dailyBattle } from '../rules/daily';
 import { armyCap, BENCH_SIZE, benchCount, MAX_HEIRS } from '../rules/placement';
+import {
+  type Family,
+  type FamilyStatus,
+  familiesOf,
+  familyStatus,
+  FAMILIES,
+  type SynergyUpgrade,
+  synergyUpgrades,
+} from '../rules/synergy';
 import { PlacementBoard } from '../ui/board';
+import { type BoardSpec, fileLetter, pawnSquares } from '../chess/boardSpec';
 import { inlinePiece, setPlayerColor } from '../ui/boardDom';
 import { moveDiagram } from '../ui/moveDiagram';
 import { reduceMotion, settings as playerSettings } from './settings';
@@ -83,6 +93,8 @@ export class PlacementScreen {
   private selectedOffer: number | null = null;
   /** The opponent piece type whose description is showing. */
   private foeInfo: PieceType | null = null;
+  /** The synergy chip whose explanation is showing ("you:cavalry", "them:siege" or "help"). */
+  private synInfo: string | null = null;
   private busy = false;
   /** Variant of the board last shown, to announce when it grows. */
   private shownBoard: string | null = null;
@@ -178,6 +190,13 @@ export class PlacementScreen {
       } else if (btn.hasAttribute('data-sell')) this.applyShop(sellPiece(shop, this.selected), undefined, 'sell');
       // The result of a merge, fusion or upgrade isn't left selected: the next tap would move it.
       if (this.session.run.shop !== before) this.board.clearSelection();
+    });
+    // Tapping a synergy chip explains the family (or, for ?, what synergies are).
+    $('#synergies').addEventListener('click', (e) => {
+      const chip = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-syn]');
+      if (!chip) return;
+      this.synInfo = this.synInfo === chip.dataset.syn ? null : chip.dataset.syn!;
+      this.renderSynergies();
     });
     // Tapping an opponent piece in the list explains what it does (the board reports taps via onFoeTap).
     $('#opponent').addEventListener('click', (e) => {
@@ -304,6 +323,7 @@ export class PlacementScreen {
     this.shownBoard = null;
     this.selected = null;
     this.selectedOffer = null;
+    this.synInfo = null;
   }
 
   setMessage(text: string): void {
@@ -337,6 +357,73 @@ export class PlacementScreen {
       `On the board ${placed.length}/${armyCap(this.session.board)} · bench ${benchCount(pieces)}/${BENCH_SIZE} · ${points} pts`;
     this.updateFight();
     this.renderShop();
+    this.renderSynergies();
+  }
+
+  /** True when this run plays with synergies (synergy.ts). */
+  private synergiesOn(): boolean {
+    return this.session.run.settings.synergies === true;
+  }
+
+  /**
+   * The synergy bar: each side's families (yours with how close the next tier is, the opponent's
+   * active ones), the explanation of the tapped one, and the upgrade badges on the board.
+   */
+  private renderSynergies(): void {
+    const bar = $('#synergies');
+    const info = $('#synergy-info');
+    if (!this.synergiesOn()) {
+      bar.hidden = true;
+      info.hidden = true;
+      this.board.setUpgrades(new Map());
+      return;
+    }
+    const spec = this.session.board;
+    const mine = this.session.run.shop.pieces;
+    const myUpgrades = synergyUpgrades(mine, spec);
+    const opponent = this.session.opponent();
+    const theirs = opponent?.pieces ?? [];
+    const theirUpgrades = synergyUpgrades(theirs, spec);
+    const reveal = this.session.revealOpponent?.() ?? this.session.run.settings.reveal;
+    this.board.setUpgrades(new Map([...myUpgrades, ...(reveal ? theirUpgrades : [])].map((u) => [u.id, u.to])));
+
+    const placedTypes = (pieces: Piece[]) => pieces.filter((p) => p.square).map((p) => p.type);
+    const chip = (who: 'you' | 'them', s: FamilyStatus, upgrades: number) => {
+      const key = `${who}:${s.family.id}`;
+      const shown = this.synInfo === key;
+      const count = s.next === null ? `${s.count}` : `${s.count}/${s.next}`;
+      const up = upgrades > 0 ? `<span class="syn-up">↑${upgrades}</span>` : '';
+      const label = `${s.family.name}: ${s.count} on the board${upgrades ? `, ${upgrades} upgraded` : ''}. What does it do?`;
+      return `<button type="button" class="syn-chip${s.tier > 0 ? ' on' : ''}${shown ? ' active' : ''}" data-syn="${key}" aria-pressed="${shown}" aria-label="${label}">${inlinePiece(s.family.icon, who === 'you' ? 'w' : 'b')}<span class="syn-name">${s.family.name}</span><span class="syn-count">${count}</span>${up}</button>`;
+    };
+    const upgradedBy = (ups: SynergyUpgrade[], fam: Family) => ups.filter((u) => u.family === fam.id).length;
+    const myChips = familyStatus(placedTypes(mine))
+      .map((s) => chip('you', s, upgradedBy(myUpgrades, s.family)))
+      .join('');
+    // The opponent's families that do something this battle (its army is all on the board).
+    const theirActive = familyStatus(placedTypes(theirs)).filter((s) => s.tier > 0);
+    const theirChips = theirActive.map((s) => chip('them', s, upgradedBy(theirUpgrades, s.family))).join('');
+    const helpShown = this.synInfo === 'help';
+    const help = `<button type="button" class="syn-chip syn-help${helpShown ? ' active' : ''}" data-syn="help" aria-pressed="${helpShown}" aria-label="What are synergies?">?</button>`;
+    bar.hidden = false;
+    bar.innerHTML =
+      `<div class="syn-row mine"><span class="syn-label">You</span>${myChips || '<span class="syn-none">no synergies yet</span>'}${help}</div>` +
+      (opponent && theirs.length
+        ? `<div class="syn-row theirs"><span class="syn-label">Them</span>${theirChips || '<span class="syn-none">none</span>'}</div>`
+        : '');
+
+    // The tapped chip's explanation (dropped once that family is no longer on the board).
+    const [who, id] = this.synInfo?.split(':') ?? [];
+    const fam = FAMILIES.find((f) => f.id === id);
+    let text = '';
+    if (this.synInfo === 'help') text = synergyHelp();
+    else if (fam && who === 'you' && placedTypes(mine).some((t) => fam.members.includes(t)))
+      text = familyText(fam, placedTypes(mine), myUpgrades, true, spec);
+    else if (fam && who === 'them' && theirActive.some((s) => s.family === fam))
+      text = familyText(fam, placedTypes(theirs), reveal ? theirUpgrades : null, false, spec);
+    if (!text) this.synInfo = null;
+    info.hidden = !text;
+    info.innerHTML = text;
   }
 
   private updateFight(): void {
@@ -388,6 +475,7 @@ export class PlacementScreen {
     const shown = this.foeInfo;
     this.renderOpponent();
     if (shown) this.toggleFoeInfo(shown);
+    this.renderSynergies();
   }
 
   private toggleFoeInfo(type: PieceType): void {
@@ -403,7 +491,7 @@ export class PlacementScreen {
       el.classList.toggle('active', el.dataset.foe === type);
     }
     if (!type) return;
-    info.innerHTML = `<span class="panel-head">${moveDiagram(type, 'b')}<span><strong>${PIECE_NAME[type]}</strong> · ${about(type)} ${guideLink(type)}</span></span>`;
+    info.innerHTML = `<span class="panel-head">${moveDiagram(type, 'b')}<span><strong>${PIECE_NAME[type]}</strong> · ${about(type)}${this.familyTags(type)} ${guideLink(type)}</span></span>`;
   }
 
   private deselectPiece(): void {
@@ -474,8 +562,9 @@ export class PlacementScreen {
     const soldOut = this.session.offerLeft?.(offer) === 0;
     const disabled = gold < price || full || soldOut ? 'disabled' : '';
     const text = isAffinityOffer(offer) ? affinityText(offer[1] as Affinity, pieces) : about(offer);
+    const offered = isAffinityOffer(offer) ? 'P' : offer;
     detail.innerHTML =
-      panelHead(offerDiagram(offer), offerName(offer), `${text} ${guideLink(isAffinityOffer(offer) ? 'P' : offer)}`) +
+      panelHead(offerDiagram(offer), offerName(offer), `${text}${this.familyTags(offered)} ${guideLink(offered)}`) +
       `<button type="button" class="primary" data-buy ${disabled}>${soldOut ? 'Sold out' : full ? 'Bench full' : gold < price ? `Need ${price}g` : `Buy · ${price}g`}</button>`;
   }
 
@@ -564,8 +653,16 @@ export class PlacementScreen {
         }`;
     const icon = moveDiagram(piece.type, 'w', piece.affinity);
     actions.innerHTML =
-      panelHead(icon, pieceName(piece), `${info} ${guideLink(piece.type)}`) +
+      panelHead(icon, pieceName(piece), `${info}${this.familyTags(piece.type)} ${guideLink(piece.type)}`) +
       `<div class="panel-buttons">${fusions}${rooks}${pawnFusions}${upgrades}${sell}</div>`;
+  }
+
+  /** " Cavalry · Guard" tags: the synergy families a piece counts toward, in a synergy run (else nothing). */
+  private familyTags(type: PieceType): string {
+    if (!this.synergiesOn()) return '';
+    return familiesOf(type)
+      .map((f) => ` <span class="syn-tag">${f.name}</span>`)
+      .join('');
   }
 
   /** How many Heirs the army may have (a prestige perk can allow more). */
@@ -587,6 +684,68 @@ export class PlacementScreen {
     this.board.setPieces(result.shop.pieces);
     this.piecesChanged(result.shop.pieces);
   }
+}
+
+/** What synergies are, for the bar's ? chip. */
+function synergyHelp(): string {
+  const families = FAMILIES.map(
+    (f) => `<strong>${f.name}</strong> ${f.members.map((t) => inlinePiece(t)).join('')} from ${f.tiers[0]}`,
+  ).join(' · ');
+  return (
+    '<strong>Synergies</strong> · pieces belong to families by how they move. Field enough of a family and its ' +
+    'front pieces fight this battle as stronger pieces (marked on the board), for you and your opponent alike. ' +
+    `Bishops, Rooks and Queens belong to none. ${families}.`
+  );
+}
+
+/** The text with its first letter in capitals. */
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** "a Knight fights as a Centaur, a Camel as a Wildebeest": what a family's upgrades make. */
+function upgradeText(fam: Family): string {
+  const byTarget = new Map<PieceType, PieceType[]>();
+  for (const [from, to] of Object.entries(fam.upgrades) as [PieceType, PieceType][]) {
+    byTarget.set(to, [...(byTarget.get(to) ?? []), from]);
+  }
+  return [...byTarget]
+    .map(([to, froms], i) => `${froms.map((t) => aName(t)).join(' or ')}${i === 0 ? ' fights' : ''} as ${aName(to)}`)
+    .join(', ');
+}
+
+/**
+ * A family's explanation: its members, what each tier does, and what it does for this army now.
+ * `upgrades`: the army's upgrades, or null when where its pieces stand is hidden (the opponent's).
+ */
+function familyText(
+  fam: Family,
+  types: PieceType[],
+  upgrades: SynergyUpgrade[] | null,
+  mine: boolean,
+  spec: BoardSpec,
+): string {
+  const count = types.filter((t) => fam.members.includes(t)).length;
+  const front = ['one', 'two', 'three'];
+  const tiers = fam.tiers
+    .map((n, i) =>
+      i === 0
+        ? `With ${n} on the board, the front ${front[i]} fights this battle as a stronger piece`
+        : `with ${n}, the front ${front[i]}`,
+    )
+    .join('; ');
+  const ups = upgrades?.filter((u) => u.family === fam.id) ?? [];
+  const where = (u: SynergyUpgrade) => (mine ? ` on ${fileLetter(u.square.file)}${u.square.rank + 1}` : '');
+  const now = ups.length
+    ? `This battle: ${ups.map((u) => `${mine ? 'your' : 'their'} ${PIECE_NAME[u.from]}${where(u)} fights as ${aName(u.to)}`).join(', ')}.`
+    : `${mine ? 'You have' : 'They have'} ${count}.`;
+  const icons = fam.members.map((t) => inlinePiece(t, mine ? 'w' : 'b')).join('');
+  // Pawns only stand off the back row, so on the small boards there's no room for Infantry's eight.
+  const room =
+    fam.members.every(isPawnLike) && pawnSquares(spec) < fam.tiers[0]
+      ? ` Only the 8×8 and 9×9 boards have room for ${fam.tiers[0]} pawns.`
+      : '';
+  return `<strong>${fam.name}</strong> (${fam.kind}) ${icons} · ${tiers}. ${capitalize(upgradeText(fam))}. ${now}${room}`;
 }
 
 /** "3 pts. Jumps in an L shape." (the King and Heir aren't worth points in battle). */

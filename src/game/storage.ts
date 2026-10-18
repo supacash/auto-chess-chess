@@ -298,6 +298,8 @@ export function parseSave(raw: unknown): SavedGame | null {
     fairy: typeof s.fairy === 'boolean' ? s.fairy : true,
     manual: s.manual === true,
   };
+  // Synergies need fairy pieces (their upgrades are fairy pieces).
+  if (s.synergies === true && settings.fairy) settings.synergies = true;
   return {
     version: SAVE_VERSION,
     run: {

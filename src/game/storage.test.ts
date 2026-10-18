@@ -150,6 +150,16 @@ describe('parseSave', () => {
     });
   });
 
+  it('keeps Synergies only when on, and only in a fairy run', () => {
+    const g: any = JSON.parse(JSON.stringify(sample()));
+    g.run.settings = { ...g.run.settings, fairy: true, synergies: true };
+    expect(parseSave(g)?.run.settings.synergies).toBe(true);
+    g.run.settings = { ...g.run.settings, fairy: false, synergies: true };
+    expect(parseSave(g)?.run.settings).not.toHaveProperty('synergies');
+    g.run.settings = { ...g.run.settings, fairy: true, synergies: 'yes' };
+    expect(parseSave(g)?.run.settings).not.toHaveProperty('synergies');
+  });
+
   it('keeps the battle-in-progress flag only when it is true', () => {
     expect(parseSave({ ...sample(), battleInProgress: true })?.battleInProgress).toBe(true);
     expect(parseSave({ ...sample(), battleInProgress: 'yes' })).not.toHaveProperty('battleInProgress');

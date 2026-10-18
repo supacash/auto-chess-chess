@@ -13,6 +13,8 @@ export interface RenderOptions {
   animateMs?: number;
   /** Highlight the king of the side to move as in check. */
   check?: boolean;
+  /** Squares to light up (the pieces synergies upgraded, at the start of a battle). */
+  glow?: readonly string[];
 }
 
 /** Lets the player move: `legal` maps each movable square to its legal UCI moves. */
@@ -102,7 +104,11 @@ export class BattleView {
   }
 
   /** Redraws the position from a FEN on a board of `spec`'s size. */
-  render(fen: string, spec: BoardSpec = BOARD_8, { last, animateMs = 0, check = false }: RenderOptions = {}): void {
+  render(
+    fen: string,
+    spec: BoardSpec = BOARD_8,
+    { last, animateMs = 0, check = false, glow = [] }: RenderOptions = {},
+  ): void {
     const fromRect = last && animateMs > 0 ? this.cell(last.from)?.getBoundingClientRect() : undefined;
     const rows = parsePlacement(fen, spec.files); // top rank first
     const checkedColor = check ? fenTurn(fen) : null;
@@ -116,6 +122,7 @@ export class BattleView {
         const cell = squareEl(file, rank);
         const name = squareName(file, rank);
         if (last && (name === last.from || name === last.to)) cell.classList.add('last');
+        if (glow.includes(name)) cell.classList.add('upgraded');
         const occupant = rows[r]?.[file];
         if (occupant) {
           const royal = occupant.type === 'K' || occupant.type === 'J'; // an Heir left alone is the king

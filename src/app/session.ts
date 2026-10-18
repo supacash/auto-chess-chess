@@ -405,7 +405,8 @@ export class Session implements PlacementSession {
   /** The battle's start position, re-placing the AI army if both kings would start in check. */
   resolveStart(): Extract<StartPosition, { ok: true }> {
     const playerFirst = this.run.color === 'w';
-    const start = startPosition(this.run.shop.pieces, this.aiPieces, playerFirst, this.board);
+    const synergies = this.run.settings.synergies === true;
+    const start = startPosition(this.run.shop.pieces, this.aiPieces, playerFirst, this.board, synergies);
     if (start.ok) return start;
     const types = this.aiPieces.map((p) => p.type);
     const placed = placeForBattle(
@@ -415,6 +416,7 @@ export class Session implements PlacementSession {
       this.stream('place'),
       this.board,
       playerFirst,
+      synergies,
     );
     this.aiPieces = placed.ai;
     return placed.start;
