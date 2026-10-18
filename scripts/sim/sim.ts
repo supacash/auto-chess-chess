@@ -24,6 +24,7 @@ import {
   pickStyle,
   placeAiArmy,
   placeForBattle,
+  synergyAllowance,
 } from '../../src/rules/aiArmy';
 import { type BoardSpec, plyLimit } from '../../src/chess/boardSpec';
 import { gameMode } from '../../src/rules/mode';
@@ -89,6 +90,8 @@ const { values: opts } = parseArgs({
     synergies: { type: 'boolean', default: false },
     /** The shop stand-in builds toward one synergy family (shopPlayer.ts). */
     seek: { type: 'string' },
+    /** How AI armies are drafted: `build` for synergies (as in a run with them), `chance` as without. */
+    'ai-draft': { type: 'string' },
     'daily-gold': { type: 'string' },
     'daily-income': { type: 'string' },
     'daily-interest': { type: 'string' },
@@ -166,6 +169,13 @@ const SAVE = Number(opts.save);
 const LIVES = maxLives(PERKS);
 /** `--synergies`: both sides fight with their synergy upgrades. */
 const SYNERGIES = opts.synergies === true;
+/**
+ * `--ai-draft build|chance`: AI armies drafted for synergies or as without them. Defaults to `build`
+ * with --synergies (as in the game) and `chance` without; `chance` with --synergies is the §27
+ * baseline (the AI gets synergies only by chance), `build` without measures the drafts alone.
+ */
+const AI_DRAFT = opts['ai-draft'] ?? (SYNERGIES ? 'build' : 'chance');
+if (AI_DRAFT !== 'build' && AI_DRAFT !== 'chance') throw new Error('--ai-draft must be build or chance');
 /** `--seek <family>`: the shop stand-in builds toward that synergy family. */
 const SEEK = opts.seek ? FAMILIES.find((f) => f.id === opts.seek) : undefined;
 if (opts.seek && !SEEK) throw new Error(`--seek must be one of: ${FAMILIES.map((f) => f.id).join(', ')}`);
@@ -290,7 +300,7 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       }
       shop = { ...shop, pieces: unplaced };
     }
-    const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec, AI_FAIRY, round);
+    const aiTypes = draftAiArmy(aiPoints, aiStyle, rng, spec, AI_FAIRY, round, AI_DRAFT === 'build');
 
     // As in the game: the AI re-places (falling back to other layouts) until both kings aren't in check.
     const { ai, start } = placeForBattle(player, aiTypes, aiStyle, rng, spec, first, SYNERGIES);
@@ -345,7 +355,8 @@ async function playRun(run: number, engine: NodeEngine, onGame: () => void): Pro
       aiStyle: aiStyle.name,
       playerStyle: runStyle.name,
       playerPoints: player.reduce((sum, p) => sum + PIECE_VALUE[p.type], 0),
-      aiPoints,
+      // An AI drafted for synergies gets their allowance on top (draftAiArmy).
+      aiPoints: aiPoints + (AI_DRAFT === 'build' && AI_FAIRY ? synergyAllowance(round) : 0),
       result,
       peakLead,
       peakLeader,
@@ -522,7 +533,8 @@ function report(records: RunRecord[]): string {
       `${DAILY ? 'DAILY (rounds 2–10), ' : ''}mode ${MODE.name}, ply limit ${PLY_OVERRIDE ?? '10 × size + 10'}${DECISIVE ? `, decisive lead ${DECISIVE[0]} for ${DECISIVE[1]} plies` : ''}, player ${PLAYER}, player style ${PLAYER_STYLE}, player points ${PLAYER_POINTS}, ` +
       `AI budget ${AI_BUDGET ? `${AI_BUDGET[0]} + ${AI_BUDGET[1]}×round ±1` : `${PER_ROUND}×round × ramp${MODE.aiBonus ? ` + ${MODE.aiBonus}` : ''} ±1 (round 1: −${MODE.roundOneDiscount})`}` +
       `${PRESTIGE ? `, prestige ${PRESTIGE}` : ''}${PERKS.length ? `, perks ${PERKS.join(',')}` : ''}${SAVE ? `, saves ${SAVE} gold from round 3` : ''}` +
-      `${SYNERGIES ? ', SYNERGIES' : ''}${SEEK ? `, stand-in seeks ${SEEK.name}` : ''}`,
+      `${SYNERGIES ? ', SYNERGIES' : ''}${AI_DRAFT !== (SYNERGIES ? 'build' : 'chance') ? `, AI drafts ${AI_DRAFT === 'build' ? 'for synergies' : 'as without synergies'}` : ''}` +
+      `${SEEK ? `, stand-in seeks ${SEEK.name}` : ''}`,
     'W/D/L are from the player\'s side. "lead≥N" = games where a side was ever ≥N points of material ahead;',
     '"no mate"/"no win" = share of those where that side failed to checkmate / failed to win at all.',
     '"±win" = 95% margin of error on the win rate, in points. Treat gaps smaller than the margins as noise.',

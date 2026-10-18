@@ -294,7 +294,7 @@ export class Session implements PlacementSession {
       this.run.color === 'w',
     );
     this.aiPieces = placeAiArmy(
-      draftAiArmy(budget, this.aiStyle, this.rng, spec, settings.fairy, this.run.round),
+      draftAiArmy(budget, this.aiStyle, this.rng, spec, settings.fairy, this.run.round, settings.synergies === true),
       this.aiStyle,
       this.rng,
       spec,
