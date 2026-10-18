@@ -20,7 +20,8 @@ npm run sim -- --rounds 10 --games 100
 | `--plies` | `PLY_LIMIT` (60) | Overrides the move limit (see section 7) |
 | `--decisive lead,plies` | off | Prototype early end: a side that holds a material lead of at least `lead` for `plies` consecutive half-moves wins (`decisive` end reason) |
 | `--lead` | 5 | Material lead threshold for the "lead≥N / no mate / no win" columns |
-| `--synergies` | off | Both sides fight with their synergy upgrades (DESIGN.md, Synergies), and the report adds how often each side's synergies did something and what they added |
+| `--synergies` | off | Both sides fight with their synergy upgrades (DESIGN.md, Synergies) and AI armies are drafted for them (§28), and the report adds how often each side's synergies did something and what they added |
+| `--ai-draft build\|chance` | `build` with `--synergies`, else `chance` | How AI armies are drafted: `build` for synergies (as in a synergy run), `chance` as without them. `--synergies --ai-draft chance` is §27's baseline; `--ai-draft build` alone measures the drafts without any upgrades in battle |
 | `--seek <family>` | — | The shop stand-in builds toward one synergy family (`infantry`, `cavalry`, `guard`, `siege`): its pieces are what it likes best and it never sells them (see §27) |
 | `--json` | off | Dumps every game record instead of the tables |
 
@@ -587,7 +588,93 @@ Families active over the run: the stand-in's Siege 76%, Guard 35%, Cavalry 31%, 
 - Guard is what synergies are for: a build that didn't work now does. Infantry isn't there yet.
 - These runs show which builds the synergies help, not how strong a player building for them is.
 
-**Not done yet (balancing).** Synergy runs are about 10 points easier than normal runs, mostly from round 7 on. The next step is to let the AI's armies get synergies at rates like the player's, for instance by having each AI style lean toward a family (Cavalry Charge toward Cavalry, Fortress toward Guard, Heavy Artillery toward Siege) and keep that family's base pieces instead of upgrading them all into compounds. Then the thresholds per family: Cavalry's Centaur is the most efficient upgrade, Siege's and Infantry's the least.
+**Balancing (done in §28).** Synergy runs were about 10 points easier than normal runs, mostly from round 7 on. §28 has each AI style lean toward a family and keep its base pieces, plus a small budget allowance from round 11.
+
+### 28. Synergies: AI armies that build for them
+
+In a synergy run the AI's drafter now builds for synergies (`draftAiArmy(…, synergies)`, from the run's settings). With synergies off it drafts exactly as before: the same armies from the same rng draws (42,000 drafts checked against the old code), and the normal rows below are §27's. Each style leans toward families:
+
+| Style | Builds toward |
+|---|---|
+| Cavalry Charge | Cavalry |
+| Heavy Artillery | Siege |
+| Fortress | Guard, and Infantry while it holds eight pawns |
+| Menagerie | two of Cavalry, Guard and Siege at random, the first tier of each |
+| Balanced | one of Cavalry, Guard and Siege at random |
+
+How it drafts (aiArmy.ts):
+- **Leaning:** the families' pieces are drafted twice as often (`SYNERGY_LEAN`).
+- **Keeping:** leftover points never upgrade a family below the tier its draft reached, or below one piece for each tier that its synergy can upgrade. A Knight stays a Knight instead of becoming a Rook or a Chancellor.
+- **Giving up:** a synergy is given up only when nothing else is left to upgrade and the points it would leave unspent are more than it's worth. That's a Fortress's eight pawns once its budget outgrows them, and any family at the full-board cap.
+- **Allowance:** from round 11 the AI gets 3 more points (`SYNERGY_ALLOWANCE`). By then most of its points are in compounds and Queens, which synergies don't upgrade.
+
+**First try: reserving a tier's pieces (dropped).** The drafter first took enough of a family's base pieces for the highest tier that fit in half the pieces' share, then drafted as usual (two versions; the second also checked that the army could still spend its budget, and had Balanced build too). That made synergy runs harder than normal runs: Growing 51% against 56%, and rounds 6–10 41% against 61%. Its upgrades were only about a point a battle above the stand-in's, so the armies themselves were stronger. With the same drafts and no upgrades in battle (`--ai-draft build`), rounds 6–10 still fell to 49%. The reserved Knights, Camels and Men pushed out pawns, and Knights it kept were Knights it didn't turn into Rooks, which play weak for 5 points (§23). Rounds 1–10, Growing Normal, 80 runs (`--rounds 10`):
+
+| AI drafting | R1–5 | R6–10 |
+|---|---|---|
+| Normal run (no synergies) | 65% | 61% |
+| By chance only (§27) | 66% | 67% |
+| Reserving a tier's pieces | 63% | 47% |
+| The same drafts, no upgrades in battle | 67% | 49% |
+| Keeping what it drafted, no leaning | 70% | 71% |
+| **Leaning ×2 and keeping** | **67%** | **61%** |
+
+- **Leaning ×2 matches normal runs in rounds 1–10,** although its upgrades add 0.5–2 points a battle less than the stand-in's. Its synergies are mostly Cavalry (72% of battles, against the stand-in's 27%); the stand-in's are mostly Siege (80%, Cannons bought as finished pieces). A Cavalry upgrade wins far more battles per point (§27).
+
+**Rounds 11–25 needed more.** Leaning alone left them easier, and the AI's upgrades fell 3 points a battle behind from round 11. The allowance and a Siege threshold change were both tried (seed 1, 80 runs a row):
+
+| Synergy run, AI drafting | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score |
+|---|---|---|---|---|---|---|---|
+| Growing: normal run | 65% | 61% | 63% | 46% | 44% | 56% | 8.1 |
+| Reserving a tier's pieces | 62% | 41% | 53% | 43% | 55% | 51% | 6.2 |
+| Leaning ×2 | 67% | 61% | 70% | 58% | 64% | 64% | 9.1 |
+| **Leaning ×2, +3 points from round 11** | **67%** | **61%** | **61%** | **47%** | **59%** | **59%** | **8.9** |
+| … and never giving a synergy up | 67% | 60% | 60% | 47% | 68% | 60% | 8.6 |
+| Leaning ×2, Siege tiers 3/5 | 65% | 56% | 66% | 51% | 55% | 58% | 8.0 |
+| Classic: normal run | 45% | 50% | 54% | 36% | 51% | 47% | 4.8 |
+| Leaning ×2 | 41% | 52% | 52% | 41% | 65% | 50% | 4.2 |
+| **Leaning ×2, +3 points from round 11** | **41%** | **52%** | **40%** | **37%** | **62%** | **46%** | **4.3** |
+| Leaning ×2, Siege tiers 3/5 | 41% | 48% | 46% | 34% | 60% | 46% | 4.2 |
+
+- **Chosen: the allowance.** It and Siege 3/5 both bring both modes within 3 points. The allowance keeps the families' thresholds as designed. It answers the measured cause, armies whose points sit in pieces synergies can't upgrade. And it keeps Growing's rounds 1–20 within 2 points of normal runs.
+- **Never giving a synergy up made rounds 21–25 easier still.** At the cap the AI kept +5 points a battle of upgrades but left more points unspent than that.
+- **The Classic 80-run normal row is a little harder than §27's 40-run row** (rounds 1–5 45% against 50%), so Classic is compared at 80 runs too. Its 40-run rows move by 5 points or more between halves of the same seed.
+
+**Whole runs** (the §27 commands, seed 1; Growing 80 runs, Classic 40). Rows are normal / synergies with the AI by chance (§27) / synergies now:
+
+| Normal | R1–5 | R6–10 | R11–15 | R16–20 | R21–25 | All | Run score | Reach 25 |
+|---|---|---|---|---|---|---|---|---|
+| Growing | 65% / 66% / 67% | 61% / 67% / 61% | 63% / 80% / 61% | 46% / 64% / 47% | 44% / 61% / 59% | **56% / 68% / 59%** | 8.1 / 10.8 / 8.9 | 5% / 18% / 10% |
+| Classic | 50% / 50% / 38% | 52% / 62% / 51% | 49% / 66% / 37% | 36% / 45% / 35% | 50% / 58% / 60% | **47% / 56% / 44%** | 5.1 / 6.1 / 3.7 | 3% / 10% / 3% |
+| Classic, 80 runs | 45% / – / 41% | 50% / – / 52% | 54% / – / 40% | 36% / – / 37% | 51% / – / 62% | **47% / – / 46%** | 4.8 / – / 4.3 | 5% / – / 4% |
+
+Upgrade points a battle, synergy runs (Growing; §27 then now):
+
+| Round | 3 | 5 | 7 | 9 | 11 | 13 | 15 | 20 | 25 |
+|---|---|---|---|---|---|---|---|---|---|
+| Stand-in | +2.0 / +2.2 | +4.0 / +3.8 | +6.0 / +6.5 | +7.7 / +7.8 | +8.6 / +8.9 | +8.1 / +8.5 | +7.7 / +8.1 | +6.8 / +7.0 | +5.4 / +6.0 |
+| AI | +1.1 / +1.5 | +2.6 / +3.3 | +4.8 / +5.7 | +5.4 / +6.8 | +3.8 / +5.9 | +1.5 / +5.0 | +1.6 / +5.3 | +0.2 / +3.1 | 0 / +0.3 |
+
+Families active over the run, now: the stand-in's Siege 80%, Guard 35%, Cavalry 27%, Infantry 0%; the AI's Cavalry 72%, Guard 56%, Siege 35%, Infantry 11%. `npm run sim:ai-synergies -- --board schedule|8` gives the AI's side without battles: its drafts with and without building, upgrade points, active families and points left unspent, round by round.
+
+**Building toward one family** (the §27 command: `--seek <family>`, 40 runs × 15 rounds, Growing Normal, seed 1). Win rate over rounds 1–15:
+
+| Seeks | Off | On, AI by chance (§27) | On now | Run score off / §27 / now |
+|---|---|---|---|---|
+| Nothing (the normal stand-in, 80 runs) | 63% | 71% | 63% | – |
+| Infantry | 30% | 30% | 24% | 3.6 / 3.2 / 3.2 |
+| Cavalry | 69% | 73% | 64% | 8.1 / 8.6 / 7.2 |
+| Guard | 42% | 55% | 46% | 5.1 / 6.3 / 5.3 |
+| Siege | 74% | 74% | 66% | 8.2 / 9.1 / 7.5 |
+
+- **Against AI armies that build too, a one-family build no longer gains over normal runs.** Cavalry and Siege seekers come out 5 and 8 points below their off rows, Infantry 6 below; Guard keeps a little (+4, was +13).
+- **Within synergy runs the families aren't equally worth building for yet.** Seeking Cavalry or Siege plays about like the normal stand-in (64% and 66% against 63%); Guard (46%) and Infantry (24%) are well below. Cheaper Guard and Infantry tiers, or a stronger Infantry upgrade, are the next things to try, after play-testing.
+
+**What's left:**
+- **Rounds 21–25 stay easier** (Growing 59% against 44%, Classic 62% against 51% at 80 runs). The AI's budget is at or near the full-board cap there and its armies are Queens and compounds: keeping Knights or Cannons for synergies costs it more points than they add. The stand-in's armies are limited by gold, not the cap, and still hold them (+5 to +7 a battle). One Growing run in ten gets that far.
+- **Classic's first rounds come out a little harder** (41% against 45% at 80 runs; 38% against 50% in the 40-run rows), which is most of its lower run score. Families fit on 8×8 from round 1, so the lean takes hold sooner than on Growing's small boards (the drafts alone gave 43%).
+- **Classic rounds 11–15 come out harder** (40% against 54%). The allowance that Growing needs there is more than Classic needs: on 8×8 (16 pieces, against 18 on 9×9) the stand-in's synergies run about a point a battle lower. An allowance on the 9×9 board only would leave Classic at the leaning row (50%, rounds 11–15 52%).
+- **Siege 3/5 is the fallback** if the allowance feels wrong in play: about the same balance, by making Siege a deliberate build rather than the family players get by accident.
 
 ## Problems found
 
