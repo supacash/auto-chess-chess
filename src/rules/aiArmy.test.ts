@@ -14,11 +14,15 @@ import {
   placeForBattle,
   RAMP,
   rampFactor,
+  SYNERGY_ALLOWANCE,
+  SYNERGY_ALLOWANCE_ROUND,
+  synergyAllowance,
 } from './aiArmy';
 import { BOARDS, homeSquares, pawnSquares } from '../chess/boardSpec';
 import { PIECES, type PieceType, PIECE_VALUE } from './pieces';
 import { armyCap, armyErrors } from './placement';
 import { seededRng } from './rng';
+import { familyStatus, synergyUpgrades } from './synergy';
 
 const style = (id: string): AiStyle => AI_STYLES.find((s) => s.id === id)!;
 const points = (types: PieceType[]) => types.reduce((s, t) => s + PIECE_VALUE[t], 0);
@@ -316,5 +320,109 @@ describe('Heirs in AI armies', () => {
     const share = heirs(AI_HEIR_ROUND, true);
     expect(share).toBeGreaterThan(0.05);
     expect(share).toBeLessThan(0.2);
+  });
+});
+
+describe('AI armies with synergies', () => {
+  const spec8 = BOARDS[3]; // 8×8
+  const draft = (id: string, budget: number, seed: number, synergies: boolean, spec = spec8, round = 9) => {
+    const rng = seededRng(seed);
+    const s = style(id);
+    const types = draftAiArmy(budget, s, rng, spec, true, round, synergies);
+    return { types, placed: placeAiArmy(types, s, rng, spec) };
+  };
+  const active = (types: PieceType[], id: string) => familyStatus(types).some((f) => f.family.id === id && f.tier > 0);
+  const upgrades = (placed: ReturnType<typeof placeAiArmy>, id?: string) =>
+    synergyUpgrades(placed, spec8).filter((u) => !id || u.family === id).length;
+
+  it('changes nothing without them, or without fairy pieces', () => {
+    for (let seed = 0; seed < 30; seed++) {
+      for (const s of AI_STYLES) {
+        const before = draftAiArmy(40, s, seededRng(seed), spec8, true, 12);
+        expect(draftAiArmy(40, s, seededRng(seed), spec8, true, 12, false)).toEqual(before);
+        expect(draftAiArmy(40, s, seededRng(seed), spec8, false, 12, true)).toEqual(
+          draftAiArmy(40, s, seededRng(seed), spec8, false, 12),
+        );
+      }
+    }
+  });
+
+  it('leans toward the style’s family and keeps a piece in it for its synergy to upgrade', () => {
+    for (const [id, fam] of [
+      ['cavalry', 'cavalry'],
+      ['heavy', 'siege'],
+      ['fortress', 'guard'],
+    ] as const) {
+      let withThem = 0;
+      let without = 0;
+      for (let seed = 0; seed < 40; seed++) {
+        const built = draft(id, 50, seed, true);
+        withThem += upgrades(built.placed, fam);
+        without += upgrades(draft(id, 50, seed, false).placed, fam);
+        // An active family always has a piece left to upgrade: none were all fused into compounds.
+        if (active(built.types, fam)) expect(upgrades(built.placed, fam), `${id} seed ${seed}`).toBeGreaterThan(0);
+      }
+      expect(withThem, id).toBeGreaterThan(without);
+    }
+  });
+
+  it('keeps a Fortress’s eight pawns while its budget allows, then upgrades them', () => {
+    let small = 0;
+    let large = 0;
+    for (let seed = 0; seed < 40; seed++) {
+      if (active(draft('fortress', 30, seed, true).types, 'infantry')) small++;
+      const { types } = draft('fortress', 60, seed, true);
+      if (active(types, 'infantry')) large++;
+      expect(points(types)).toBeGreaterThanOrEqual(57);
+      // Eight pawns don't fit before the 8×8 board.
+      expect(active(draft('fortress', 30, seed, true, BOARDS[2]).types, 'infantry')).toBe(false);
+    }
+    expect(small).toBeGreaterThanOrEqual(36);
+    expect(large).toBeLessThanOrEqual(12);
+  });
+
+  it(`gets ${SYNERGY_ALLOWANCE} more points from round ${SYNERGY_ALLOWANCE_ROUND}, up to a full board`, () => {
+    expect(synergyAllowance(SYNERGY_ALLOWANCE_ROUND - 1)).toBe(0);
+    expect(synergyAllowance(SYNERGY_ALLOWANCE_ROUND)).toBe(SYNERGY_ALLOWANCE);
+    for (let seed = 0; seed < 20; seed++) {
+      const before = points(draft('cavalry', 50, seed, true, spec8, SYNERGY_ALLOWANCE_ROUND - 1).types);
+      const after = points(draft('cavalry', 50, seed, true, spec8, SYNERGY_ALLOWANCE_ROUND).types);
+      expect(before).toBeLessThanOrEqual(50);
+      expect(after).toBeGreaterThan(50);
+      expect(after).toBeLessThanOrEqual(50 + SYNERGY_ALLOWANCE);
+      expect(points(draft('heavy', 200, seed, true, spec8, 20).types)).toBeLessThanOrEqual(maxArmyValue(spec8));
+    }
+  });
+
+  it('keeps armies within budget, caps and legal placement, and spends the budget, on every board', () => {
+    // Budgets as high as a run reaches on each board (Growing to 7×7, Classic on 8×8, Growing on 9×9).
+    const highest: Record<number, number> = { 5: 15, 6: 28, 7: 45, 8: 135, 9: 153 };
+    for (const s of AI_STYLES) {
+      for (const spec of BOARDS) {
+        let short = 0;
+        let drafts = 0;
+        for (const budget of [5, 12, 20, 28, 35, 45, 60, 80, 100, 120, 135, 153].filter(
+          (b) => b <= highest[spec.files],
+        )) {
+          for (let seed = 0; seed < 6; seed++) {
+            const rng = seededRng(seed);
+            const types = draftAiArmy(budget, s, rng, spec, true, 9, true);
+            expect(count(types, 'K')).toBe(1);
+            expect(points(types)).toBeLessThanOrEqual(budget);
+            expect(types.length).toBeLessThanOrEqual(armyCap(spec));
+            expect(types.filter((t) => PIECES[t].pawn).length).toBeLessThanOrEqual(
+              Math.min(MAX_PAWNS, pawnSquares(spec)),
+            );
+            const placed = placeAiArmy(types, s, rng, spec);
+            expect(placed).toHaveLength(types.length);
+            expect(armyErrors(placed, spec)).toEqual([]);
+            // Points left unspent, beyond what the drafter leaves without synergies.
+            short += points(draftAiArmy(budget, s, seededRng(seed), spec, true, 9)) - points(types);
+            drafts++;
+          }
+        }
+        expect(short / drafts, `${s.id} on ${spec.files}×${spec.files}`).toBeLessThanOrEqual(3);
+      }
+    }
   });
 });

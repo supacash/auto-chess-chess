@@ -3,6 +3,7 @@ import { HEIR_WORTH, isPawnLike, makePiece, type Piece, type PieceType, type Squ
 import { armyCap, BACK_RANK, canPlace, frontRank, pieceAt } from './placement';
 import { type StartPosition, startPosition } from './position';
 import { type Rng, randomInt, weightedPick } from './rng';
+import { type Family, type FamilyId, family, synergyTier } from './synergy';
 
 // All squares here are AI-local: rank 0 is the AI's back row, rank homeRows − 1 its front row.
 // Style preferences are written for 8 files and 3 home rows and scaled to smaller boards.
@@ -33,6 +34,12 @@ export interface AiStyle {
   pawnFront: number;
   /** Bonus for pawns directly in front of (or diagonal to) the king. */
   shield: number;
+  /**
+   * With synergies on (synergy.ts): the families the style builds toward, by weight, how many of them
+   * an army picks, and the highest tier it builds each to (default: the family's top tier). Absent: it
+   * doesn't build for any.
+   */
+  synergy?: { families: Partial<Record<FamilyId, number>>; picks: number; maxTier?: number };
 }
 
 export const AI_STYLES: AiStyle[] = [
@@ -48,6 +55,7 @@ export const AI_STYLES: AiStyle[] = [
     forward: 0.2,
     pawnFront: 0,
     shield: 1,
+    synergy: { families: { cavalry: 1, guard: 1, siege: 1 }, picks: 1 },
   },
   {
     id: 'fortress',
@@ -62,6 +70,7 @@ export const AI_STYLES: AiStyle[] = [
     forward: -0.3,
     pawnFront: 0,
     shield: 2.5,
+    synergy: { families: { guard: 1, infantry: 1 }, picks: 2 },
   },
   {
     id: 'heavy',
@@ -76,6 +85,7 @@ export const AI_STYLES: AiStyle[] = [
     forward: 0,
     pawnFront: 0,
     shield: 1,
+    synergy: { families: { siege: 1 }, picks: 1 },
   },
   {
     id: 'cavalry',
@@ -91,6 +101,7 @@ export const AI_STYLES: AiStyle[] = [
     forward: 0.8,
     pawnFront: 1,
     shield: 0.5,
+    synergy: { families: { cavalry: 1 }, picks: 1 },
   },
   {
     id: 'menagerie',
@@ -120,6 +131,7 @@ export const AI_STYLES: AiStyle[] = [
     forward: 0.3,
     pawnFront: 0.5,
     shield: 1,
+    synergy: { families: { cavalry: 1, guard: 1, siege: 1 }, picks: 2, maxTier: 1 },
   },
 ];
 
@@ -231,10 +243,88 @@ function upgradesFor(type: PieceType, fairy: boolean): PieceType[] {
 }
 
 /**
+ * With synergies on, an AI army leans toward its style's families: their pieces are drafted this many
+ * times as often, and its upgrades keep the tier each one reached (SIMULATION.md §28).
+ */
+export const SYNERGY_LEAN = 2;
+
+/**
+ * With synergies on, AI armies get SYNERGY_ALLOWANCE more points from SYNERGY_ALLOWANCE_ROUND. By then
+ * most of their points are in compounds and Queens, which synergies don't upgrade, so their synergies
+ * add 2–3 points a battle less than a player's, who still fields Cannons, Knights and Ferzes
+ * (SIMULATION.md §28).
+ */
+export const SYNERGY_ALLOWANCE = 3;
+export const SYNERGY_ALLOWANCE_ROUND = 11;
+
+/** The points an AI army gets on top of its budget in a synergy run (synergies on, fairy pieces on). */
+export function synergyAllowance(round: number): number {
+  return round >= SYNERGY_ALLOWANCE_ROUND ? SYNERGY_ALLOWANCE : 0;
+}
+
+/** The families an army builds toward: the style's, picked by weight. */
+function pickFamilies(style: AiStyle, rng: Rng): Family[] {
+  const pool = { ...style.synergy?.families };
+  const picked: Family[] = [];
+  for (let k = 0; k < (style.synergy?.picks ?? 0); k++) {
+    const ids = (Object.keys(pool) as FamilyId[]).filter((id) => (pool[id] ?? 0) > 0);
+    if (ids.length === 0) break;
+    const id = weightedPick(ids, (f) => pool[f]!, rng);
+    delete pool[id];
+    picked.push(family(id));
+  }
+  return picked;
+}
+
+/** The pieces of a family that its synergy upgrades. */
+function baseTypes(fam: Family): PieceType[] {
+  return Object.keys(fam.upgrades) as PieceType[];
+}
+
+/**
+ * A synergy an army keeps: enough of the family's members for its tier, and one of the pieces the
+ * synergy upgrades for each tier (or as many as it has).
+ */
+interface KeptSynergy {
+  family: Family;
+  /** Members kept: the tier's threshold. */
+  members: number;
+  /** Pieces kept that synergies upgrade (pawns, Knights, Camels, Ferzes, Wazirs, Men, Cannons, …). */
+  base: number;
+  /** The points its upgrades add. */
+  worth: number;
+}
+
+/** The synergies `types` reaches in `families` (up to the style's highest tier), the most valuable first. */
+function keptSynergies(types: readonly PieceType[], families: readonly Family[], maxTier = Infinity): KeptSynergy[] {
+  const kept: KeptSynergy[] = [];
+  for (const fam of families) {
+    const tier = Math.min(synergyTier(fam, types.filter((t) => fam.members.includes(t)).length), maxTier);
+    const gains = types
+      .filter((t) => fam.upgrades[t])
+      .map((t) => PIECE_VALUE[fam.upgrades[t]!] - PIECE_VALUE[t])
+      .sort((a, b) => b - a);
+    if (tier === 0 || gains.length === 0) continue;
+    const base = Math.min(tier, gains.length);
+    kept.push({
+      family: fam,
+      members: fam.tiers[tier - 1],
+      base,
+      worth: gains.slice(0, base).reduce((a, b) => a + b, 0),
+    });
+  }
+  return kept.sort((a, b) => b.worth - a.worth);
+}
+
+/**
  * Picks piece types (always including the king) whose values sum to at most `budget` and that
  * fit `spec`'s home rows: non-pawn pieces by the style's weights, the rest as pawns, and any budget
  * left once the board or the pawn cap is full goes into upgrades. With `fairy`, the style's fairy
- * pieces join the draft, some pawns are Berolina pawns, and upgrades include fusions.
+ * pieces join the draft, some pawns are Berolina pawns, and upgrades include fusions. With
+ * `synergies` (fairy runs only), the army leans toward the style's families (AiStyle.synergy): their
+ * pieces are drafted SYNERGY_LEAN times as often, its upgrades keep the tier each one reached and the
+ * pieces it upgrades instead of turning them into Rooks and compounds, and from round 11 its budget
+ * gets synergyAllowance (SIMULATION.md §28). Without it, the rng is drawn exactly as before.
  */
 /** From this round (fairy runs), an AI army may include an Heir: rarely, with AI_HEIR_CHANCE. */
 export const AI_HEIR_ROUND = 20;
@@ -249,7 +339,9 @@ export function draftAiArmy(
   spec: BoardSpec = BOARD_8,
   fairy = false,
   round = 0,
+  synergies = false,
 ): PieceType[] {
+  if (synergies && fairy) budget += synergyAllowance(round);
   // Budget past a full board of queens can't be spent; capping it keeps the numbers honest.
   budget = Math.min(budget, maxArmyValue(spec));
   const types: PieceType[] = ['K'];
@@ -266,13 +358,20 @@ export function draftAiArmy(
     ? { ...style.weights, ...style.fairyWeights }
     : style.weights;
   const options = (Object.keys(weights) as PieceType[]).filter((t) => (weights[t] ?? 0) > 0 && !isPawnLike(t));
+  // With synergies, the families it builds toward, and their pieces drafted more often (no rng is
+  // drawn without them).
+  const families = synergies && fairy ? pickFamilies(style, rng) : [];
+  const draftWeights: Partial<Record<PieceType, number>> = { ...weights };
+  for (const fam of families) {
+    for (const t of fam.members) if (draftWeights[t]) draftWeights[t]! *= SYNERGY_LEAN;
+  }
   // One Stackman per army. The player has no limit, but Stackmen are rare in the shop; the drafter
   // has no shop, and at 9 points a Stackman is stronger than a Queen (DESIGN.md).
   const allowed = (t: PieceType) => t !== 'Y' || !types.includes('Y');
   while (types.length < capacity) {
     const affordable = options.filter((t) => PIECE_VALUE[t] <= pieceBudget && allowed(t));
     if (affordable.length === 0) break;
-    const pick = weightedPick(affordable, (t) => weights[t]!, rng);
+    const pick = weightedPick(affordable, (t) => draftWeights[t]!, rng);
     types.push(pick);
     pieceBudget -= PIECE_VALUE[pick];
   }
@@ -286,7 +385,7 @@ export function draftAiArmy(
   while (types.length < capacity) {
     const affordable = options.filter((t) => PIECE_VALUE[t] <= left && allowed(t));
     if (affordable.length === 0) break;
-    const pick = weightedPick(affordable, (t) => weights[t]!, rng);
+    const pick = weightedPick(affordable, (t) => draftWeights[t]!, rng);
     types.push(pick);
     left -= PIECE_VALUE[pick];
   }
@@ -297,18 +396,35 @@ export function draftAiArmy(
     left++;
   }
 
+  // Each synergy reached keeps its tier: no upgrade takes its members, or the pieces it upgrades, below it.
+  const kept = keptSynergies(types, families, style.synergy?.maxTier);
+  const keeps = (from: PieceType, to: PieceType) =>
+    kept.every(({ family: fam, members, base }) => {
+      const drops = (set: readonly PieceType[], keep: number) =>
+        set.includes(from) && !set.includes(to) && types.filter((t) => set.includes(t)).length <= keep;
+      return !drops(fam.members, members) && !drops(baseTypes(fam), base);
+    });
+
   // Spend leftovers on upgrades, cheapest pieces first but pawns last: upgrading pawns first used to
   // strip pawn-heavy styles of every pawn once the budget grew (Fortress had none at 40 points).
   for (;;) {
     const order = types
       .map((t, i) => [t, i] as const)
       .sort(([a], [b]) => Number(isPawnLike(a)) - Number(isPawnLike(b)) || PIECE_VALUE[a] - PIECE_VALUE[b]);
-    const found = order
-      .map(([from, i]) => ({
-        i,
-        to: upgradesFor(from, fairy).filter((to) => valueGain(from, to) <= left),
-      }))
-      .find((o) => o.to.length > 0);
+    const search = () =>
+      order
+        .map(([from, i]) => ({
+          i,
+          to: upgradesFor(from, fairy).filter((to) => valueGain(from, to) <= left && keeps(from, to)),
+        }))
+        .find((o) => o.to.length > 0);
+    let found = search();
+    // Only upgrades that break a synergy are left, and they'd spend more than it's worth: give up the
+    // least valuable one (a Fortress's eight pawns once its budget outgrows them).
+    while (!found && kept.length > 0 && left >= kept.at(-1)!.worth) {
+      kept.pop();
+      found = search();
+    }
     if (!found) break;
     const to = weightedPick(found.to, (t) => weights[t] ?? 0.1, rng);
     left -= valueGain(types[found.i], to);

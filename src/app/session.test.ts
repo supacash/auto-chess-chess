@@ -4,6 +4,7 @@ import type { BattleResult } from '../rules/battle';
 import { OFFER_COUNT } from '../rules/economy';
 import { seededRng } from '../rules/rng';
 import { FINAL_ROUND, isRunOver, START_LIVES } from '../rules/run';
+import { synergyUpgrades } from '../rules/synergy';
 import { Session } from './session';
 
 beforeAll(loadRulesForNode);
@@ -81,6 +82,22 @@ describe('Session', () => {
     const start = s.resolveStart();
     expect(start.synergies?.upgrades.filter((u) => u.side === 'w').map((u) => [u.id, u.to])).toEqual([['n1', 'T']]);
     expect(start.fen.split(' ')[0]).toContain('T');
+  });
+
+  it('drafts opponents that build for synergies in a run that has them', () => {
+    // Round 13 (9×9) with fairy pieces: how many of the opponents' pieces their synergies upgrade.
+    const upgraded = (synergies: boolean) => {
+      let total = 0;
+      for (let seed = 1; seed <= 20; seed++) {
+        const s = ready(seed);
+        s.run = { ...s.run, round: 13, settings: { ...s.run.settings, fairy: true, synergies } };
+        s.draftOpponent();
+        total += synergyUpgrades(s.aiPieces, s.board).length;
+      }
+      return total / 20;
+    };
+    const by = upgraded(false);
+    expect(upgraded(true)).toBeGreaterThan(by + 1);
   });
 
   it('ends the run after the last life and records a new best', () => {
