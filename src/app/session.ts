@@ -484,6 +484,11 @@ export class Session implements PlacementSession {
     return true;
   }
 
+  /** Reads the best score again (after a sync brought the account's). */
+  refreshBest(): void {
+    this.best = this.loadBest();
+  }
+
   private loadBest(): number {
     return loadBest(this.run.settings.difficulty, this.run.settings.mode, this.run.settings.manual);
   }

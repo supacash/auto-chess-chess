@@ -2747,6 +2747,62 @@ input.switch:focus-visible {
   letter-spacing: 0.02em;
 }
 
+/* The Google account card on the Profile. */
+.account-card {
+  margin: 0 0 14px;
+  padding: 12px 14px 8px;
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: var(--lift);
+}
+
+.account-card.confirming {
+  box-shadow:
+    inset 0 0 0 2px var(--danger),
+    var(--lift);
+}
+
+.account-text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.account-status {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.account-status.error {
+  color: var(--danger);
+}
+
+.account-actions {
+  flex-wrap: wrap;
+}
+
+/* Google's own colours on white, as its sign-in button guidelines ask. */
+button.google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #1f1f1f;
+  background: #ffffff;
+  box-shadow: 0 4px 0 #b9b2d6;
+}
+
+button.google:active:not(:disabled) {
+  box-shadow: 0 1px 0 #b9b2d6;
+}
+
+.google-g {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
 .tabs {
   display: flex;
   gap: 4px;

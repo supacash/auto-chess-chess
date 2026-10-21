@@ -1,14 +1,11 @@
-import { type FirebaseApp, initializeApp } from 'firebase/app';
-import { connectAuthEmulator, getAuth, signInAnonymously } from 'firebase/auth';
+import { signInAnonymously } from 'firebase/auth';
 import {
   collection,
-  connectFirestoreEmulator,
   deleteDoc,
   doc,
   type Firestore,
   getDoc,
   getDocs,
-  getFirestore,
   limit,
   onSnapshot,
   query,
@@ -46,46 +43,10 @@ import {
   startBattle,
   startRoom,
 } from './room';
+import { firebase } from './firebase';
 
 // Firestore storage for online rooms. Loaded only when a player opens online play (main.ts imports
 // it dynamically), so single-player never downloads the Firebase SDK.
-
-/** The web app's Firebase config. It's public by design: the security rules (firestore.rules) protect the data. */
-const CONFIG = {
-  apiKey: 'AIzaSyB-cI9n3wnbeoPmL-74jXWKQgZpiGzBnb4',
-  authDomain: 'auto-chess-chess.firebaseapp.com',
-  projectId: 'auto-chess-chess',
-  storageBucket: 'auto-chess-chess.firebasestorage.app',
-  messagingSenderId: '570904955189',
-  appId: '1:570904955189:web:f410a59a661f8baecaa47c',
-};
-
-/** Set VITE_FIREBASE_EMULATOR=1 to use local emulators (npm run e2e:online, development). */
-const USE_EMULATOR = import.meta.env.VITE_FIREBASE_EMULATOR === '1';
-
-/**
- * Firebase App Check (reCAPTCHA Enterprise site key, also public): requests carry proof that they
- * come from this game on its real site, so copies elsewhere can't use the project. Empty = off.
- * Not used with the emulators or in the Android app (its WebView origin is https://localhost; it
- * will need Play Integrity through a native plugin once it's on Google Play). On localhost the SDK
- * prints a debug token to the console, to register in the Firebase console for local testing.
- */
-const APP_CHECK_SITE_KEY = '';
-
-let app: FirebaseApp | null = null;
-
-async function startAppCheck(firebase: FirebaseApp): Promise<void> {
-  const native = (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
-  if (!APP_CHECK_SITE_KEY || USE_EMULATOR || native) return;
-  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-    (self as { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-  }
-  const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import('firebase/app-check');
-  initializeAppCheck(firebase, {
-    provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
-    isTokenAutoRefreshEnabled: true,
-  });
-}
 
 /** A signed-in connection to the rooms database. */
 export class RoomClient {
@@ -98,16 +59,8 @@ export class RoomClient {
   ) {}
 
   static async connect(): Promise<RoomClient> {
-    if (!app) {
-      app = initializeApp(CONFIG);
-      await startAppCheck(app);
-    }
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    if (USE_EMULATOR && !(auth as { emulatorConfig?: unknown }).emulatorConfig) {
-      connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-      connectFirestoreEmulator(db, '127.0.0.1', 8080);
-    }
+    const { auth, db } = await firebase();
+    // A signed-in account plays as itself; otherwise an anonymous one is made for the session.
     const { user } = auth.currentUser ? { user: auth.currentUser } : await signInAnonymously(auth);
     const client = new RoomClient(db, user.uid);
     await client.syncClock();

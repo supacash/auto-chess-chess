@@ -278,4 +278,5 @@ test('Settings: sound off stays in step with the menu speaker and is kept; About
   await expect(page.locator('#set-speed [data-speed="4"]')).toHaveAttribute('aria-checked', 'true');
   const response = await page.request.get('privacy.html');
   expect(response.ok()).toBe(true);
+  expect((await page.request.get('delete-account.html')).ok()).toBe(true);
 });

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1a1035" />
+    <title>Delete your account · Pawned Up</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg" />
+    <!-- Linked from the Google Play listing (account deletion) and the privacy policy. [?] marks a question for the developer. -->
+    <style>
+      :root {
+        --bg: #1a1035;
+        --panel: #2e2159;
+        --deep: #120a29;
+        --text: #ffffff;
+        --muted: #c9bfe6;
+        --faint: #9488bc;
+        --accent: #ff7a59;
+        --gold: #ffc93c;
+        --ink: #1a1035;
+        --radius: 16px;
+        color-scheme: dark;
+        font-family: "Nunito Variable", "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-weight: 500;
+        color: var(--text);
+        background: var(--bg);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        background: radial-gradient(120% 60% at 50% 0%, #241749 0%, var(--bg) 60%) fixed;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+          max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        line-height: 1.6;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+      header img {
+        flex: none;
+      }
+      h1,
+      h2 {
+        font-family: "Lilita One", "Nunito Variable", system-ui, sans-serif;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        line-height: 1.1;
+      }
+      h1 {
+        margin: 0;
+        font-size: 2rem;
+        text-transform: uppercase;
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 1.3rem;
+        color: var(--gold);
+      }
+      section {
+        margin: 14px 0;
+        padding: 16px;
+        background: var(--panel);
+        border-radius: var(--radius);
+        box-shadow: 0 4px 0 var(--deep);
+      }
+      p,
+      ul,
+      ol {
+        margin: 0 0 10px;
+      }
+      p:last-child,
+      ul:last-child,
+      ol:last-child {
+        margin-bottom: 0;
+      }
+      ul,
+      ol {
+        padding-left: 20px;
+      }
+      li + li {
+        margin-top: 4px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        font-size: 0.75rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink);
+        background: var(--gold);
+        border-radius: 999px;
+      }
+      .draft {
+        border: 2px dashed var(--accent);
+      }
+      .draft h2 {
+        color: var(--accent);
+      }
+      .q {
+        font-weight: 800;
+        color: var(--accent);
+      }
+      a {
+        color: var(--text);
+      }
+      code {
+        font-size: 0.9em;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="logo.svg" alt="" width="48" height="48" />
+        <div>
+          <h1>Delete your account</h1>
+        </div>
+      </header>
+      <p class="muted">
+        Pawned Up, the chess auto battler, on the web and in the Android app. Developer: <span class="q">[? name]</span>.
+      </p>
+
+      <section>
+        <h2>In the game</h2>
+        <ol>
+          <li>Open the game and tap <strong>Profile</strong> on the menu.</li>
+          <li>Under your Google account, tap <strong>Delete account</strong>, then <strong>Tap again to delete</strong>.</li>
+          <li>If Google asks you to sign in again first, do so: the deletion finishes straight after.</li>
+        </ol>
+        <p>
+          This deletes your account and the progress saved to it (records, achievements, best scores, dismissed tips,
+          your player name and the game in progress) from our servers straight away. The copy on your device stays until
+          you clear the game's storage (your browser's site data, or the app's storage in Android settings).
+        </p>
+      </section>
+
+      <section>
+        <h2>Without the game</h2>
+        <p>
+          Email <span class="q">[? contact email]</span> from the Google account you signed in with, asking for your Pawned
+          Up account to be deleted. We delete the account and everything saved to it within <span class="q">[? 30]</span> days and reply when it's done.
+        </p>
+      </section>
+
+      <section>
+        <h2>What isn't deleted</h2>
+        <ul>
+          <li>
+            Online rooms you played in keep your generated player name, armies and results, under your user ID, until the
+            room is cleaned up <span class="q">[? how long rooms are kept]</span>. They hold no email address or real name.
+          </li>
+          <li>Playing without an account keeps everything on your device only; there's nothing on our servers to delete.</li>
+        </ul>
+        <p>More in the <a href="privacy.html">privacy policy</a>.</p>
+      </section>
+    </main>
+  </body>
+</html>

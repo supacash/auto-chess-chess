@@ -140,7 +140,7 @@
         <h2>The short version</h2>
         <ul>
           <li>No account, no email address and no real name needed to play.</li>
-          <li>Single-player games, records and settings stay on your device.</li>
+          <li>Single-player games, records and settings stay on your device, unless you sign in with Google to save them to your account.</li>
           <li>
             Playing online sends your army, results and a randomly generated player name (like "Golden Knight 19") to
             Google Firebase, under an anonymous ID.
@@ -157,7 +157,7 @@
         <h2>Stored on your device</h2>
         <p>
           The game keeps these in your browser's or app's local storage. They never leave your device unless you play
-          online (see the next section).
+          online or sign in with Google (see below).
         </p>
         <ul>
           <li>The game in progress, including the opponent drafted for the next round, and the daily challenge in progress.</li>
@@ -165,6 +165,7 @@
           <li>The online match you're in, so you can rejoin it (its room code and round).</li>
           <li>Your generated player name.</li>
           <li>Your settings: sound on or off, effects volume, battle speed, reduced motion, and which tips you've dismissed.</li>
+          <li>If you've signed in with Google: the account's user ID and email address (shown on the Profile), and a copy of your records as of the last sync.</li>
         </ul>
         <p>
           Clearing the site's data in your browser, or the app's storage in Android settings, deletes all of it. Settings →
@@ -207,13 +208,39 @@
       </section>
 
       <section>
-        <h2>Google sign-in (not yet live)</h2>
+        <h2>Google sign-in (optional)</h2>
         <p>
-          A future version may let you sign in with Google to keep your records across devices. It is not switched on yet.
-          <span class="q">[? Update this section before it ships: which data the account keeps (records, name), where,
-          and how to delete it.]</span> It would ask Google for your basic profile and email address
-          (<code>openid email profile</code>).
+          You can sign in with Google on the Profile to keep your progress if you reinstall, and to carry it to another
+          device. Signing in is never needed to play. Until you sign in, nothing in this section happens.
         </p>
+        <ul>
+          <li>
+            <strong>What Google shares with the game.</strong> Your Google account's basic profile and email address
+            (<code>openid email profile</code>). Firebase Authentication keeps your user ID, email address, name and the
+            date you signed in. The game shows your email address on the Profile; it doesn't show your name or email to other players.
+          </li>
+          <li>
+            <strong>What your account keeps.</strong> One record in Cloud Firestore under your user ID, which only you can
+            read or change: your records and achievements (daily challenge results included), best scores, which tips
+            you've dismissed, your player name, and the single-player game in progress. Not saved to the account: settings,
+            the daily challenge in progress, your last battle and online matches in progress.
+          </li>
+          <li>
+            <strong>When it syncs.</strong> When the game opens, a few seconds after a round ends or something above changes,
+            and when you leave the app.
+          </li>
+          <li>
+            <strong>Online play.</strong> Signed in, you play online rooms under your account's user ID instead of an
+            anonymous one (your earlier anonymous ID is linked to the account).
+          </li>
+          <li>
+            <strong>Signing out</strong> stops syncing; the copy on your device stays.
+            <strong>Delete account</strong> (Profile, two taps) deletes your account and its saved progress from Firebase
+            straight away; the copy on your device stays until you clear the game's storage. You can also ask for it by
+            email: see <a href="delete-account.html">Delete your account</a>.
+          </li>
+          <li>The account's data is kept until you delete the account.</li>
+        </ul>
       </section>
 
       <section>
@@ -261,6 +288,7 @@
         <ul>
           <li>Play single-player only, and nothing is sent to Firebase.</li>
           <li>Clear the game's storage to delete everything kept on your device.</li>
+          <li>Delete your Google account's saved progress at any time: Profile → <em>Delete account</em>, or see <a href="delete-account.html">Delete your account</a>.</li>
           <li>To ask for online data to be deleted, or with any question: <span class="q">[? contact email]</span></li>
           <li>Changes to this policy will be posted on this page, with a new date at the top.</li>
         </ul>
@@ -275,7 +303,7 @@
           <li>How to handle deletion requests: rooms are keyed by anonymous IDs the player can't see.</li>
           <li>Whether AdMob ads are personalised or non-personalised, and which consent settings are used in AdMob.</li>
           <li>The intended age rating, and whether the app targets children (affects AdMob and Play Families requirements).</li>
-          <li>The Google sign-in section, once accounts ship.</li>
+          <li>Whether Firebase Authentication's own record of a signed-in user (email, name, sign-in dates) is covered well enough by the Google sign-in section.</li>
           <li>
             Whether App Check (reCAPTCHA Enterprise on the web, Play Integrity in the app) will be switched on: it's in the
             code but off, and would send device signals to Google.
