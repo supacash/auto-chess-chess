@@ -1,6 +1,7 @@
 rules_version = '2';
 
-// Online rooms for 4-player matches (see src/online/). Players sign in anonymously.
+// Online rooms for 4-player matches (see src/online/), and saved progress for Google accounts.
+// Online play signs in anonymously unless the player has signed in with Google.
 //
 // - rooms/{code}: the shared room. Anyone signed in can read it (to join by code, or find a quick
 //   play room). Only people
@@ -62,6 +63,21 @@ service cloud.firestore {
           return get(/databases/$(database)/documents/rooms/$(code)).data;
         }
       }
+    }
+
+    // A Google account's saved progress (src/online/account.ts): only its owner reads or writes it,
+    // and only signed in with a real account (not the anonymous one online play makes). The data is
+    // one JSON string the app validates when it reads it back; the size cap keeps it bounded.
+    match /users/{uid} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn()
+        && request.auth.uid == uid
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.resource.data.keys().hasOnly(['v', 'updatedAt', 'data'])
+        && request.resource.data.v is int
+        && request.resource.data.updatedAt is int
+        && request.resource.data.data is string
+        && request.resource.data.data.size() <= 400000;
     }
 
     // Each player's clock-sync doc: write a server timestamp, read it back (src/online/client.ts).

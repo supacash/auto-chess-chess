@@ -11,6 +11,7 @@ import {
 } from './game/achievements';
 import { adsAvailable, showRewardedAd } from './app/ads';
 import { listenForBack } from './app/backButton';
+import { CloudSync } from './app/cloudSync';
 import { startMenuDrift } from './app/menuDrift';
 import { applyReduceMotion } from './app/settings';
 import { SettingsScreen } from './app/settingsScreen';
@@ -36,7 +37,7 @@ import { loadRules } from './chess/loadRules';
 import { createEngine, type GameEngine } from './engine/engine';
 import { USE_FAIRY } from './engine/engineChoice';
 import { ManualBattle } from './game/manualBattle';
-import { clearMatch, loadMatch, loadReplay } from './game/storage';
+import { clearMatch, loadMatch, loadName, loadReplay, saveName } from './game/storage';
 import { GauntletDialog } from './app/gauntletDialog';
 import { dailyBattle, dailyStreak, dailyTheme, type DailyDay } from './rules/daily';
 import { generateName } from './multi/names';
@@ -134,10 +135,28 @@ soundButton.addEventListener('click', () => {
   sfx('select');
 });
 renderSoundButton();
+const sync = new CloudSync({
+  playing: () => !document.body.classList.contains('in-menu') || match.active,
+  applied: (run) => {
+    records.reload();
+    runSession.refreshBest();
+    // A run from another device replaces this one only while nothing is being played here.
+    if (run && document.body.classList.contains('in-menu')) {
+      runSession.restore();
+      renderHeader(session);
+      if (!profile.visible) showMenu();
+    }
+    if (profile.visible) profile.refresh();
+  },
+  changed: () => {
+    if (profile.visible) profile.renderAccount();
+  },
+});
 const profile = new ProfileScreen(
   records,
   playerName,
   renamePlayer,
+  sync,
   () => showMenu(),
   // An empty tab's button: off to play for it.
   (go) => {
@@ -228,25 +247,18 @@ matchDialog.querySelector('form')?.addEventListener('submit', (e) => {
 /** Picks a new random name for the player (used in online rooms from then on). */
 function renamePlayer(): string {
   const name = generateName(Math.random);
-  try {
-    localStorage.setItem('acc.name.v1', name);
-  } catch {
-    // ignore
-  }
+  saveName(name);
   return name;
 }
 
 /** The player's generated name, kept so friends recognise them from game to game. */
 function playerName(): string {
-  try {
-    const saved = localStorage.getItem('acc.name.v1');
-    if (saved) return saved;
-    const name = generateName(Math.random);
-    localStorage.setItem('acc.name.v1', name);
-    return name;
-  } catch {
-    return generateName(Math.random);
-  }
+  const saved = loadName();
+  if (saved) return saved;
+  const name = generateName(Math.random);
+  // Not picked by the player: an account's name (from another device) takes priority.
+  saveName(name, 0);
+  return name;
 }
 
 /** Creates or joins an online room (or finds a quick play one), then shows its lobby. The Firebase code loads only now. */
@@ -690,6 +702,7 @@ function boot(): void {
   renderHeader(session);
   showMenu([notice, daily.notice].filter(Boolean).join(' '));
   void listenForBack(goBack);
+  void sync.start();
 }
 
 /**

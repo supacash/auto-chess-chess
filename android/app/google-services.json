@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "570904955189",
+    "project_id": "auto-chess-chess",
+    "storage_bucket": "auto-chess-chess.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:570904955189:android:2a104663bbc692bdcaa47c",
+        "android_client_info": {
+          "package_name": "com.pawnedup.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "570904955189-g8ptkei4v598edbn82pflrvkam430pb2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pawnedup.app",
+            "certificate_hash": "66b79126a5cb766ea9c17e1a86d0a34cccbd9811"
+          }
+        },
+        {
+          "client_id": "570904955189-n28g76tksltqge21r0ak8jbd0v29msvu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pawnedup.app",
+            "certificate_hash": "f40010cb188b8f6caf27601d05f3622274ee760e"
+          }
+        },
+        {
+          "client_id": "570904955189-tr1f1r8tguhqs2g410mg9tiin9cqo0s9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnHvtiUpuoR0O8K8cnCAS-8D0SgRXRXkU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "570904955189-tr1f1r8tguhqs2g410mg9tiin9cqo0s9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -15,6 +15,7 @@ import { MODES } from '../rules/mode';
 import { PIECE_NAME } from '../rules/pieces';
 import { inlinePiece } from '../ui/boardDom';
 import { $, escapeHtml } from './dom';
+import type { CloudSync } from './cloudSync';
 import { matchLabel, type RecordBook, runLabel } from './recordBook';
 
 type Tab = 'single' | 'daily' | 'multi' | 'history' | 'fun' | 'achievements';
@@ -22,18 +23,32 @@ type Tab = 'single' | 'daily' | 'multi' | 'history' | 'fun' | 'achievements';
 /** Where an empty tab's button leads: a new game, today's daily challenge or Multiplayer. */
 export type ProfileGo = 'new' | 'daily' | 'multi';
 
-/** The Profile screen: the player's name and their records, by tab. */
+/** The Profile screen: the player's name, their Google account (if any), and their records, by tab. */
 export class ProfileScreen {
   private readonly section = $('#profile');
   private tab: Tab = 'single';
+  /** Delete account needs a second tap. */
+  private confirmingDelete = false;
 
   constructor(
     private readonly book: RecordBook,
     private readonly name: () => string,
     private readonly newName: () => string,
+    private readonly sync: CloudSync,
     onBack: () => void,
     onGo: (go: ProfileGo) => void,
   ) {
+    $('#account-signin').addEventListener('click', () => void this.sync.signIn());
+    $('#account-signout').addEventListener('click', () => void this.sync.signOut());
+    $('#account-delete').addEventListener('click', () => {
+      if (!this.confirmingDelete) {
+        this.confirmingDelete = true;
+        this.renderAccount();
+        return;
+      }
+      this.confirmingDelete = false;
+      void this.sync.deleteAccount();
+    });
     $('#profile-tabs').addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-tab]');
       if (!btn) return;
@@ -52,8 +67,52 @@ export class ProfileScreen {
 
   show(): void {
     this.section.hidden = false;
+    this.confirmingDelete = false;
+    this.refresh();
+  }
+
+  /** Redraws the name, account and records (after a sync brought new ones). */
+  refresh(): void {
     $('#profile-name').textContent = this.name();
+    this.renderAccount();
     this.render();
+  }
+
+  get visible(): boolean {
+    return !this.section.hidden;
+  }
+
+  /** The account card: sign in, or who's signed in and how syncing is going. */
+  renderAccount(): void {
+    const account = this.sync.account;
+    const status = this.sync.status;
+    $('#profile-saved').textContent = account
+      ? 'Your progress is saved to your Google account.'
+      : 'Your records are saved on this device.';
+    $('#account-text').innerHTML = account
+      ? `Signed in as <strong>${escapeHtml(account.label)}</strong>`
+      : 'Sign in to keep your progress if you reinstall, and to play on another device.';
+    const line = $('#account-status');
+    const text = this.confirmingDelete
+      ? 'This deletes your account and the progress saved to it. This device keeps its own copy.'
+      : status.kind === 'error'
+        ? status.message
+        : !account
+          ? ''
+          : status.kind === 'syncing'
+            ? 'Syncing…'
+            : status.kind === 'synced'
+              ? 'Progress synced.'
+              : '';
+    line.hidden = !text;
+    line.textContent = text;
+    line.classList.toggle('error', status.kind === 'error');
+    $('#account-signin').hidden = account !== null;
+    $('#account-signout').hidden = account === null;
+    const del = $('#account-delete');
+    del.hidden = account === null;
+    del.textContent = this.confirmingDelete ? 'Tap again to delete' : 'Delete account';
+    $('#account-card').classList.toggle('confirming', this.confirmingDelete);
   }
 
   hide(): void {

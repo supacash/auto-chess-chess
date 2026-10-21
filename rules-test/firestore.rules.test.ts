@@ -7,6 +7,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -175,5 +176,37 @@ describe('clocks', () => {
     await assertSucceeds(getDoc(doc(as('p2'), 'clocks/p2')));
     await assertFails(setDoc(doc(as('p2'), 'clocks/host'), { t: 1 }));
     await assertFails(getDoc(doc(as('host'), 'clocks/p2')));
+  });
+});
+
+describe('users (saved progress)', () => {
+  const google = (uid: string) =>
+    env.authenticatedContext(uid, { firebase: { sign_in_provider: 'google.com' } }).firestore();
+  const anonymous = (uid: string) =>
+    env.authenticatedContext(uid, { firebase: { sign_in_provider: 'anonymous' } }).firestore();
+  const save = (data = '{}') => ({ v: 1, updatedAt: 5, data });
+
+  it('belong to their Google account only', async () => {
+    await assertSucceeds(setDoc(doc(google('u1'), 'users/u1'), save()));
+    await assertSucceeds(getDoc(doc(google('u1'), 'users/u1')));
+    await assertFails(getDoc(doc(google('u2'), 'users/u1')));
+    await assertFails(setDoc(doc(google('u2'), 'users/u1'), save()));
+    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'users/u1')));
+  });
+
+  it('are not for anonymous players', async () => {
+    await assertFails(setDoc(doc(anonymous('u1'), 'users/u1'), save()));
+  });
+
+  it('hold only the save string, under the size cap', async () => {
+    await assertFails(setDoc(doc(google('u1'), 'users/u1'), { ...save(), extra: true }));
+    await assertFails(setDoc(doc(google('u1'), 'users/u1'), { v: 1, updatedAt: 5, data: { records: {} } }));
+    await assertFails(setDoc(doc(google('u1'), 'users/u1'), save('x'.repeat(400001))));
+  });
+
+  it('can be deleted by their owner', async () => {
+    await setDoc(doc(google('u1'), 'users/u1'), save());
+    await assertFails(deleteDoc(doc(google('u2'), 'users/u1')));
+    await assertSucceeds(deleteDoc(doc(google('u1'), 'users/u1')));
   });
 });

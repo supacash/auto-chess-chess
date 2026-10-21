@@ -11,6 +11,9 @@ const config: CapacitorConfig = {
     // The game is always dark: light status bar icons, whatever the phone's own theme (by default
     // they follow it, and come out dark grey on the violet in light mode). The page is edge to edge.
     SystemBars: { style: 'DARK', initialViewportFitValueHint: 'cover' },
+    // Google's native sign-in sheet gives an ID token; the Firebase web SDK signs in with it
+    // (src/online/account.ts), so the native layer doesn't sign in to Firebase itself.
+    FirebaseAuthentication: { skipNativeAuth: true, providers: ['google.com'] },
   },
 };
 

@@ -48,6 +48,11 @@ export class RecordBook {
     }
   }
 
+  /** Reads the records again (after a sync wrote the account's to this device). */
+  reload(): void {
+    this.records = loadRecords() ?? this.records;
+  }
+
   /**
    * A battle the player fought. `side` is the player's colour in the battle's FEN; `worstDeficit` the
    * most points they were behind. `run` is the run's settings for single-player battles.

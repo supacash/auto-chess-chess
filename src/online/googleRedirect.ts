@@ -1,10 +1,15 @@
 // Google sign-in by redirect: the page goes to Google's sign-in screen and comes back with an ID
-// token in the URL fragment, which Firebase then accepts (src/online/account.ts). Popups and
-// embedded frames don't work here: the engine needs the page to be cross-origin isolated, which
-// cuts popups off from the page and blocks Google's frames.
+// token in the URL fragment, which Firebase then accepts (src/online/account.ts, src/app/cloudSync.ts). A
+// redirect rather than a popup because it also works in a `fairy` build, whose cross-origin isolation
+// cuts popups off from the page and blocks Google's frames (the default build isn't isolated).
 
-/** The Google OAuth web client (Google Cloud → APIs & Services → Credentials). Public by design. */
-export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
+/**
+ * The Google OAuth web client Firebase made for Google sign-in (Google Cloud → APIs & Services →
+ * Credentials). Public by design. Its authorized redirect URIs must list each address the game is
+ * served from (returnUrl): the GitHub Pages site and the dev server.
+ */
+export const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '570904955189-tr1f1r8tguhqs2g410mg9tiin9cqo0s9.apps.googleusercontent.com';
 
 const NONCE_KEY = 'acc.signin.nonce';
 

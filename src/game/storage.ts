@@ -7,9 +7,10 @@ import { isAffinity, isPieceType, type Piece } from '../rules/pieces';
 import { isPerkId } from '../rules/prestige';
 import type { DailyRun, RoundLog, Run } from '../rules/run';
 import { TIPS, type TipId } from './tips';
+import { CLOUD_VERSION, type CloudData } from './cloudSave';
 import type { ManualState } from './manualBattle';
 import { type BattleRecord, parseRecord } from './record';
-import { parseRecords, type Records } from './records';
+import { emptyRecords, parseRecords, type Records } from './records';
 
 /** Saved squares may be anywhere on the biggest board; the game fits them to the current one (fitToBoard). */
 const MAX_FILES = Math.max(...BOARDS.map((b) => b.files));
@@ -31,6 +32,27 @@ const DAILY_KEY = 'acc.daily.v1';
 /** Which save: the normal run, or the daily challenge. */
 export type SaveSlot = 'run' | 'daily';
 const slotKey = (slot: SaveSlot) => (slot === 'daily' ? DAILY_KEY : RUN_KEY);
+/** When the run save last changed (ms), so the newer of two devices' runs wins (cloudSave.ts). */
+const RUN_AT_KEY = 'acc.run.at.v1';
+const NAME_KEY = 'acc.name.v1';
+/** When every tip was last shown again (ms), so the account doesn't bring back tips cleared here. */
+const TIPS_CLEARED_KEY = 'acc.tips.cleared.v1';
+const NAME_AT_KEY = 'acc.name.at.v1';
+/** The signed-in account, if any (see SavedAccount). */
+const ACCOUNT_KEY = 'acc.account.v1';
+/** The records as of this device's last sync with the account (recordsSync.ts). */
+const SYNC_BASE_KEY = 'acc.sync.base.v1';
+
+/**
+ * Called after a save that the account should get (records, bests, tips, the name, a run starting
+ * or ending): cloudSync.ts listens, to upload soon. Saves made during play (every placement) don't
+ * call it; they go up with the next one, or when the app is hidden.
+ */
+let onChange: () => void = () => {};
+
+export function onSavesChanged(listener: () => void): void {
+  onChange = listener;
+}
 
 /** Current save format. Bump it and add a MIGRATIONS step whenever SavedGame changes shape. */
 export const SAVE_VERSION = 3;
@@ -60,7 +82,12 @@ export function loadGame(slot: SaveSlot = 'run'): SavedGame | null {
 
 export function saveGame(game: SavedGame, slot: SaveSlot = 'run'): void {
   try {
+    const fresh = !localStorage.getItem(slotKey(slot));
     localStorage.setItem(slotKey(slot), JSON.stringify(game));
+    if (slot === 'run') {
+      localStorage.setItem(RUN_AT_KEY, String(Date.now()));
+      if (fresh) onChange();
+    }
   } catch {
     // ignore
   }
@@ -96,6 +123,7 @@ export function loadRecords(): Records | null {
 export function saveRecords(records: Records): void {
   try {
     localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+    onChange();
   } catch {
     // ignore
   }
@@ -177,6 +205,7 @@ export function seenTips(): Set<TipId> {
 export function dismissTip(id: TipId): void {
   try {
     localStorage.setItem(TIPS_KEY, JSON.stringify([...seenTips(), id]));
+    onChange();
   } catch {
     // ignore
   }
@@ -186,6 +215,8 @@ export function dismissTip(id: TipId): void {
 export function clearTips(): void {
   try {
     localStorage.removeItem(TIPS_KEY);
+    localStorage.setItem(TIPS_CLEARED_KEY, String(Date.now()));
+    onChange();
   } catch {
     // ignore
   }
@@ -194,6 +225,133 @@ export function clearTips(): void {
 export function clearGame(slot: SaveSlot = 'run'): void {
   try {
     localStorage.removeItem(slotKey(slot));
+    // The account keeps the normal run only (a daily is one attempt a day, on one device).
+    if (slot === 'run') {
+      localStorage.setItem(RUN_AT_KEY, String(Date.now()));
+      onChange();
+    }
+  } catch {
+    // ignore
+  }
+}
+
+/** The player's name (shown online), or null before one is picked. */
+export function loadName(): string | null {
+  try {
+    return localStorage.getItem(NAME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Saves the name; `at` is when the player picked it (0: generated, not picked). */
+export function saveName(name: string, at = Date.now()): void {
+  try {
+    localStorage.setItem(NAME_KEY, name);
+    localStorage.setItem(NAME_AT_KEY, String(at));
+    onChange();
+  } catch {
+    // ignore
+  }
+}
+
+/** The account this device is signed in to (Google), remembered so sync can start without asking Firebase. */
+export interface SavedAccount {
+  uid: string;
+  /** What the Profile shows: the account's email address, or its name. */
+  label: string;
+}
+
+export function loadAccount(): SavedAccount | null {
+  try {
+    const data = JSON.parse(localStorage.getItem(ACCOUNT_KEY) ?? 'null');
+    return isObject(data) && typeof data.uid === 'string' && typeof data.label === 'string'
+      ? { uid: data.uid, label: data.label }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Remembers the account (null: signed out). A different account than before starts syncing afresh. */
+export function saveAccount(account: SavedAccount | null): void {
+  try {
+    const before = loadAccount();
+    if (!account) localStorage.removeItem(ACCOUNT_KEY);
+    else localStorage.setItem(ACCOUNT_KEY, JSON.stringify(account));
+    if (!account || before?.uid !== account.uid) localStorage.removeItem(SYNC_BASE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** The records as of the last sync, or null if this device hasn't synced with the account yet. */
+export function loadSyncBase(): Records | null {
+  try {
+    const raw = localStorage.getItem(SYNC_BASE_KEY);
+    return raw ? parseRecords(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Everything the account keeps, as this device has it (see cloudSave.ts). */
+export function readCloudData(): CloudData {
+  const best: Record<string, number> = {};
+  let run: unknown = null;
+  let tips: string[] = [];
+  let name: CloudData['name'] = null;
+  let runAt = 0;
+  let tipsCleared = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('acc.best.')) {
+        const score = Number(localStorage.getItem(key));
+        if (Number.isInteger(score) && score > 0) best[key] = score;
+      }
+    }
+    const rawRun = localStorage.getItem(RUN_KEY);
+    run = rawRun ? JSON.parse(rawRun) : null;
+    tips = [...seenTips()];
+    const value = localStorage.getItem(NAME_KEY);
+    if (value) name = { value, at: Number(localStorage.getItem(NAME_AT_KEY)) || 0 };
+    runAt = Number(localStorage.getItem(RUN_AT_KEY)) || 0;
+    tipsCleared = Number(localStorage.getItem(TIPS_CLEARED_KEY)) || 0;
+  } catch {
+    // An unreadable save is left out.
+  }
+  return {
+    v: CLOUD_VERSION,
+    records: loadRecords() ?? emptyRecords(),
+    best,
+    tips,
+    tipsCleared,
+    name,
+    run: { at: runAt, save: run && parseSave(run) ? run : null },
+  };
+}
+
+/**
+ * Stores the account's data on this device, with `base` (the records the account now has) as the
+ * new sync base. The run is only replaced when `run` (nobody is playing one right now).
+ */
+export function writeCloudData(data: CloudData, base: Records, run: boolean): void {
+  try {
+    localStorage.setItem(RECORDS_KEY, JSON.stringify(data.records));
+    localStorage.setItem(SYNC_BASE_KEY, JSON.stringify(base));
+    for (const [key, score] of Object.entries(data.best)) localStorage.setItem(key, String(score));
+    localStorage.setItem(TIPS_KEY, JSON.stringify(data.tips));
+    localStorage.setItem(TIPS_CLEARED_KEY, String(data.tipsCleared));
+    if (data.name) {
+      localStorage.setItem(NAME_KEY, data.name.value);
+      localStorage.setItem(NAME_AT_KEY, String(data.name.at));
+    }
+    if (run) {
+      if (data.run.save) localStorage.setItem(RUN_KEY, JSON.stringify(data.run.save));
+      else localStorage.removeItem(RUN_KEY);
+      localStorage.setItem(RUN_AT_KEY, String(data.run.at));
+    }
   } catch {
     // ignore
   }
@@ -226,6 +384,7 @@ export function saveBest(
 ): void {
   try {
     localStorage.setItem(bestKey(difficulty, mode, manual), String(score));
+    onChange();
   } catch {
     // ignore
   }

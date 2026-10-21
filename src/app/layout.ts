@@ -132,7 +132,19 @@ export function renderLayout(root: HTMLElement): void {
         <p class="profile-name"><span id="profile-name"></span>
           <button type="button" id="profile-rename" class="leave-button" title="Pick a new random name">New name</button>
         </p>
-        <p class="dialog-text muted">Your records are saved on this device.</p>
+        <p class="dialog-text muted" id="profile-saved"></p>
+      </div>
+    </div>
+    <div class="account-card" id="account-card">
+      <p class="account-text" id="account-text"></p>
+      <p class="account-status" id="account-status" role="status" hidden></p>
+      <div class="actions account-actions">
+        <button type="button" id="account-signin" class="google">
+          <svg class="google-g" viewBox="0 0 48 48" aria-hidden="true"><path fill="#ea4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.8 6.1C12.3 13.6 17.7 9.5 24 9.5z"/><path fill="#4285f4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#fbbc05" d="M10.4 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.9-4.7l-7.8-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.8-6.1z"/><path fill="#34a853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.7-4.1-13.6-9.8l-7.8 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+          Sign in with Google
+        </button>
+        <button type="button" id="account-signout" hidden>Sign out</button>
+        <button type="button" id="account-delete" class="sell" hidden>Delete account</button>
       </div>
     </div>
     <div class="tabs" id="profile-tabs" role="tablist">
